@@ -1,0 +1,114 @@
+{
+  "language": "ru",
+  "levels": ["A1", "A2", "B1", "B2"],
+  "case_aliases": {
+    "nomn": "nom",
+    "gent": "gen",
+    "gen2": "gen",
+    "datv": "dat",
+    "accs": "acc",
+    "acc2": "acc",
+    "ablt": "ins",
+    "loct": "prep",
+    "loc2": "prep",
+    "voct": "nom"
+  },
+  "tense_aliases": {
+    "pres": "pres",
+    "past": "past",
+    "futr": "fut"
+  },
+  "A1": {
+    "allowed_cases": ["nom"],
+    "allowed_tenses": ["pres"],
+    "allowed_moods": ["indc"],
+    "forbidden_pos": ["PRTF", "PRTS", "GRND", "COMP"],
+    "forbidden_conjunctions": [
+      "чтобы",
+      "хотя",
+      "если",
+      "который",
+      "которая",
+      "которое",
+      "которые",
+      "потому",
+      "когда",
+      "бы"
+    ],
+    "allowed_subordinate": [],
+    "max_subordinate_rate": 0.0,
+    "max_overlevel_lemma_rate": 0.15,
+    "max_forbidden_case_rate": 0.12,
+    "max_forbidden_tense_rate": 0.12,
+    "max_forbidden_pos_rate": 0.02,
+    "prompt_constraints": "Use ONLY nominative case. Present tense only (imperfective). Short simple sentences. No subordinate clauses. No past or future. No participles, verbal adverbs, or comparatives. Adjective agreement in nominative only."
+  },
+  "A2": {
+    "allowed_cases": ["nom", "acc", "gen", "prep", "dat"],
+    "allowed_tenses": ["pres", "past", "fut"],
+    "allowed_moods": ["indc"],
+    "forbidden_pos": ["PRTF", "PRTS", "GRND", "COMP"],
+    "forbidden_conjunctions": [
+      "чтобы",
+      "хотя",
+      "который",
+      "которая",
+      "которое",
+      "которые",
+      "бы"
+    ],
+    "allowed_subordinate": ["когда", "если", "потому"],
+    "max_subordinate_rate": 0.08,
+    "max_overlevel_lemma_rate": 0.18,
+    "max_forbidden_case_rate": 0.08,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 0.02,
+    "prompt_constraints": "Allowed cases: nominative, accusative, genitive, prepositional, dative. Do NOT use instrumental. Present, past, and future tenses OK. Questions and negation OK. No participles, verbal adverbs, conditionals with бы, or relative clauses with который. Keep aspect simple; avoid aspectual contrast as a narrative device."
+  },
+  "B1": {
+    "allowed_cases": ["nom", "acc", "gen", "prep", "dat", "ins"],
+    "allowed_tenses": ["pres", "past", "fut"],
+    "allowed_moods": ["indc", "impr"],
+    "forbidden_pos": ["PRTF", "PRTS", "GRND"],
+    "forbidden_conjunctions": [
+      "хотя",
+      "который",
+      "которая",
+      "которое",
+      "которые",
+      "бы"
+    ],
+    "allowed_subordinate": ["когда", "если", "потому", "чтобы", "что"],
+    "max_subordinate_rate": 0.28,
+    "max_overlevel_lemma_rate": 0.22,
+    "max_forbidden_case_rate": 0.0,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 0.03,
+    "prompt_constraints": "All six cases allowed. Verbal aspect may contrast (perfective vs imperfective). Motion verbs (идти/ходить, ехать/ездить), reflexives (-ся), imperative, and impersonals (нужно, можно, нельзя) are welcome. Simple subordinate clauses with когда, если, потому что, чтобы. No participles, verbal adverbs, or subjunctive бы constructions."
+  },
+  "B2": {
+    "allowed_cases": ["nom", "acc", "gen", "prep", "dat", "ins"],
+    "allowed_tenses": ["pres", "past", "fut"],
+    "allowed_moods": ["indc", "impr"],
+    "forbidden_pos": [],
+    "forbidden_conjunctions": [],
+    "allowed_subordinate": [
+      "когда",
+      "если",
+      "потому",
+      "чтобы",
+      "что",
+      "хотя",
+      "который",
+      "которая",
+      "которое",
+      "которые"
+    ],
+    "max_subordinate_rate": 0.45,
+    "max_overlevel_lemma_rate": 0.3,
+    "max_forbidden_case_rate": 0.0,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 1.0,
+    "prompt_constraints": "Full case system. Participles, verbal adverbs, conditionals with бы, comparatives, indirect speech, and который-clauses are allowed. Calibrate vocabulary to B2; avoid rare C1+ literary syntax."
+  }
+}

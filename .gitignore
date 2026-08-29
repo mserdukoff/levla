@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+levla.db
+.env
+node_modules/
+.next/
+frontend/.next/
+frontend/node_modules/
+.DS_Store
+*.egg-info/
+dist/
+data/raw/
+

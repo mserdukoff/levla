@@ -1,0 +1,63 @@
+{
+  "language": "ja",
+  "levels": ["A1", "A2", "B1", "B2"],
+  "A1": {
+    "forbidden_constructions": [
+      "te_form",
+      "plain_past",
+      "plain_neg",
+      "te_iru",
+      "conditional",
+      "potential",
+      "causative",
+      "passive",
+      "relative",
+      "keigo"
+    ],
+    "forbidden_lemmas": ["ば", "たら", "なら", "ながら", "のに", "ように", "わけ", "はず", "べき"],
+    "max_overlevel_lemma_rate": 0.18,
+    "max_subordinate_rate": 0.0,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 1.0,
+    "max_forbidden_pos_rate": 0.05,
+    "prompt_constraints": "Use polite です/ます style only. Allowed particles: は, が, を, に, の, と, で, も. Simple noun and adjective sentences. Do NOT use て-form, plain past (た), plain negative (ない), ている, conditionals (ば/たら/なら), potential, causative, passive, relative clauses, or keigo. Keep kanji to very basic N5 characters; prefer kana when unsure."
+  },
+  "A2": {
+    "forbidden_constructions": [
+      "te_iru",
+      "conditional",
+      "potential",
+      "causative",
+      "passive",
+      "relative",
+      "keigo"
+    ],
+    "forbidden_lemmas": ["ば", "たら", "なら", "ながら", "のに", "ように", "わけ", "はず", "べき"],
+    "max_overlevel_lemma_rate": 0.2,
+    "max_subordinate_rate": 0.08,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 1.0,
+    "max_forbidden_pos_rate": 0.05,
+    "prompt_constraints": "です/ます is still the default. て-form, てください, plain past た, and plain negative ない are allowed. Time expressions and counters OK. Do NOT use ている aspect, conditionals (ば/たら/なら), potential られる/える, causative させる, passive られる, relative clauses (verb modifying a noun), or keigo."
+  },
+  "B1": {
+    "forbidden_constructions": ["passive", "keigo"],
+    "forbidden_lemmas": ["わけ", "はず", "べき"],
+    "max_overlevel_lemma_rate": 0.22,
+    "max_subordinate_rate": 0.28,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 1.0,
+    "max_forbidden_pos_rate": 0.08,
+    "prompt_constraints": "ている aspect, potential, causative, てあげる/もらう/くれる, and simple relative clauses are welcome. Conditionals ば/たら/なら OK. Do NOT use passive られる as a voice, and do NOT use keigo (いらっしゃる, おっしゃる, いたします, ございます, いただく as humble/honorific)."
+  },
+  "B2": {
+    "forbidden_constructions": [],
+    "forbidden_lemmas": [],
+    "max_overlevel_lemma_rate": 0.3,
+    "max_subordinate_rate": 0.45,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 1.0,
+    "max_forbidden_pos_rate": 1.0,
+    "prompt_constraints": "Passive, keigo (です/ます plus modest honorifics), auxiliary stacking, and N3-style conditionals are allowed. Calibrate vocabulary to B2 / N3–N2. Avoid classical 文語 and rare C1 literary patterns."
+  }
+}

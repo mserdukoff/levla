@@ -1,0 +1,112 @@
+from __future__ import annotations
+
+import re
+from functools import lru_cache
+
+from app.models.schemas import MorphInfo, Token
+from app.services.data import vocab_bands
+from app.services.kanji import breakdown
+
+_PUNCT_POS = {"補助記号", "空白"}
+_KATAKANA_START = 0x30A1
+_KATAKANA_END = 0x30F6
+_KATA_TO_HIRA = 0x60
+
+POS_EN = {
+    "名詞": "noun",
+    "動詞": "verb",
+    "形容詞": "i-adj",
+    "形状詞": "na-adj",
+    "副詞": "adverb",
+    "連体詞": "prenominal",
+    "助詞": "particle",
+    "助動詞": "aux",
+    "感動詞": "interjection",
+    "代名詞": "pronoun",
+    "接頭辞": "prefix",
+    "接尾辞": "suffix",
+    "接続詞": "conjunction",
+}
+
+CONTENT_POS_JA = {"名詞", "動詞", "形容詞", "形状詞", "副詞"}
+
+
+def kata_to_hira(text: str) -> str:
+    out = []
+    for ch in text:
+        cp = ord(ch)
+        if _KATAKANA_START <= cp <= _KATAKANA_END:
+            out.append(chr(cp - _KATA_TO_HIRA))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+@lru_cache(maxsize=1)
+def sudachi():
+    from sudachipy import dictionary, tokenizer
+
+    tok = dictionary.Dictionary().create()
+    mode = tokenizer.Tokenizer.SplitMode.C
+    return tok, mode
+
+
+def _pos_tuple(m) -> tuple[str, ...]:
+    return tuple(m.part_of_speech())
+
+
+def morph_from_sudachi(m) -> MorphInfo:
+    pos = _pos_tuple(m)
+    pos0 = pos[0] if pos else None
+    form = pos[5] if len(pos) > 5 and pos[5] not in {"*", ""} else None
+    reading = kata_to_hira(m.reading_form() or "")
+    lemma = m.dictionary_form() or m.surface()
+    surface = m.surface()
+    if reading == kata_to_hira(surface) or reading == lemma:
+        # still useful for kanji
+        if not re.search(r"[\u4e00-\u9faf]", surface):
+            reading = None
+    return MorphInfo(
+        lemma=lemma,
+        pos=POS_EN.get(pos0, pos0),
+        reading=reading or None,
+        form=form,
+    )
+
+
+def analyze_word_ja(word: str) -> MorphInfo:
+    tok, mode = sudachi()
+    ms = tok.tokenize(word, mode)
+    if not ms:
+        return MorphInfo(lemma=word)
+    return morph_from_sudachi(ms[0])
+
+
+def analyze_text_ja(text: str, language: str = "ja") -> list[Token]:
+    bands = vocab_bands(language)
+    tok, mode = sudachi()
+    ms = list(tok.tokenize(text, mode))
+    tokens: list[Token] = []
+    for i, m in enumerate(ms):
+        surface = m.surface()
+        end = m.end()
+        next_start = ms[i + 1].begin() if i + 1 < len(ms) else len(text)
+        trailing = text[end:next_start]
+        pos = _pos_tuple(m)
+        pos0 = pos[0] if pos else ""
+        if pos0 in _PUNCT_POS or not surface.strip():
+            tokens.append(Token(text=surface, ws=trailing, is_word=False))
+            continue
+        morph = morph_from_sudachi(m)
+        tokens.append(
+            Token(
+                text=surface,
+                ws=trailing,
+                is_word=True,
+                lemma=morph.lemma,
+                morph=morph,
+                level=bands.get(morph.lemma),
+                kanji=breakdown(surface, morph.reading),
+            )
+        )
+    return tokens

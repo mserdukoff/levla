@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f3eee4;
+  --paper-raised: #faf6ee;
+  --ink: #1b1712;
+  --rule: #d7cbb8;
+  --terracotta: #b84a2a;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-rule: var(--rule);
+  --color-terracotta: var(--terracotta);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-literata);
+  --font-reading: var(--font-literata);
+  --font-ja: var(--font-outfit);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display,
+.font-reading {
+  font-family: var(--font-literata), "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+}
+
+.font-ja {
+  font-family: var(--font-outfit), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--terracotta) 28%, transparent);
+}
