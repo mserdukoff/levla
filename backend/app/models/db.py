@@ -70,6 +70,22 @@ class LearnerLemmaRow(Base):
     )
 
 
+class LearnerStarRow(Base):
+    __tablename__ = "learner_stars"
+    __table_args__ = (UniqueConstraint("device_id", "language", "lemma"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(64), index=True)
+    language: Mapped[str] = mapped_column(String(8))
+    lemma: Mapped[str] = mapped_column(String(120))
+    gloss: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    passage_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class LearnerReadRow(Base):
     __tablename__ = "learner_reads"
     __table_args__ = (UniqueConstraint("device_id", "passage_id"),)

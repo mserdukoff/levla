@@ -7,6 +7,7 @@ import type {
   LibraryResponse,
   Passage,
   PassageStats,
+  StarredWord,
 } from "./types";
 
 async function readError(res: Response): Promise<string> {
@@ -101,3 +102,32 @@ export async function sendFeedback(
   }
   return res.json();
 }
+
+export async function starWord(body: {
+  lemma: string;
+  gloss?: string | null;
+  passage_id?: string | null;
+  language?: LangCode;
+}): Promise<StarredWord> {
+  const res = await fetch("/api/words", {
+    method: "POST",
+    headers: deviceHeaders(true),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+  return res.json();
+}
+
+export async function unstarWord(lemma: string, language: LangCode): Promise<void> {
+  const res = await fetch("/api/words", {
+    method: "DELETE",
+    headers: deviceHeaders(true),
+    body: JSON.stringify({ lemma, language }),
+  });
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+}
+

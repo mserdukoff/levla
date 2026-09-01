@@ -10,14 +10,15 @@ Per `(device_id, language)` Levla keeps:
 | ----- | ---- |
 | `learners` | Current CEFR placement (default **A2**). Unique on `(device_id, language)` |
 | `learner_lemmas` | Content-word lemmas seen after finishing a text. Unique on `(device_id, language, lemma)` |
+| `learner_stars` | Lemmas the learner saved from a gloss. Unique on `(device_id, language, lemma)` |
 | `learner_reads` | Passages already read. Unique on `(device_id, passage_id)` — language is implied by the passage |
-| `feedback` | Raw too-easy / too-hard events (not device-scoped) |
+| `feedback` | Raw too-easy / just-right / too-hard events (not device-scoped) |
 
-Reads and lemmas are written only in `complete_read` (the **Too easy / Too hard** path). Opening a passage does not mark it read and does not ingest lemmas.
+Reads and lemmas are written only in `complete_read` (the **Too easy / Just right / Too hard** path). Opening a passage does not mark it read and does not ingest lemmas. Starring a word does not ingest it into `learner_lemmas`.
 
 ## Placement
 
-`too_easy` moves one step up (cap **B2**). `too_hard` moves one step down (floor **A1**).
+`too_easy` moves one step up (cap **B2**). `too_hard` moves one step down (floor **A1**). `just_right` keeps the current band. All three ingest lemmas, mark the passage read, and pick next.
 
 ```
 A1 ⇄ A2 ⇄ B1 ⇄ B2
@@ -53,8 +54,8 @@ The recommended item is `next_id` and is highlighted as **Continue**. The reader
 
 ## What the model is not
 
-- Not spaced repetition. Lemmas are a set, not a schedule or strength.
-- Not click-based. Tapping a gloss does not add a lemma; finishing via feedback does.
+- Not spaced repetition. Lemmas are a set, not a schedule or strength. Saved Words are a list, not a review queue.
+- Not click-based for placement. Tapping a gloss does not add a lemma to `learner_lemmas`; finishing via feedback does. **Save** only writes `learner_stars`.
 - Not cross-device. Clearing site data is a full reset of client identity.
 - Not a proficiency exam. Placement is a one-step slider driven by self-report.
 

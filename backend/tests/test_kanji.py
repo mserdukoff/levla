@@ -51,3 +51,40 @@ def test_tokens_include_kanji_breakdown():
 def test_kana_only_has_no_kanji_parts():
     tok = _by_text("これは本です。", "これ")
     assert tok.kanji == []
+
+
+def test_hon_dictionary_details():
+    parts = breakdown("本", "ほん")
+    p = parts[0]
+    assert p.on == ["ホン"]
+    assert "もと" in p.kun
+    assert p.strokes == 5
+    assert p.jlpt == 5
+    assert p.grade == 1
+    assert p.freq == 10
+    assert p.radical == "木"
+    assert p.radical_name == "tree"
+    assert "一" in p.parts and "木" in p.parts
+    assert "book" in p.meaning
+    assert "origin" in p.meaning
+
+
+def test_go_on_kun_and_jlpt():
+    parts = breakdown("語", "ご")
+    p = parts[0]
+    assert p.reading == "ご"
+    assert p.on == ["ゴ"]
+    assert "かた.る" in p.kun
+    assert p.strokes == 14
+    assert p.jlpt == 5
+    assert p.grade == 2
+    assert p.radical == "言"
+    assert p.radical_name == "speech"
+    assert "口" in p.parts and "言" in p.parts
+
+
+def test_taberu_keeps_okurigana_on_kun():
+    parts = breakdown("食べる", "たべる")
+    assert parts[0].reading == "た"
+    assert "た.べる" in parts[0].kun
+    assert "ショク" in parts[0].on

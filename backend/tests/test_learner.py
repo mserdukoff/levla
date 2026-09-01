@@ -13,6 +13,7 @@ def test_bump_level_moves_one_step():
     assert bump_level("A2", "too_hard") == "A1"
     assert bump_level("A1", "too_hard") == "A1"
     assert bump_level("B2", "too_easy") == "B2"
+    assert bump_level("A2", "just_right") == "A2"
 
 
 def test_lemma_token_stats_counts_occurrences():
@@ -92,3 +93,50 @@ def test_pick_next_skips_read_at_same_level():
     complete_read(db, a.id, "too_hard", "test-device-2")
     nxt = pick_next_id(db, "ja", "A1", {a.id}, exclude_id=a.id)
     assert nxt == b.id
+
+
+def test_just_right_ingests_without_moving_level():
+    db = _session()
+    first = save_authored_passage(
+        db,
+        language="ja",
+        level="A2",
+        topic="home",
+        genre="daily_life",
+        title="私の朝",
+        text="私は学生です。これは本です。本は新しいです。",
+    )
+    result = complete_read(db, first.id, "just_right", "test-device-3")
+    assert result is not None
+    assert result["placement"] == "A2"
+    assert result["new_lemmas"] > 0
+    library = list_library(db, "ja", "test-device-3")
+    assert library.placement == "A2"
+    read = next(item for item in library.items if item.id == first.id)
+    assert read.read
+    assert library.seen_lemmas > 0
+
+
+def test_star_and_unstar_lemma():
+    from app.services.learner import list_stars, star_lemma, unstar_lemma
+
+    db = _session()
+    passage = save_authored_passage(
+        db,
+        language="ja",
+        level="A1",
+        topic="table",
+        genre="daily_life",
+        title="これは本です",
+        text="これは本です。本は新しいです。",
+    )
+    word = star_lemma(db, "test-device-4", "ja", "本", "book", passage.id)
+    assert word.lemma == "本"
+    assert word.gloss == "book"
+    assert word.title == "これは本です"
+    listed = list_stars(db, "test-device-4", "ja")
+    assert [w.lemma for w in listed] == ["本"]
+    star_lemma(db, "test-device-4", "ja", "本", "book", passage.id)
+    assert len(list_stars(db, "test-device-4", "ja")) == 1
+    assert unstar_lemma(db, "test-device-4", "ja", "本")
+    assert list_stars(db, "test-device-4", "ja") == []

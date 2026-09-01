@@ -92,8 +92,12 @@ def analyze_text(text: str, language: str = "ru") -> list[Token]:
     if language == "ja":
         from app.services.morph_ja import analyze_text_ja
 
-        return analyze_text_ja(text, language)
-    return analyze_text_ru(text, language)
+        tokens = analyze_text_ja(text, language)
+    else:
+        tokens = analyze_text_ru(text, language)
+    from app.services.grammar import attach_grammar
+
+    return attach_grammar(tokens, language)
 
 
 def word_count(tokens: list[Token]) -> int:

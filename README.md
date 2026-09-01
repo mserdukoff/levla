@@ -2,7 +2,7 @@
 
 CEFR-calibrated graded readers for **Russian** and **Japanese**.
 
-Levla generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text you mark it **too easy** or **too hard**. That updates your placement, records the lemmas you just saw, and picks the next unread passage.
+Levla generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text you mark it **too easy**, **just right**, or **too hard**. That updates your placement (or leaves it), records the lemmas you just saw, and picks the next unread passage.
 
 The product claim is not “an LLM wrote some Japanese.” It is: **grammar and vocabulary are constrained in the prompt, then checked by a morphological analyzer, then used to drive a learner model.**
 
@@ -42,7 +42,7 @@ Asking a model to “write B1 Russian” or “write A1 Japanese” is not enoug
 4. A failing draft is rewritten with those flags. The closer attempt is kept.
 5. The reader still shows a warning if the text is a soft fail.
 
-The reading UI is built around that analysis: every word already has lemma, POS, gloss, CEFR band, and kanji parts attached before it hits the page.
+The reading UI is built around that analysis: every word already has lemma, POS, gloss, CEFR band, grammar role, verb-suffix pieces, and kanji parts attached before it hits the page.
 
 ---
 
@@ -61,10 +61,13 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 - Read the passage as clickable words. Tap a word for:
   - surface form, lemma, CEFR band
   - Russian: case, gender, number, tense, aspect, mood
-  - Japanese: reading (hiragana), kanji breakdown with on/kun and English meanings
+  - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown, kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, and parts
   - English gloss
-- Reveal a full **English** translation (stored on the passage, or generated on demand).
-- Mark the text **too easy** or **too hard**. Placement moves one CEFR step, lemmas are ingested, and you get a **Read next** link.
+- Optionally colour grammar (particles, verbs, endings, adjectives). Off by default.
+- Optionally furigana over kanji (Japanese), and fade already-seen content words.
+- Save a lemma from the gloss; it appears on a **Words** list on the shelf.
+- Reveal a full **English** translation, or **this sentence** only.
+- Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps it. All three ingest lemmas and give you **Read next**.
 
 **Seeded library**
 
@@ -128,7 +131,9 @@ Lexicon lookup (`data/gloss/{ru,ja}_en.json`). Unknown lemmas in generated text 
 
 **Kanji** (`backend/app/services/kanji.py`)
 
-For each kanji in a word, Levla tries to consume a prefix of the word reading using on/kun candidates (including voiced, handakuten, and sokuon variants). Each part carries the matched reading, on/kun lists, and up to three English meanings from `data/kanji/ja.json` (~13k characters).
+For each kanji in a word, Levla tries to consume a prefix of the word reading using on/kun candidates (including voiced, handakuten, and sokuon variants). Each part carries the matched reading, on (katakana) / kun (okurigana dots), English meanings, stroke count, JLPT N-level, school grade, newspaper frequency, Kangxi radical, and KRADFILE parts from `data/kanji/ja.json` (~13k characters, built from KANJIDIC2). Stored passages are re-aligned on read so the extra fields show up without regenerating text.
+
+Jisho.org has no kanji API (its public endpoint is word search only). The lexicon is the same EDRDG data Jisho is built on, bundled locally.
 
 ---
 
@@ -186,10 +191,11 @@ Per `(device_id, language)` Levla keeps:
 | ----- | ---- |
 | `learners` | Current CEFR placement (default **A2**) |
 | `learner_lemmas` | Content-word lemmas seen after finishing a text |
+| `learner_stars` | Lemmas saved from the gloss |
 | `learner_reads` | Passages already read |
-| `feedback` | Raw too-easy / too-hard events |
+| `feedback` | Raw too-easy / just-right / too-hard events |
 
-**Placement.** `too_easy` moves one step up (cap B2). `too_hard` moves one step down (floor A1).
+**Placement.** `too_easy` moves one step up (cap B2). `too_hard` moves one step down (floor A1). `just_right` keeps the current band.
 
 **New vs. known.** Content POS only:
 
@@ -245,7 +251,8 @@ levla/
 │   │       ├── validator.py        # Russian CEFR + ja dispatch
 │   │       ├── validator_ja.py     # Japanese constructions
 │   │       ├── gloss.py            # lexicon + LLM fill
-│   │       ├── kanji.py            # reading alignment
+│   │       ├── kanji.py            # reading alignment + KANJIDIC2 details
+│   │       ├── grammar.py          # colour roles + Japanese verb suffixes
 │   │       ├── learner.py          # placement, lemmas, next-id
 │   │       ├── library.py          # shelf payload
 │   │       ├── data.py             # load grammar / vocab / gloss JSON
@@ -268,7 +275,8 @@ levla/
 │   └── kanji/ja.json
 ├── scripts/
 │   ├── build_lexicon.py            # Russian vocab + gloss
-│   └── build_ja_lexicon.py         # Japanese vocab + gloss
+│   ├── build_ja_lexicon.py         # Japanese vocab + gloss
+│   └── build_kanji.py              # KANJIDIC2 + KRADFILE + JLPT → ja.json
 └── docker-compose.yml
 ```
 
@@ -284,11 +292,11 @@ levla/
 | `data/gloss/ja_en.json` | ~500 | Short English glosses, keyed to Sudachi dictionary form. |
 | `data/grammar/ru_cefr.json` | 4 levels | Allowed cases/tenses, forbidden POS/conjunctions, rate caps, prompt text. |
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text. |
-| `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings. |
+| `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts. |
 
-Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese is a curated N5–N3-ish core, not JLPT official lists.
+Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese vocab is a curated N5–N3-ish core, not JLPT official lists. Kanji JLPT tags on the gloss card come from [kanjiapi.dev](https://kanjiapi.dev/) (Jonathan Waller’s lists); readings, meanings, strokes, grade, frequency, and radicals come from [KANJIDIC2](https://www.edrdg.org/wiki/KANJIDIC_Project.html) and [KRADFILE](https://www.edrdg.org/krad/kradinf.html), used under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html).
 
-`data/raw/` is gitignored. `scripts/build_lexicon.py` expects `data/raw/ru_50k.txt` if you rebuild Russian from frequency.
+`data/raw/` is gitignored. `scripts/build_lexicon.py` expects `data/raw/ru_50k.txt` if you rebuild Russian from frequency. `scripts/build_kanji.py` downloads KANJIDIC2, KRADFILE, and JLPT lists into `data/raw/` then writes `data/kanji/ja.json`.
 
 ---
 
@@ -303,9 +311,12 @@ Base path: `/api`. OpenAPI is at `http://localhost:8000/docs` when the backend i
 | `GET` | `/library?language=ja\|ru` | header `X-Device-Id` | Placement, seen lemma count, `next_id`, items with new/known/read/recommended. |
 | `GET` | `/passages/{id}` | | Full passage: text, tokens, calibration, optional translation. |
 | `GET` | `/passages/{id}/translation` | | Returns stored English or generates and stores it. 503 if still unavailable. |
-| `GET` | `/passages/{id}/stats` | header `X-Device-Id` | Placement, read flag, new/recycled counts, `next_id`. |
+| `GET` | `/passages/{id}/stats` | header `X-Device-Id` | Placement, read flag, new/recycled counts, `next_id`, `known_lemmas`, `starred_lemmas`. |
 | `POST` | `/gloss` | `{ word, passage_id? }` | Prefers the passage token; else live analyze + lexicon. |
-| `POST` | `/feedback` | `{ passage_id, rating }` + `X-Device-Id` | `too_easy` \| `too_hard`. Ingests lemmas, bumps level, returns next id. |
+| `POST` | `/feedback` | `{ passage_id, rating }` + `X-Device-Id` | `too_easy` \| `just_right` \| `too_hard`. Ingests lemmas, bumps level (except just_right), returns next id. |
+| `GET` | `/words?language=ja\|ru` | header `X-Device-Id` | Starred lemmas for the Words list. |
+| `POST` | `/words` | `{ lemma, gloss?, passage_id?, language? }` + `X-Device-Id` | Save a lemma from the gloss. |
+| `DELETE` | `/words` | `{ lemma, language }` + `X-Device-Id` | Remove a starred lemma. |
 
 **Generate request**
 
@@ -332,8 +343,8 @@ Base path: `/api`. OpenAPI is at `http://localhost:8000/docs` when the backend i
   "gloss": "market",
   "level": "A2",
   "kanji": [
-    { "char": "市", "reading": "し", "on": ["し"], "kun": ["いち"], "meaning": "market, city, town" },
-    { "char": "場", "reading": "じょう", "on": ["じょう"], "kun": ["ば"], "meaning": "location, place" }
+    { "char": "市", "reading": "し", "on": ["シ"], "kun": ["いち"], "meaning": "market, city, town", "strokes": 5, "jlpt": 3, "grade": 2, "freq": 42, "radical": "巾", "radical_name": "turban", "parts": ["巾", "亠"], "nanori": ["い", "ち"] },
+    { "char": "場", "reading": "じょう", "on": ["ジョウ", "チョウ"], "kun": ["ば"], "meaning": "location, place", "strokes": 12, "jlpt": 4, "grade": 2, "freq": 52, "radical": "土", "radical_name": "earth", "parts": ["土", "日", "勿"], "nanori": [] }
   ]
 }
 ```
@@ -425,8 +436,10 @@ pytest
 | ---- | ------ |
 | `tests/test_validator.py` | Russian lemmas/cases; A1 rejects past, accusative, *если*; A2 allows acc, rejects instrumental |
 | `tests/test_validator_ja.py` | です/ます A1; て-form A1 vs A2; ている A2 vs B1; keigo B1 vs B2; core gloss |
-| `tests/test_kanji.py` | Reading alignment: 市場, 学生, 食べる, 本 |
-| `tests/test_learner.py` | Placement bump, new/known counts, next-id skip of already-read |
+| `tests/test_kanji.py` | Reading alignment: 市場, 学生, 食べる, 本; dictionary fields on 本 / 語 |
+| `tests/test_grammar.py` | は/が/を roles; 食べました / 食べる / て-いる / 行かない chains; Russian verb vs preposition |
+| `tests/test_learner.py` | Placement bump, just-right no bump, new/known counts, next-id skip of already-read, star/unstar |
+| `tests/test_sentences.py` | Japanese sentence index on 。; English split on `. ` |
 | `tests/test_translation.py` | Every seed title has a non-empty English translation; persist path stores it |
 
 Tests do **not** call OpenRouter. Gloss attach in tests uses `use_llm=False`.
@@ -440,6 +453,9 @@ Only needed if you change the pedagogical lists in the scripts.
 ```bash
 # Japanese: writes data/vocab/ja_cefr.json and data/gloss/ja_en.json
 python3 scripts/build_ja_lexicon.py
+
+# Kanji: KANJIDIC2 + KRADFILE + JLPT lists → data/kanji/ja.json
+python3 scripts/build_kanji.py
 
 # Russian: needs pymorphy3 and optionally data/raw/ru_50k.txt
 python3 scripts/build_lexicon.py

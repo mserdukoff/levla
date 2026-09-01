@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 CefrLevel = Literal["A1", "A2", "B1", "B2"]
 LangCode = Literal["ru", "ja"]
-FeedbackRating = Literal["too_easy", "too_hard"]
+FeedbackRating = Literal["too_easy", "too_hard", "just_right"]
 GENRES = ("daily_life", "travel", "news", "folklore", "work")
 
 
@@ -42,12 +42,33 @@ class LibraryItem(BaseModel):
     recycled_lemmas: int = 0
 
 
+class StarredWord(BaseModel):
+    lemma: str
+    gloss: str | None = None
+    passage_id: str | None = None
+    title: str | None = None
+    language: LangCode
+
+
+class StarRequest(BaseModel):
+    lemma: str = Field(..., min_length=1, max_length=120)
+    gloss: str | None = Field(default=None, max_length=200)
+    passage_id: str | None = None
+    language: LangCode | None = None
+
+
+class UnstarRequest(BaseModel):
+    lemma: str = Field(..., min_length=1, max_length=120)
+    language: LangCode
+
+
 class LibraryResponse(BaseModel):
     language: LangCode
     placement: CefrLevel
     next_id: str | None = None
     seen_lemmas: int = 0
     items: list[LibraryItem]
+    words: list[StarredWord] = []
 
 
 class PassageStats(BaseModel):
@@ -58,6 +79,8 @@ class PassageStats(BaseModel):
     new_lemmas: int = 0
     recycled_lemmas: int = 0
     next_id: str | None = None
+    known_lemmas: list[str] = []
+    starred_lemmas: list[str] = []
 
 
 class KanjiPart(BaseModel):
@@ -66,6 +89,14 @@ class KanjiPart(BaseModel):
     on: list[str] = []
     kun: list[str] = []
     meaning: str = ""
+    strokes: int | None = None
+    jlpt: int | None = None
+    grade: int | None = None
+    freq: int | None = None
+    radical: str | None = None
+    radical_name: str | None = None
+    parts: list[str] = []
+    nanori: list[str] = []
 
 
 class MorphInfo(BaseModel):
@@ -79,6 +110,13 @@ class MorphInfo(BaseModel):
     mood: str | None = None
     reading: str | None = None
     form: str | None = None
+    pos_detail: str | None = None
+    conj_type: str | None = None
+
+
+class ConjPiece(BaseModel):
+    text: str
+    label: str
 
 
 class Token(BaseModel):
@@ -90,6 +128,9 @@ class Token(BaseModel):
     gloss: str | None = None
     level: str | None = None
     kanji: list[KanjiPart] = []
+    role: str | None = None
+    conj: list[ConjPiece] = []
+    conj_id: int | None = None
 
 
 class Calibration(BaseModel):
@@ -126,6 +167,8 @@ class GlossResponse(BaseModel):
     gloss: str | None
     level: str | None
     kanji: list[KanjiPart] = []
+    role: str | None = None
+    conj: list[ConjPiece] = []
 
 
 class TranslationResponse(BaseModel):

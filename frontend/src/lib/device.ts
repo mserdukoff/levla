@@ -22,6 +22,42 @@ export function saveLanguage(language: "ru" | "ja"): void {
   window.localStorage.setItem(LANG_KEY, language);
 }
 
+const GRAMMAR_KEY = "levla.grammar";
+
+export function loadGrammarColors(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(GRAMMAR_KEY) === "1";
+}
+
+export function saveGrammarColors(on: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(GRAMMAR_KEY, on ? "1" : "0");
+}
+
+const FURIGANA_KEY = "levla.furigana";
+
+export function loadFurigana(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(FURIGANA_KEY) === "1";
+}
+
+export function saveFurigana(on: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(FURIGANA_KEY, on ? "1" : "0");
+}
+
+const FADE_KEY = "levla.fade";
+
+export function loadFadeKnown(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(FADE_KEY) === "1";
+}
+
+export function saveFadeKnown(on: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(FADE_KEY, on ? "1" : "0");
+}
+
 export function deviceHeaders(json = false): HeadersInit {
   const headers: Record<string, string> = {
     "X-Device-Id": getDeviceId(),

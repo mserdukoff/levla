@@ -10,8 +10,8 @@ export default function HomePage() {
         Levla
       </h1>
       <p className="mt-4 max-w-md text-lg leading-relaxed text-ink/70">
-        Graded readers at a real CEFR level. Pick a text. Too easy or too hard
-        moves the next one.
+        Graded readers at a real CEFR level. Pick a text. Too easy, just right,
+        or too hard decides the next one.
       </p>
       <div className="mt-12">
         <Shelf />

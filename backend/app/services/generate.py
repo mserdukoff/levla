@@ -29,9 +29,12 @@ def _to_response(row: PassageRow) -> PassageResponse:
         from app.services.kanji import breakdown
 
         for tok in tokens:
-            if tok.is_word and not tok.kanji:
+            if tok.is_word:
                 reading = tok.morph.reading if tok.morph else None
                 tok.kanji = breakdown(tok.text, reading)
+    from app.services.grammar import attach_grammar
+
+    attach_grammar(tokens, language)
     calibration = Calibration.model_validate(json.loads(row.calibration_json))
     created = row.created_at
     if created.tzinfo is None:

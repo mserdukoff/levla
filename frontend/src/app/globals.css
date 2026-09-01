@@ -6,6 +6,14 @@
   --ink: #1b1712;
   --rule: #d7cbb8;
   --terracotta: #b84a2a;
+  --g-topic: #b84a2a;
+  --g-subject: #2c6b73;
+  --g-object: #8b5420;
+  --g-particle: #3f4a28;
+  --g-verb: #3d3a78;
+  --g-aux: #7a3d5c;
+  --g-adj: #2a5a45;
+  --g-adverb: #6a5340;
 }
 
 @theme inline {
@@ -14,6 +22,14 @@
   --color-ink: var(--ink);
   --color-rule: var(--rule);
   --color-terracotta: var(--terracotta);
+  --color-g-topic: var(--g-topic);
+  --color-g-subject: var(--g-subject);
+  --color-g-object: var(--g-object);
+  --color-g-particle: var(--g-particle);
+  --color-g-verb: var(--g-verb);
+  --color-g-aux: var(--g-aux);
+  --color-g-adj: var(--g-adj);
+  --color-g-adverb: var(--g-adverb);
   --font-sans: var(--font-outfit);
   --font-display: var(--font-literata);
   --font-reading: var(--font-literata);
@@ -39,6 +55,17 @@ body {
 .font-ja {
   font-family: var(--font-outfit), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
     "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+}
+
+article ruby {
+  ruby-position: over;
+}
+
+article rt {
+  font-size: 0.45em;
+  font-weight: 400;
+  line-height: 1;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
 ::selection {

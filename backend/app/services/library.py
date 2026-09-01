@@ -9,6 +9,7 @@ from app.services.learner import (
     calibration_passed,
     get_learner,
     lemma_token_stats,
+    list_stars,
     pick_next_id,
     read_ids,
     seen_lemmas,
@@ -73,4 +74,5 @@ def list_library(
         next_id=next_id,
         seen_lemmas=len(seen),
         items=items,
+        words=list_stars(db, device_id, language) if device_id else [],
     )

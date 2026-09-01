@@ -28,6 +28,17 @@ POS_EN = {
     "接続詞": "conjunction",
 }
 
+POS1_EN = {
+    "係助詞": "binding",
+    "格助詞": "case",
+    "接続助詞": "conjunctive",
+    "終助詞": "final",
+    "副助詞": "adverbial",
+    "準体助詞": "nominal",
+    "非自立可能": "bound",
+    "助動詞語幹": "aux-stem",
+}
+
 CONTENT_POS_JA = {"名詞", "動詞", "形容詞", "形状詞", "副詞"}
 
 
@@ -55,6 +66,31 @@ def _pos_tuple(m) -> tuple[str, ...]:
     return tuple(m.part_of_speech())
 
 
+def _pos_detail(pos: tuple[str, ...]) -> str | None:
+    if len(pos) < 2 or pos[1] in {"*", ""}:
+        return None
+    return POS1_EN.get(pos[1], pos[1])
+
+
+def _conj_type(pos: tuple[str, ...]) -> str | None:
+    if len(pos) < 5 or pos[4] in {"*", ""}:
+        return None
+    raw = pos[4]
+    if raw.startswith("五段"):
+        return "godan"
+    if "一段" in raw:
+        return "ichidan"
+    if "サ行変格" in raw:
+        return "sahen"
+    if "カ行変格" in raw:
+        return "kahen"
+    if raw == "形容詞":
+        return "i-adj"
+    if raw.startswith("助動詞"):
+        return "aux"
+    return raw
+
+
 def morph_from_sudachi(m) -> MorphInfo:
     pos = _pos_tuple(m)
     pos0 = pos[0] if pos else None
@@ -71,6 +107,8 @@ def morph_from_sudachi(m) -> MorphInfo:
         pos=POS_EN.get(pos0, pos0),
         reading=reading or None,
         form=form,
+        pos_detail=_pos_detail(pos),
+        conj_type=_conj_type(pos),
     )
 
 

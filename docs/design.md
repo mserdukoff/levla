@@ -28,6 +28,19 @@ CSS custom properties on `:root`, also registered as Tailwind theme colors (`bg-
 | `--rule` | `#d7cbb8` | Borders, skeleton bars, hairlines |
 | `--terracotta` | `#b84a2a` | Brand kicker, selected genre chips, errors, 404 link, text selection |
 
+Optional **grammar-colour** inks, used only when the reader Grammar toggle is on. They are pedagogical overlays, not brand accents. Nouns stay `--ink`.
+
+| Token | Hex | Role |
+| --- | --- | --- |
+| `--g-topic` | `#b84a2a` | は (topic); same ink as terracotta |
+| `--g-subject` | `#2c6b73` | が (subject) |
+| `--g-object` | `#8b5420` | を (object) |
+| `--g-particle` | `#3f4a28` | other particles; Russian prepositions |
+| `--g-verb` | `#3d3a78` | verbs |
+| `--g-aux` | `#7a3d5c` | endings (ます / た / て / です) |
+| `--g-adj` | `#2a5a45` | adjectives |
+| `--g-adverb` | `#6a5340` | adverbs |
+
 Derived states (Tailwind opacity modifiers, not extra tokens):
 
 | Use | Recipe |
@@ -149,7 +162,13 @@ On success, `router.push(/passage/{id})`. The button stays disabled (`cursor-wai
 
 Header: **← Shelf** left; pill right with `{level} · {n} words · {n} new · {n} known`.
 
-Title, topic, **English** / **Hide English** underline button.
+Title, topic, underline buttons on one wrapping row: **English**, **Sentence**, **Grammar**, **Furigana** (Japanese only), **Known**. All optional overlays except English/Sentence which reveal translation. Grammar / Furigana / Known persist (`levla.grammar`, `levla.furigana`, `levla.fade`). English and Sentence are mutually exclusive.
+
+Grammar off is the default (ink on paper). On: coloured function words plus a compact legend (は topic, が subject, を object, particle, verb, ending, adjective).
+
+Furigana: ruby over kanji that have a token reading. Article line-height increases to `leading-[2.35]`.
+
+Known: content-word lemmas already in `learner_lemmas` fade to `text-ink/40` (or 40% opacity when grammar colours are on). Particles and a first-ever shelf (empty seen-set) do not fade.
 
 Article: each `is_word` token is a button. Idle: faint underline. Hover: stronger underline + ink wash. Selected: terracotta wash, underline off. Non-word tokens (punctuation, Japanese 補助記号) render as plain text. Trailing whitespace lives on `token.ws` so Japanese has no extra spaces.
 
@@ -157,10 +176,12 @@ If calibration `warnings` exist, they print below the article in `text-xs text-i
 
 **English block** (when revealed): top rule, then translation in Literata. Loading / error states are one line.
 
+**Sentence block** (when revealed): top rule. If no word is selected, “Tap a word to see that sentence in English.” If a word is selected, that sentence’s English only. Japanese/Russian sentences split on `。！？` / `.!?`; English on `.!?` plus space. Paired by index.
+
 **Sticky bottom** — two mutually exclusive modes:
 
-1. **No word selected:** feedback bar. “Was this {level} passage…” (desktop) / “This passage was” (mobile). Pills **Too easy** / **Too hard**. After save, a status line plus **Read next**. The selected pill fills ink. Sending disables both.
-2. **Word selected:** gloss sheet. Mobile: full-bleed bottom sheet with top rule. `sm+`: floating card centered, `min(24rem, calc(100%-2rem))`, 8px off the bottom, rounded, bordered. Max height `50vh` with overflow scroll. **Close** dismisses (tapping the same word also toggles off).
+1. **No word selected:** feedback bar. “Was this {level} passage…” (desktop) / “This passage was” (mobile). Pills **Too easy** / **Just right** / **Too hard**. After save, a status line plus **Read next**. The selected pill fills ink. Sending disables all three.
+2. **Word selected:** gloss sheet. Mobile: full-bleed bottom sheet with top rule. `sm+`: floating card centered, `min(24rem, calc(100%-2rem))`, 8px off the bottom, rounded, bordered. Max height `60vh` with overflow scroll. **Close** dismisses (tapping the same word also toggles off). **Save** / **Saved** under the gloss marks the lemma on the shelf Words list.
 
 The feedback bar is hidden while a gloss is open so the two do not stack.
 
@@ -177,15 +198,18 @@ Three static rule-colored bars approximating title + body. No spinner.
 1. Surface form (2xl)
 2. Reading, if any (Japanese hiragana)
 3. Lemma (if different from surface) + CEFR band
-4. Russian morph line only (`aspect · tense · imperative · case · gender · number · pos`) — Japanese skips this
-5. English gloss, or “No gloss for this lemma yet.”
-6. Kanji list, each row: character (xl) · matched reading · up to three meanings
+4. Russian morph line (`aspect · tense · imperative · case · gender · number · pos`) or Japanese grammar line (`topic marker`, `verb`, `case particle`, …)
+5. Japanese verb-suffix row, when the token is part of a chain of two or more pieces (`食べ` stem · `まし` polite · `た` past). Stem uses verb ink; endings use aux ink.
+6. English gloss, or “No gloss for this lemma yet.”
+7. **Save** / **Saved** (lemma only)
+8. Kanji list, each row: character · reading used in this word · all English meanings · on (katakana) / kun (okurigana dots, first six if the list is long) · N-level, grade, strokes, newspaper freq · radical + KRADFILE parts · name readings (first six)
+   Max height `60vh` with overflow scroll.
 
-`morphLine` in `types.ts` hides POS when a case is present (case already implies a declined form). Mood `impr` is labeled “imperative”.
+`morphLine` in `types.ts` hides POS when a case is present (case already implies a declined form). Mood `impr` is labeled “imperative”. `jaGrammarLine` maps `role` to a short English label (topic marker, case particle, …).
 
 ## Interaction rules
 
-- Language preference persists in `localStorage` (`levla.language`). Device UUID (`levla.device_id`) is created on first client render.
+- Language preference persists in `localStorage` (`levla.language`). Grammar colours persist as `levla.grammar` (`1` / `0`). Furigana as `levla.furigana`. Fade known as `levla.fade`. Device UUID (`levla.device_id`) is created on first client render.
 - Shelf fetch aborts on language change (`AbortController`).
 - Feedback is one-shot in the UI: after a rating, that button stays selected and both stay disabled. Reloading the page does not restore the selected pill (no “already rated” fetch).
 - English starts from `passage.translation` if present; otherwise the first reveal hits `/translation` and caches the string in component state.
@@ -206,4 +230,4 @@ Three static rule-colored bars approximating title + body. No spinner.
 - A second typeface beyond Outfit + Literata + system Gothic.
 - A generate page that is not the restock disclosure.
 
-The terracotta + paper palette and the inverted Continue card are the visual signature. Keep them.
+The terracotta + paper palette and the inverted Continue card are the visual signature. Keep them. Grammar colours are an opt-in overlay of muted inks; they must not become a third brand accent on the shelf or chrome.

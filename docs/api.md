@@ -8,7 +8,7 @@ The Next.js origin proxies `/api/*` to the backend. Passage SSR bypasses the rew
 
 | Header | Used by | Notes |
 | ------ | ------- | ----- |
-| `X-Device-Id` | `GET /library`, `GET /passages/{id}/stats`, `POST /feedback`, `POST /generate` (sent by the client; generate does not read it) | Must match `^[A-Za-z0-9_-]{8,64}$`. Invalid or missing → treated as anonymous (default placement A2, no lemma/read history). The browser stores a UUID in `localStorage` as `levla.device_id`. |
+| `X-Device-Id` | `GET /library`, `GET /passages/{id}/stats`, `POST /feedback`, `GET/POST/DELETE /words`, `POST /generate` (sent by the client; generate does not read it) | Must match `^[A-Za-z0-9_-]{8,64}$`. Invalid or missing → treated as anonymous (default placement A2, no lemma/read history). The browser stores a UUID in `localStorage` as `levla.device_id`. |
 | `Content-Type: application/json` | POST bodies | |
 
 CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`).
@@ -25,6 +25,9 @@ CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`
 | `GET` | `/passages/{id}/stats` | `X-Device-Id` | `PassageStats` |
 | `POST` | `/gloss` | `{ word, passage_id? }` | `GlossResponse` |
 | `POST` | `/feedback` | `{ passage_id, rating }` + `X-Device-Id` | `FeedbackResponse` |
+| `GET` | `/words?language=ja\|ru` | `X-Device-Id` | `StarredWord[]` |
+| `POST` | `/words` | `{ lemma, gloss?, passage_id?, language? }` + `X-Device-Id` | `StarredWord` |
+| `DELETE` | `/words` | `{ lemma, language }` + `X-Device-Id` | `{ "ok": true }` |
 
 `GET /library` defaults `language` to `ja` if omitted. `POST /generate` defaults `language` to `ru` if omitted (the UI always sends a language; the shelf defaults to Japanese).
 
@@ -101,24 +104,45 @@ What the reader clicks.
     "aspect": null,
     "mood": null,
     "reading": "しじょう",
-    "form": null
+    "form": null,
+    "pos_detail": null,
+    "conj_type": null
   },
   "gloss": "market",
   "level": "A2",
+  "role": null,
+  "conj": [],
+  "conj_id": null,
   "kanji": [
     {
       "char": "市",
       "reading": "し",
-      "on": ["し"],
+      "on": ["シ"],
       "kun": ["いち"],
-      "meaning": "market, city, town"
+      "meaning": "market, city, town",
+      "strokes": 5,
+      "jlpt": 3,
+      "grade": 2,
+      "freq": 42,
+      "radical": "巾",
+      "radical_name": "turban",
+      "parts": ["巾", "亠"],
+      "nanori": ["い", "ち"]
     },
     {
       "char": "場",
       "reading": "じょう",
-      "on": ["じょう"],
+      "on": ["ジョウ", "チョウ"],
       "kun": ["ば"],
-      "meaning": "location, place"
+      "meaning": "location, place",
+      "strokes": 12,
+      "jlpt": 4,
+      "grade": 2,
+      "freq": 52,
+      "radical": "土",
+      "radical_name": "earth",
+      "parts": ["土", "日", "勿"],
+      "nanori": []
     }
   ]
 }
@@ -128,9 +152,15 @@ Whitespace (or the next Japanese morpheme, including particles that Sudachi spli
 
 `is_word` is false for punctuation and Japanese 補助記号 / 空白.
 
-Russian `morph.pos` uses pymorphy tags (`NOUN`, `VERB`, `ADJF`, …). Japanese POS is mapped to English labels (`noun`, `verb`, `i-adj`, `particle`, `aux`, …). Japanese `form` is Sudachi inflection (e.g. `連体形`, `仮定形`).
+Russian `morph.pos` uses pymorphy tags (`NOUN`, `VERB`, `ADJF`, …). Japanese POS is mapped to English labels (`noun`, `verb`, `i-adj`, `particle`, `aux`, …). Japanese `form` is Sudachi inflection (e.g. `連体形`, `仮定形`). Japanese `pos_detail` is the Sudachi POS-1 slot (`binding`, `case`, `conjunctive`, `final`, `bound`, …). `conj_type` is a simplified conjugation class (`godan`, `ichidan`, `sahen`, `kahen`, `i-adj`, `aux`).
+
+`role` is the reader colour class, filled on every passage read: `topic` (は), `subject` (が), `object` (を), `particle`, `verb`, `aux`, `adj`, `adverb`. Nouns and pronouns stay `null` (ink).
+
+`conj` is a Japanese verb/adjective suffix breakdown (`[{ "text": "食べ", "label": "stem" }, { "text": "まし", "label": "polite" }, { "text": "た", "label": "past" }]`). Copied onto every token in the chain. `conj_id` is the index of the head token, or `null`. Recomputed on read (like kanji), so older stored passages pick it up.
 
 `level` is the lexicon band for the lemma, or `null` if unknown.
+
+Japanese `kanji` parts are filled from the local KANJIDIC2 lexicon on every passage read (so older stored tokens pick up new fields). `on` is katakana; `kun` keeps KANJIDIC okurigana dots (`た.べる`). `jlpt` is the modern N-level (5 = N5). `grade` is 1–6 (kyōiku), 8 (remaining jōyō / junior high), or 9–10 (jinmeiyō). `freq` is the newspaper rank among the 2,500 most common characters. `radical` / `radical_name` are the Kangxi classifier; `parts` are KRADFILE components.
 
 ### Calibration
 
@@ -186,13 +216,15 @@ Soft-fail passages are still readable. The reader concatenates `warnings` under 
 
 `seen_lemmas` is unique lemmas stored for this device + language.
 
+`words` is the saved-lemma list for this device + language (`[]` if anonymous): `{ lemma, gloss, passage_id, title, language }`, newest first.
+
 ## Passage stats
 
-Subset used by the reader header and “read next” before feedback:
+Subset used by the reader header, fade-known, starring, and “read next” before feedback:
 
-`{ passage_id, language, placement, read, new_lemmas, recycled_lemmas, next_id }`
+`{ passage_id, language, placement, read, new_lemmas, recycled_lemmas, next_id, known_lemmas, starred_lemmas }`
 
-`next_id` excludes the current passage.
+`next_id` excludes the current passage. `known_lemmas` is the full seen-lemma set for fade. `starred_lemmas` is lemma strings currently on the Words list.
 
 ## Translation
 
@@ -214,7 +246,7 @@ The reader does **not** call `/gloss` today; it uses tokens already on the passa
 { "passage_id": "…", "rating": "too_easy" }
 ```
 
-`rating` is `too_easy` | `too_hard`.
+`rating` is `too_easy` | `just_right` | `too_hard`. Just right ingests lemmas and marks read but does not move placement.
 
 ```json
 {
@@ -229,3 +261,10 @@ The reader does **not** call `/gloss` today; it uses tokens already on the passa
 ```
 
 Without a valid `X-Device-Id`, `placement` and `next_id` are null and lemma counts stay 0, but the anonymous `feedback` row is still written.
+
+## Words
+
+Saved lemmas from the gloss **Save** control. Requires a valid `X-Device-Id`. Not SRS.
+
+`POST /words` `{ lemma, gloss?, passage_id?, language? }`. If `passage_id` is set, language is taken from that passage. Saving the same lemma again updates gloss / passage. `DELETE /words` `{ lemma, language }`. `GET /words?language=` returns the same list as `library.words`.
+

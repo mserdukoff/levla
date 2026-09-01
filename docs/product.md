@@ -4,7 +4,7 @@
 
 Levla is a **CEFR-calibrated graded reader** for **Russian** and **Japanese** (A1–B2).
 
-It generates and serves short reading passages at a checkable CEFR band, then lets the learner tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text the learner marks it **too easy** or **too hard**. That updates placement, records the lemmas they just saw, and picks the next unread passage.
+It generates and serves short reading passages at a checkable CEFR band, then lets the learner tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text the learner marks it **too easy**, **just right**, or **too hard**. That updates placement (or leaves it), records the lemmas they just saw, and picks the next unread passage.
 
 The product claim is not “an LLM wrote some Japanese.” It is:
 
@@ -35,10 +35,14 @@ Two screens. That is the whole product.
 - Read the passage as clickable words. Tap a word for:
   - surface form, lemma, CEFR band
   - Russian: case, gender, number, tense, aspect, mood
-  - Japanese: reading (hiragana), kanji breakdown with on/kun and English meanings
+  - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown (stem + polite/past/te-form/…), kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, and parts
   - English gloss
-- Reveal a full **English** translation (stored on the passage, or generated on demand).
-- Mark the text **too easy** or **too hard**. Placement moves one CEFR step, lemmas are ingested, and a **Read next** link appears.
+- Optionally **colour grammar**: particles (は topic, が subject, を object, others), verbs, endings, adjectives. Off by default; persists in `localStorage`.
+- Optionally **furigana** over kanji (Japanese). Off by default.
+- Optionally **fade known** content words the learner has already finished in other texts.
+- Save a lemma from the gloss; a **Words** list on the shelf (not SRS).
+- Reveal a full **English** translation, or **this sentence** only.
+- Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps the level. All three ingest lemmas and pick **Read next**.
 
 ### Seeded library
 
@@ -56,8 +60,8 @@ Generated texts are stored alongside these and appear on the same shelf.
 ```
 open shelf  →  pick Continue (or any card)
      →  read, tap words for gloss
-     →  Too easy / Too hard
-     →  placement ±1, lemmas stored, Read next
+     →  Too easy / Just right / Too hard
+     →  placement ±1 (or unchanged), lemmas stored, Read next
      →  back on the shelf at a new recommendation
 ```
 

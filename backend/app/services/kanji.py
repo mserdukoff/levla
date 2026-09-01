@@ -9,6 +9,8 @@ from app.models.schemas import KanjiPart
 
 _KATAKANA_START = 0x30A1
 _KATAKANA_END = 0x30F6
+_HIRAGANA_START = 0x3041
+_HIRAGANA_END = 0x3096
 _KATA_TO_HIRA = 0x60
 
 _KANJI = re.compile(r"[\u4e00-\u9faf]")
@@ -28,6 +30,17 @@ def _kata_to_hira(text: str) -> str:
         cp = ord(ch)
         if _KATAKANA_START <= cp <= _KATAKANA_END:
             out.append(chr(cp - _KATA_TO_HIRA))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def _hira_to_kata(text: str) -> str:
+    out = []
+    for ch in text:
+        cp = ord(ch)
+        if _HIRAGANA_START <= cp <= _HIRAGANA_END:
+            out.append(chr(cp + _KATA_TO_HIRA))
         else:
             out.append(ch)
     return "".join(out)
@@ -73,17 +86,41 @@ def _candidates(char: str) -> list[str]:
     return cands
 
 
-def _standalone_meaning(char: str) -> str:
+def _int_or_none(value: object) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+
+def _part(char: str, matched: str | None) -> KanjiPart:
     info = kanji_dict().get(char) or {}
+    on = [_hira_to_kata(str(r)) for r in (info.get("on") or []) if r]
+    kun = [str(r) for r in (info.get("kun") or []) if r]
     meanings = [str(m).strip() for m in (info.get("meanings") or []) if m]
-    return ", ".join(m.lower() for m in meanings[:3])
-
-
-def _on_kun(char: str) -> tuple[list[str], list[str]]:
-    info = kanji_dict().get(char) or {}
-    on = [_clean_reading(r) for r in (info.get("on") or []) if r]
-    kun = [_clean_reading(r) for r in (info.get("kun") or []) if r]
-    return on, kun
+    meaning = ", ".join(m.lower() for m in meanings)
+    parts = [str(p) for p in (info.get("parts") or []) if p and p != char]
+    nanori = [str(n) for n in (info.get("nanori") or []) if n]
+    radical = str(info["radical"]) if info.get("radical") else None
+    radical_name = str(info["radical_name"]) if info.get("radical_name") else None
+    return KanjiPart(
+        char=char,
+        reading=matched,
+        on=on,
+        kun=kun,
+        meaning=meaning,
+        strokes=_int_or_none(info.get("strokes")),
+        jlpt=_int_or_none(info.get("jlpt")),
+        grade=_int_or_none(info.get("grade")),
+        freq=_int_or_none(info.get("freq")),
+        radical=radical,
+        radical_name=radical_name,
+        parts=parts,
+        nanori=nanori,
+    )
 
 
 def breakdown(surface: str, word_reading: str | None) -> list[KanjiPart]:
@@ -101,16 +138,7 @@ def breakdown(surface: str, word_reading: str | None) -> list[KanjiPart]:
                     matched = cand
                     remaining = remaining[len(cand) :]
                     break
-            on, kun = _on_kun(ch)
-            parts.append(
-                KanjiPart(
-                    char=ch,
-                    reading=matched,
-                    on=on,
-                    kun=kun,
-                    meaning=_standalone_meaning(ch),
-                )
-            )
+            parts.append(_part(ch, matched))
         elif _KANA.match(ch):
             hira = _kata_to_hira(ch)
             if remaining.startswith(hira):

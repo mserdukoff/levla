@@ -6,7 +6,14 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.db import LearnerLemmaRow, LearnerReadRow, LearnerRow, PassageRow
+from app.models.db import (
+    LearnerLemmaRow,
+    LearnerReadRow,
+    LearnerRow,
+    LearnerStarRow,
+    PassageRow,
+)
+from app.models.schemas import StarredWord
 from app.models.schemas import Token
 from app.services.validator import CONTENT_POS as RU_CONTENT
 from app.services.validator_ja import CONTENT_POS as JA_CONTENT
@@ -187,6 +194,113 @@ def _level_priority(placement: str) -> list[str]:
         if lv not in order:
             order.append(lv)
     return order
+
+
+def starred_lemmas(db: Session, device_id: str, language: str) -> set[str]:
+    rows = (
+        db.query(LearnerStarRow.lemma)
+        .filter(
+            LearnerStarRow.device_id == device_id,
+            LearnerStarRow.language == language,
+        )
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
+def list_stars(db: Session, device_id: str, language: str) -> list[StarredWord]:
+    rows = (
+        db.query(LearnerStarRow)
+        .filter(
+            LearnerStarRow.device_id == device_id,
+            LearnerStarRow.language == language,
+        )
+        .order_by(LearnerStarRow.created_at.desc())
+        .all()
+    )
+    passage_ids = [r.passage_id for r in rows if r.passage_id]
+    titles: dict[str, str] = {}
+    if passage_ids:
+        for row in (
+            db.query(PassageRow.id, PassageRow.title)
+            .filter(PassageRow.id.in_(passage_ids))
+            .all()
+        ):
+            titles[row[0]] = row[1]
+    return [
+        StarredWord(
+            lemma=r.lemma,
+            gloss=r.gloss,
+            passage_id=r.passage_id,
+            title=titles.get(r.passage_id) if r.passage_id else None,
+            language=r.language,  # type: ignore[arg-type]
+        )
+        for r in rows
+    ]
+
+
+def star_lemma(
+    db: Session,
+    device_id: str,
+    language: str,
+    lemma: str,
+    gloss: str | None,
+    passage_id: str | None,
+) -> StarredWord:
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(LearnerStarRow)
+        .filter(
+            LearnerStarRow.device_id == device_id,
+            LearnerStarRow.language == language,
+            LearnerStarRow.lemma == lemma,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        row = LearnerStarRow(
+            device_id=device_id,
+            language=language,
+            lemma=lemma,
+            gloss=gloss,
+            passage_id=passage_id,
+            created_at=now,
+        )
+        db.add(row)
+    else:
+        if gloss:
+            row.gloss = gloss
+        if passage_id:
+            row.passage_id = passage_id
+    db.commit()
+    title = None
+    if row.passage_id:
+        passage = db.get(PassageRow, row.passage_id)
+        title = passage.title if passage else None
+    return StarredWord(
+        lemma=row.lemma,
+        gloss=row.gloss,
+        passage_id=row.passage_id,
+        title=title,
+        language=language,  # type: ignore[arg-type]
+    )
+
+
+def unstar_lemma(db: Session, device_id: str, language: str, lemma: str) -> bool:
+    row = (
+        db.query(LearnerStarRow)
+        .filter(
+            LearnerStarRow.device_id == device_id,
+            LearnerStarRow.language == language,
+            LearnerStarRow.lemma == lemma,
+        )
+        .one_or_none()
+    )
+    if row is None:
+        return False
+    db.delete(row)
+    db.commit()
+    return True
 
 
 def pick_next_id(

@@ -57,7 +57,8 @@ levla/
 │   │       ├── validator.py        # Russian CEFR + ja dispatch
 │   │       ├── validator_ja.py     # Japanese constructions
 │   │       ├── gloss.py            # lexicon + LLM fill
-│   │       ├── kanji.py            # reading alignment
+│   │       ├── kanji.py            # reading alignment + KANJIDIC2 details
+│   │       ├── grammar.py          # colour roles + Japanese verb suffixes
 │   │       ├── learner.py          # placement, lemmas, next-id
 │   │       ├── library.py          # shelf payload
 │   │       ├── data.py             # load grammar / vocab / gloss JSON
@@ -80,7 +81,8 @@ levla/
 │   └── kanji/ja.json
 ├── scripts/
 │   ├── build_lexicon.py            # Russian vocab + gloss
-│   └── build_ja_lexicon.py         # Japanese vocab + gloss
+│   ├── build_ja_lexicon.py         # Japanese vocab + gloss
+│   └── build_kanji.py              # KANJIDIC2 + KRADFILE + JLPT → ja.json
 ├── docs/
 └── docker-compose.yml
 ```
@@ -98,9 +100,10 @@ SQLite is created on startup. `init_db()`:
 | Table | Role |
 | ----- | ---- |
 | `passages` | Full text, token JSON, calibration JSON, optional English, metadata |
-| `feedback` | Raw too-easy / too-hard events (not keyed to device) |
+| `feedback` | Raw too-easy / just-right / too-hard events (not keyed to device) |
 | `learners` | Current CEFR placement per `(device_id, language)`. Default **A2** |
 | `learner_lemmas` | Content-word lemmas seen after finishing a text |
+| `learner_stars` | Lemmas saved from the gloss |
 | `learner_reads` | Passages already read, unique on `(device_id, passage_id)` |
 
 `passages.id` is a UUID string. Tokens and calibration are stored as JSON text, not normalized rows — the reader always loads a complete analyzed passage.
@@ -198,8 +201,10 @@ cd backend && pytest
 | ---- | ------ |
 | `tests/test_validator.py` | Russian lemmas/cases; A1 rejects past, accusative, *если*; A2 allows acc, rejects instrumental |
 | `tests/test_validator_ja.py` | です/ます A1; て-form A1 vs A2; ている A2 vs B1; keigo B1 vs B2; core gloss |
-| `tests/test_kanji.py` | Reading alignment: 市場, 学生, 食べる, 本 |
-| `tests/test_learner.py` | Placement bump, new/known counts, next-id skip of already-read |
+| `tests/test_kanji.py` | Reading alignment: 市場, 学生, 食べる, 本; dictionary fields on 本 / 語 |
+| `tests/test_grammar.py` | は/が/を roles; 食べました / 食べる / て-いる / 行かない chains; Russian verb vs preposition |
+| `tests/test_learner.py` | Placement bump, just-right no bump, new/known counts, next-id skip of already-read, star/unstar |
+| `tests/test_sentences.py` | Japanese sentence index on 。; English split on `. ` |
 | `tests/test_translation.py` | Every seed title has a non-empty English translation; persist path stores it |
 
 Tests do **not** call OpenRouter. Gloss attach in tests uses `use_llm=False`. There are no frontend tests.

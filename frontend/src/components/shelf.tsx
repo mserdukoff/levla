@@ -3,14 +3,72 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { GenerateForm } from "@/components/generate-form";
-import { fetchLibrary } from "@/lib/api";
+import { fetchLibrary, unstarWord } from "@/lib/api";
 import { loadLanguage, saveLanguage } from "@/lib/device";
-import { LANGUAGES, type LangCode, type LibraryItem, type LibraryResponse } from "@/lib/types";
+import {
+  LANGUAGES,
+  type LangCode,
+  type LibraryItem,
+  type LibraryResponse,
+  type StarredWord,
+} from "@/lib/types";
 
 function lemmaLine(item: LibraryItem): string | null {
   const total = item.new_lemmas + item.recycled_lemmas;
   if (total === 0) return null;
   return `${item.new_lemmas} new · ${item.recycled_lemmas} known`;
+}
+
+function WordsList({
+  words,
+  language,
+  onRemove,
+}: {
+  words: StarredWord[];
+  language: LangCode;
+  onRemove: (lemma: string) => void;
+}) {
+  if (words.length === 0) return null;
+  const ja = language === "ja";
+  return (
+    <section className="flex flex-col gap-2">
+      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink/50">
+        Words
+      </p>
+      <ul className="flex flex-col gap-2">
+        {words.map((word) => (
+          <li
+            key={word.lemma}
+            className="flex items-baseline justify-between gap-3 rounded-xl border border-rule bg-paper-raised px-4 py-3"
+          >
+            <div className="min-w-0">
+              <p className={`text-base text-ink ${ja ? "font-ja" : "font-reading"}`}>
+                {word.lemma}
+                {word.gloss ? (
+                  <span className="ml-2 text-sm text-ink/55">{word.gloss}</span>
+                ) : null}
+              </p>
+              {word.passage_id && word.title ? (
+                <Link
+                  href={`/passage/${word.passage_id}`}
+                  className={`mt-0.5 block text-[13px] text-ink/40 hover:text-ink ${ja ? "font-ja" : "font-reading"}`}
+                >
+                  {word.title}
+                </Link>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => onRemove(word.lemma)}
+              className="shrink-0 text-[13px] text-ink/40 underline decoration-ink/15 underline-offset-4 hover:text-ink"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 function PassageCard({ item }: { item: LibraryItem }) {
@@ -86,6 +144,19 @@ export function Shelf() {
     saveLanguage(next);
   }
 
+  async function onRemoveWord(lemma: string) {
+    try {
+      await unstarWord(lemma, language);
+      setLibrary((prev) =>
+        prev
+          ? { ...prev, words: (prev.words ?? []).filter((w) => w.lemma !== lemma) }
+          : prev,
+      );
+    } catch {
+      /* keep the list */
+    }
+  }
+
   const nextItem = library?.items.find((item) => item.id === library.next_id) ?? null;
   const rest = (library?.items ?? []).filter((item) => item.id !== library?.next_id);
 
@@ -141,6 +212,14 @@ export function Shelf() {
           </p>
           <PassageCard item={nextItem} />
         </section>
+      ) : null}
+
+      {library?.words && library.words.length > 0 ? (
+        <WordsList
+          words={library.words}
+          language={language}
+          onRemove={onRemoveWord}
+        />
       ) : null}
 
       {rest.length > 0 ? (

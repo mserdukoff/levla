@@ -85,14 +85,16 @@ POS is left as pymorphy (`NOUN`, `VERB`, `INFN`, `ADJF`, `PRTF`, `GRND`, …). C
 
 - **Sudachi** dictionary, **split mode C** (coarse; fewer morpheme cuts than A/B).
 - POS 0 mapped through `POS_EN` (`名詞→noun`, `動詞→verb`, `形容詞→i-adj`, `形状詞→na-adj`, `助詞→particle`, `助動詞→aux`, …). Unknown POS 0 is kept as the Japanese label.
+- POS 1 mapped through `POS1_EN` onto `pos_detail` (`係助詞→binding`, `格助詞→case`, `接続助詞→conjunctive`, `終助詞→final`, `非自立可能→bound`, …).
 - `form` is POS slot 5 (inflection), e.g. `連体形`, `仮定形`.
+- `conj_type` is POS slot 4 simplified: `godan`, `ichidan`, `sahen`, `kahen`, `i-adj`, `aux`.
 - Reading: Sudachi `reading_form()` converted katakana→hiragana. Dropped when the surface is already kana-only and the reading equals the surface or lemma.
 - Punctuation (`補助記号`) and whitespace (`空白`) are non-words.
-- Kanji breakdown runs at tokenize time (and again on read if a stored token has an empty `kanji` list).
+- Kanji breakdown runs at tokenize time, and again on every passage read so stored tokens pick up lexicon updates.
 
 ### Kanji (`kanji.py`)
 
-`data/kanji/ja.json` (~13k characters): on, kun, meanings.
+`data/kanji/ja.json` (~13k characters): on, kun, meanings, strokes, JLPT N-level, school grade, newspaper frequency, Kangxi radical, KRADFILE parts. Built by `scripts/build_kanji.py` from KANJIDIC2 (the same EDRDG data Jisho uses). Jisho’s public API is word search only and has no kanji endpoint.
 
 For each kanji in the surface, Levla tries to consume a **prefix of the remaining word reading** using on/kun candidates, including:
 
@@ -100,9 +102,19 @@ For each kanji in the surface, Levla tries to consume a **prefix of the remainin
 - handakuten (は→ぱ)
 - sokuon (く/き/ち/つ → っ)
 
-Candidates are tried longest-first. Okurigana kana in the surface also advance the remaining reading. Each part carries the matched slice (or `null`), full on/kun lists, and up to three English meanings lowercased.
+Candidates are tried longest-first. Okurigana kana in the surface also advance the remaining reading. Each part carries the matched slice (or `null`), on in katakana, kun with okurigana dots, all English meanings lowercased, plus strokes / JLPT / grade / freq / radical / parts. Breakdown runs again when a stored passage is read, so older tokens pick up new fields.
 
 This is heuristic alignment, not a morphological gold standard. Tests lock 市場, 学生, 食べる, 本.
+
+## Grammar roles and verb suffixes (`grammar.py`)
+
+After morph (and again on every passage read), `attach_grammar` fills `role`, `conj`, and `conj_id`.
+
+**Colour roles.** Japanese: は → `topic`, が → `subject`, を → `object`, other 助詞 → `particle`, 動詞 → `verb`, 助動詞 and non-head chain members → `aux`, i/na-adjectives → `adj`, adverbs → `adverb`. Nouns and pronouns stay uncoloured. Russian: `VERB`/`INFN`/`PRTF`/`GRND` → `verb`, adjectives → `adj`, `PREP`/`CONJ`/`PRCL` → `particle`, `ADVB` → `adverb`.
+
+**Japanese conjugation chains.** A chain starts at a verb, i-adj, na-adj, or aux (copula です after a noun). It continues through auxiliaries (ます, た, ない, れる, させる, …), conjunctive particles (て, で, ば, ながら), and subsidiary verbs after て (いる, しまう, みる, おく, …). Dictionary-form heads split the last kana (`食べる` → 食べ stem + る dictionary; `高い` → 高 + い). Labels include polite, past, te-form, negative, progressive, causative, passive / potential, conditional, volitional, copula, adnominal.
+
+Tapping any piece of the chain in the reader shows the same breakdown. Tests lock は/が/を, 食べました, 食べる, 読んでいます, 行かない.
 
 ## Glosses
 
@@ -191,7 +203,7 @@ Content POS for over-level and learner counts: `noun, verb, i-adj, na-adj, adver
 | `data/gloss/ja_en.json` | ~500 | Short English glosses, keyed to Sudachi dictionary form |
 | `data/grammar/ru_cefr.json` | 4 levels | Allowed cases/tenses, forbidden POS/conjunctions, rate caps, prompt text |
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text |
-| `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings |
+| `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts |
 
 Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese is a curated N5–N3-ish core, not JLPT official lists.
 
@@ -199,6 +211,7 @@ Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ra
 
 ```
 python3 scripts/build_ja_lexicon.py
+python3 scripts/build_kanji.py
 python3 scripts/build_lexicon.py   # needs pymorphy3; optionally data/raw/ru_50k.txt
 ```
 
