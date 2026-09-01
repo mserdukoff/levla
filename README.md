@@ -8,6 +8,8 @@ The product claim is not “an LLM wrote some Japanese.” It is: **grammar and 
 
 ---
 
+Full product, architecture, design, API, NLP, and learner-model specs live in [`docs/`](docs/README.md).
+
 ## Contents
 
 - [Why it exists](#why-it-exists)
@@ -26,6 +28,7 @@ The product claim is not “an LLM wrote some Japanese.” It is: **grammar and 
 - [Rebuilding lexicons](#rebuilding-lexicons)
 - [Environment](#environment)
 - [Limitations](#limitations)
+- [Documentation](#documentation)
 
 ---
 
@@ -477,3 +480,16 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 - **Languages.** Only `ru` and `ja`. Adding a language means grammar JSON, vocab/gloss, a morph module, a validator, seed texts, and UI labels.
 
 Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JLPT lists.
+
+---
+
+## Documentation
+
+| Doc | Covers |
+| --- | ------ |
+| [docs/product.md](docs/product.md) | Objective, audience, reading loop, scope vs. `plan.md` |
+| [docs/architecture.md](docs/architecture.md) | Stack, request flow, SQLite, Docker, adding a language |
+| [docs/design.md](docs/design.md) | Palette, type, layouts, components, interaction rules |
+| [docs/api.md](docs/api.md) | Endpoints, headers, payloads, status codes |
+| [docs/nlp-and-cefr.md](docs/nlp-and-cefr.md) | Generation, analyzers, validators, lexicons, kanji |
+| [docs/learner-model.md](docs/learner-model.md) | Device id, placement, new/known counts, next-text ranking |
