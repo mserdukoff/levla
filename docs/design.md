@@ -2,232 +2,180 @@
 
 Levla is meant to feel like a **small printed reader**, not a language-app dashboard. Paper, ink, one accent, long reading measure, almost no chrome.
 
-Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, and the three components (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`). There is no component library, no dark mode, no illustrations.
+Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, the shared components (`band.tsx`, `segmented.tsx`, `passage-article.tsx`, `gloss-card.tsx`, `generation-progress.tsx`), the screens (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`), and the landing page (`components/landing/*`). There is no component library, no dark mode, no illustrations.
+
+## Rationale for the 2026 redesign
+
+Three departures from the earlier spec, and why.
+
+1. **A landing page now exists at `/`; the shelf moved to `/library`.** The old spec forbade a marketing page. The product claim (CEFR as a *checked* constraint, not a prompt adjective) is invisible from the shelf, so a visitor never learned why this is different from asking a chatbot for "A2 Japanese". The landing page states the claim, shows the analyzer's flags on a prompted draft next to a checked one, and runs the real reader on a hand-authored passage. Nothing on it is a mockup: the hero uses the same `PassageArticle` and `GlossCard` as `/passage/[id]`.
+2. **Hairlines replace boxes.** The shelf list, words list, reader toolbar, and gloss kanji list are rules between rows rather than bordered cards. Cards remain for exactly two things: the inverted Continue block and the raised proof sheets. This is the main move away from a "SaaS card grid" and toward a printed page.
+3. **CEFR bands are drawn as a joined strip.** Wherever a level *matters* (placement, reader header, the demo), the four bands are shown as one hairline box with the current band inked (`BandStrip`). Where a level is only metadata (a shelf row), it is plain serif text. Inside the gloss card the band is a single hairline chip. No coloured badges.
+
+Kept on purpose: the palette, the two typefaces, ink-on-paper inversion as the only emphasis, no icons beyond typographic arrows, no page transitions.
 
 ## Brand
 
 | | |
 | --- | --- |
 | Name | **Levla** |
-| Document title | `Levla — graded readers` |
-| One-liner (metadata) | CEFR-calibrated Russian and Japanese passages. Click any word for lemma, grammar, and a gloss. |
-| Shelf kicker | `Russian · Japanese · A1–B2` |
-| Shelf subtitle | Graded readers at a real CEFR level. Pick a text. Too easy or too hard moves the next one. |
+| Document title | `Levla — graded readers` (`%s · Levla` on inner pages) |
+| One-liner (metadata) | CEFR-calibrated Russian and Japanese passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss. |
+| Landing headline | Graded readers where A2 is actually A2. |
+| Kicker | `Russian · Japanese · A1–B2` |
+| Library kicker | `{Language} · Library` |
 
-Copy is short, second-person, and specific. No gamification (“streak”, “XP”), no mascot, no exclamation marks in chrome.
+Copy is short, second-person, and specific. No gamification ("streak", "XP"), no mascot, no exclamation marks in chrome. Numbers are set tabular (`tnum`).
 
 ## Color
 
-CSS custom properties on `:root`, also registered as Tailwind theme colors (`bg-paper`, `text-ink`, `border-rule`, `text-terracotta`, …).
+CSS custom properties on `:root`, registered as Tailwind theme colors (`bg-paper`, `text-ink`, `border-rule`, `text-terracotta`, …).
 
 | Token | Hex | Role |
 | ----- | --- | ---- |
 | `--paper` | `#f3eee4` | Page background |
-| `--paper-raised` | `#faf6ee` | Cards, inputs, gloss sheet, unselected chips |
-| `--ink` | `#1b1712` | Body text, selected chips, primary buttons, recommended card |
-| `--rule` | `#d7cbb8` | Borders, skeleton bars, hairlines |
-| `--terracotta` | `#b84a2a` | Brand kicker, selected genre chips, errors, 404 link, text selection |
+| `--paper-raised` | `#faf6ee` | Proof sheets, gloss panel, segmented controls, row hover |
+| `--paper-deep` | `#eae3d4` | Hover wash inside segmented controls. A tonal step of paper, not a second accent |
+| `--ink` | `#1b1712` | Text, inverted blocks, primary button, active band |
+| `--rule` | `#d7cbb8` | Every hairline, skeleton bars |
+| `--terracotta` | `#b84a2a` | Kicker, selected genre chip, errors, selected word wash, drift flags on the landing page |
 
-Optional **grammar-colour** inks, used only when the reader Grammar toggle is on. They are pedagogical overlays, not brand accents. Nouns stay `--ink`.
+Grammar-colour inks (`--g-*`) are unchanged and remain an opt-in overlay.
 
-| Token | Hex | Role |
-| --- | --- | --- |
-| `--g-topic` | `#b84a2a` | は (topic); same ink as terracotta |
-| `--g-subject` | `#2c6b73` | が (subject) |
-| `--g-object` | `#8b5420` | を (object) |
-| `--g-particle` | `#3f4a28` | other particles; Russian prepositions |
-| `--g-verb` | `#3d3a78` | verbs |
-| `--g-aux` | `#7a3d5c` | endings (ます / た / て / です) |
-| `--g-adj` | `#2a5a45` | adjectives |
-| `--g-adverb` | `#6a5340` | adverbs |
+Derived states use opacity modifiers, not extra tokens: `text-ink/70 /55 /50 /45 /40`, `hover:bg-paper-raised`, `bg-terracotta/16` (selected word), `border-terracotta/30 bg-terracotta/10` (error panel).
 
-Derived states (Tailwind opacity modifiers, not extra tokens):
-
-| Use | Recipe |
-| --- | ------ |
-| Secondary text | `text-ink/70`, `/55`, `/50`, `/45`, `/40` |
-| Placeholder | `placeholder:text-ink/30` |
-| Hover border | `hover:border-ink/30` |
-| Word hover wash | `hover:bg-ink/8` |
-| Selected word | `bg-terracotta/18` |
-| Error panel | `border-terracotta/30 bg-terracotta/10 text-terracotta` |
-| Word underline (idle) | `decoration-ink/15` |
-| Word underline (hover) | `decoration-ink/40` |
-| Text selection | `color-mix(in srgb, terracotta 28%, transparent)` |
-
-**Ink-on-paper inversion** is the only “emphasis” treatment: the recommended Continue card and the active language/level chip are `bg-ink text-paper`. Genre chips are the exception — selected genre uses terracotta fill, not ink.
-
-Do not introduce a third accent. Do not use pure black or pure white.
+Terracotta appears on the landing page in exactly three places: the kicker, the underlines and flags on the drifted draft, and its "would fail" summary line. The checked draft is ink only. That contrast is the point.
 
 ## Typography
 
-Google fonts via `next/font` in `layout.tsx`. HTML `lang="en"`; the reading article sets `lang="ja"` or `lang="ru"`.
+Google fonts via `next/font` in `layout.tsx`.
 
-| Role | Face | Fallback | Used for |
-| ---- | ---- | -------- | -------- |
-| UI / Japanese | **Outfit** (`--font-outfit`) | `Hiragino Sans`, `Hiragino Kaku Gothic ProN`, `Yu Gothic`, `Noto Sans JP`, system sans | Body chrome, Japanese titles and body (`.font-ja`) |
-| Display / Russian reading | **Literata** (`--font-literata`), subsets `latin` + `cyrillic` | `Iowan Old Style`, `Palatino Linotype`, Palatino, serif | Wordmark, CEFR labels on generate, Russian titles and body (`.font-display`, `.font-reading`) |
-| Morph line | `font-mono` | system mono | Russian grammar tags in the gloss card (`aspect · tense · case · …`) |
+| Role | Face | Notes |
+| ---- | ---- | ----- |
+| UI / Japanese | **Outfit** (`--font-outfit`) | Latin only; Japanese glyphs come from the system Gothic stack (`.font-ja`) |
+| Serif | **Literata** (`--font-literata`) | Variable, `latin` + `cyrillic`, with the **`opsz` axis enabled**. `font-optical-sizing: auto` lets one file set 11 px band labels and 64 px display |
+| Morph line | `font-mono` | Grammar tags in the gloss card |
 
-Outfit is loaded with Latin only. Japanese glyphs come from the system Gothic stack, not from the Outfit file.
+Type roles are `@utility` classes in `globals.css`, so the scale lives in one place:
 
-### Type scale (as implemented)
+| Class | Use | Setting |
+| ----- | --- | ------- |
+| `t-display` | Landing h1, closing line | Literata 450, tracking −0.024em, leading 1.02, balanced |
+| `t-heading` | Section h2, library placement line | Literata 450, tracking −0.016em, leading 1.14 |
+| `t-kicker` | Brand kicker | Literata 13 px, caps, tracking 0.28em, terracotta |
+| `t-eyebrow` | Section labels, field legends, topic line | 11 px, caps, tracking 0.18em, ink/50 |
+| `t-folio` | "01", "02" on the landing page | Literata 13 px, tabular |
+| `t-quiet` | Text actions (← Library, Restock, toggles) | 13 px, ink/50 → ink on hover |
 
-| Surface | Size / tracking |
-| ------- | --------------- |
-| Shelf kicker | 13px, uppercase, `tracking-[0.28em]`, terracotta, Literata |
-| Wordmark “Levla” | `text-6xl`, medium, `tracking-tight`, Literata |
-| Shelf subtitle | `text-lg`, `leading-relaxed`, `text-ink/70` |
-| Section labels (Continue, The shelf, Level, Topic, Genre) | 11px, medium, uppercase, `tracking-[0.18em]`, `text-ink/50` |
-| Passage card title | `text-lg leading-snug` |
-| Card CEFR | 11px uppercase `tracking-[0.14em]` |
-| Card meta | 13px |
-| Reader title | 1.85rem / sm: 2.15rem, `leading-snug` |
-| Reader body | 1.35rem / sm: 1.45rem, `leading-[1.85]` |
-| English translation | 1.05rem, `leading-[1.7]`, Literata, `text-ink/75` |
-| Gloss surface | `text-2xl` |
-| Gloss reading | `text-sm text-ink/50` |
-| Calibration warning | `text-xs text-ink/40` |
-| 404 title | `text-3xl` Literata |
-
-Antialiased on `<html>`.
+Sizes in use: landing h1 `2.9 / 3.6 / 4rem`; section h2 `1.9 / 2.4rem`; library placement `2 / 2.5rem`; reader title `2.1 / 2.6rem`; reader body `1.35 / 1.45rem` at leading 1.85 (2.35 with furigana); gloss surface `1.75rem`; landing lede `1.125 / 1.2rem`.
 
 ## Layout
 
-Single column. No sidebar, no top nav bar, no footer site-wide.
+Single column everywhere except the landing page.
 
 | Surface | Max width | Padding |
 | ------- | --------- | ------- |
-| Shelf | `max-w-[34rem]` (~544px) | `px-5 py-16` / `sm:px-8` |
-| Reader | `max-w-[42rem]` (~672px) | `px-5 pt-8 pb-28` / `sm:px-8` (bottom padding clears the sticky bar) |
+| Landing | `max-w-[74rem]`, 12-col grid at `lg` | `px-5 sm:px-8 lg:px-12` |
+| Library | `max-w-[36rem]` | `px-5 pt-8 pb-24` / `sm:px-8 sm:pt-10` |
+| Reader | `max-w-[42rem]` | `px-5 pt-7 pb-32` / `sm:px-8 sm:pt-9` |
+| Review | `max-w-[36rem]` | as library |
 | 404 | `max-w-md` | `px-5 py-24` |
 
-Shelf is narrower than the reader on purpose: the library is a list of cards; the reader needs a longer measure.
+Landing sections are separated by a full-width hairline and a folio (`01 The claim`, `02 The loop`, `03 Who it's for`) in a 4 + 8 column split. Section spacing is `mt-28 sm:mt-36`.
 
-Breakpoints used: default (mobile) and `sm` (640px). No tablet/desktop-specific layouts beyond padding, type size, and the gloss card becoming a floating panel.
+## Spacing and radii
 
-## Spacing rhythm
-
-Vertical stacks use Tailwind gaps of **2 / 3 / 8 / 10** (8 / 12 / 32 / 40px). Section-to-section on the shelf is `gap-10`. Form fields are `gap-8`. Card lists are `gap-2`. Do not collapse these into a denser dashboard.
-
-Radii:
+Vertical stacks on the app screens use gaps of **3 / 9 / 12** (12 / 36 / 48 px). Form fields are `gap-9`. Row lists are hairline-divided with `py-3.5`.
 
 | Element | Radius |
 | ------- | ------ |
-| Cards, inputs, language/level chips, primary button | `rounded-lg` or `rounded-xl` |
-| Genre chips, feedback pills, CEFR header badge | `rounded-full` |
-| Clickable word | `rounded-[3px]` |
+| Cards, segmented controls, buttons, gloss panel | `rounded-card` (6 px) |
+| Band strip | 4 px |
+| Genre chips, feedback pills | `rounded-full` |
+| Clickable word | 3 px |
+| Inputs | none: `field-line` is a bottom rule only |
 
-Borders are 1px `border-rule` unless selected (`border-ink` or `border-terracotta`).
+## Controls
+
+- **Segmented** (`segmented.tsx`): one hairline box divided into cells; the active cell inverts to ink. Used for language (shelf header, demo) and CEFR level (restock form).
+- **BandStrip / BandChip** (`band.tsx`): see rationale above.
+- **Primary button** (`btn-primary`): 48 px, ink fill, paper text, 6 px radius. One per screen at most.
+- **Toggles** (reader, demo): underlined 13 px text; pressed = ink text with a stronger underline. `aria-pressed` is set.
+- **Focus**: a global `:focus-visible` outline, 1.5 px ink, 3 px offset.
 
 ## Iconography and motion
 
-No icons. The only “graphic” is the ← in “← Shelf”. Transitions are color/border only (`transition`). No page transitions, no skeleton shimmer animation (loading bars are static `bg-rule`). Gloss panel uses a soft upward shadow: `shadow-[0_-8px_30px_rgba(27,23,18,0.08)]`.
+No icons. Typographic arrows only (`←`, `→`, `↓`). Transitions are colour and border, 150 ms. `prefers-reduced-motion` collapses them. No page transitions, no skeleton shimmer.
+
+The one animated element is the **generation progress hairline** (`generation-progress.tsx`): a 1 px rule that fills asymptotically (never past 94 %) while four stages (Writing at A2 → Analyzing every word → Scoring → Rewriting if it missed) move from ink/30 to ink on a timer, with an elapsed-seconds count. It is a paced account of what the backend does, not a measured one, and the copy says "Usually 20–40 seconds".
+
+The gloss panel keeps its soft upward shadow on `sm+` because it floats.
 
 ## Screens
 
-### Shelf
+### Landing (`/`)
 
-1. Kicker, wordmark, one-sentence pitch.
-2. Two language buttons (English label + native name). Active = ink fill.
-3. Placement line: `Your Japanese level is A2. Rate a passage to move it.` After reads: `{n} lemmas seen.`
-4. Error (if API down): terracotta-tinted panel.
-5. **Continue** — recommended card, inverted.
-6. **The shelf** — remaining cards, paper-raised.
-7. Text button **Restock the shelf** / **Hide restock**. Opens `GenerateForm` in restock mode (language picker hidden; uses the shelf language).
+1. Nav: wordmark, anchor links (The check, The loop), **Library →**.
+2. Hero: kicker, headline, lede, **Open the library**, and the **reader demo** (`reader-demo.tsx`): a raised proof sheet with a band strip, language segmented control, title, Grammar / Furigana toggles, the passage as clickable words, and the gloss area beneath. One word is preselected on load (`食べ` / `продавцу`) so the gloss is visible immediately. Sample passages live in `demo-data.ts` in the real `Token` shape.
+3. **01 The claim**: two proof sheets (`drift.tsx`). Left, a prompted draft with the analyzer's flags marked in terracotta (`ている · B1`, `keigo · B2`, …) and "4 constructions above A2 · would fail". Right, the checked draft in an ink-bordered sheet with its report (over-level lemmas, banned constructions, flags caught) and "passes A2". Below, the four-step procedure (Constrain, Analyze, Score, Rewrite).
+4. **02 The loop**: five numbered steps; step three shows the feedback pills, step four two band strips (A2 → B1).
+5. **03 Who it's for**: For / Not.
+6. Close: "Pick a passage." and the button again. Footer: Levla · Morphology by Sudachi and pymorphy3 · A single-user demo.
 
-**Passage card**
+The whole page follows one language choice (the demo's segmented control).
 
-- Title (Japanese Gothic / Russian Literata)
-- CEFR at top-right
-- Topic
-- `{n} words · {n} new · {n} known · read`
+### Library (`/library`)
 
-Recommended card inverts to ink. Hover: `border-ink/30` on non-recommended cards. Entire card is a `Link` to `/passage/{id}`.
+1. Header: wordmark (links to `/`), language segmented control (hidden when only Japanese is enabled).
+2. Kicker `{Language} · Library`, heading **Your {Language} is at {band}.**, band strip, status line (`{n} lemmas seen.` / `Rate a passage to move it.` + `Three ratings in a row move the band.`).
+3. Auth panel (only when the backend requires it): hairline-bounded row or email form.
+4. Error panel.
+5. **Continue**: the inverted card. Topic and chapter top-left, inverted band strip top-right, title, meta line, **Read →**.
+6. Review row (only when cards are due).
+7. **The shelf**: hairline rows. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised.
+8. **Words**: hairline rows with Remove; export links.
+9. **Restock**: a section label and **Restock the shelf →**; open state shows one sentence and the form, with **Hide restock** below. **Review saved words** sits beside it when nothing is due.
 
-### Generate / restock form
+### Restock form
 
-| Field | Control |
-| ----- | ------- |
-| Language | 2-up grid (hidden when `restock`) |
-| Level | 4-up grid: A1 Beginner, A2 Elementary, B1 Intermediate, B2 Upper-int. Default **A2** |
-| Topic | Single-line input, max 200 chars. Placeholder depends on language (“…Kyoto” vs “…Kazan”) |
-| Genre | Pill row; toggling the active pill clears genre (`null`). Default `daily_life` |
+Language and level are segmented controls (level cells: serif band + hint). Topic is a `field-line` input. Genre stays as terracotta-selected pills. Submit is `btn-primary`, full width, then the generation progress block under a hairline while busy. Quota line under the button when known.
 
-Submit: full-width `h-12` ink button. Idle label **Add to shelf** (restock) or **Generate passage**. Busy: **Writing and checking level…** plus helper “Constraining grammar to {level}, then validating every word. This usually takes 20–40 seconds.” Empty topic: “Give the passage a topic.”
+### Reader (`/passage/[id]`)
 
-On success, `router.push(/passage/{id})`. The button stays disabled (`cursor-wait`) until navigation.
+Header: **← Library** left; tracked meta (`{n} words · {n} new · {n} known`, `sm+`) and a band strip right.
 
-### Reader
+Topic line as eyebrow (`{topic} · chapter n · {n}% new`), then the title. Audio bar if present.
 
-Header: **← Shelf** left; pill right with `{level} · {n} words · {n} new · {n} known`.
+Toolbar: a hairline-bounded row. Left, toggles **English · Sentence · Grammar · Furigana (ja) · Known**. Right, **Why this is {band}** which opens the calibration report as a definition list inside the same row. Legend appears under the toggles when Grammar is on.
 
-Title, topic, underline buttons on one wrapping row: **English**, **Sentence**, **Grammar**, **Furigana** (Japanese only), **Known**. All optional overlays except English/Sentence which reveal translation. Grammar / Furigana / Known persist (`levla.grammar`, `levla.furigana`, `levla.fade`). English and Sentence are mutually exclusive.
+Article rules are unchanged (word buttons, hover, selection, chain highlight, fade known, furigana). Calibration warnings print with a terracotta left rule.
 
-Grammar off is the default (ink on paper). On: coloured function words plus a compact legend (は topic, が subject, を object, particle, verb, ending, adjective).
+English / Sentence blocks carry an eyebrow (`English`, `This sentence`).
 
-Furigana: ruby over kanji that have a token reading. Article line-height increases to `leading-[2.35]`.
+Sticky bottom bar and gloss panel behave as before. The gloss floats at `min(26rem, 100% − 2rem)` on `sm+`. Unselected feedback pills dim after a rating; **Read next →** sits at the right of the status line.
 
-Known: content-word lemmas already in `learner_lemmas` fade to `text-ink/40` (or 40% opacity when grammar colours are on). Particles and a first-ever shelf (empty seen-set) do not fade.
+### Review, 404, loading
 
-Article: each `is_word` token is a button. Idle: faint underline. Hover: stronger underline + ink wash. Selected: terracotta wash, underline off. Non-word tokens (punctuation, Japanese 補助記号) render as plain text. Trailing whitespace lives on `token.ws` so Japanese has no extra spaces.
-
-If calibration `warnings` exist, they print below the article in `text-xs text-ink/40`.
-
-**English block** (when revealed): top rule, then translation in Literata. Loading / error states are one line.
-
-**Sentence block** (when revealed): top rule. If no word is selected, “Tap a word to see that sentence in English.” If a word is selected, that sentence’s English only. Japanese/Russian sentences split on `。！？` / `.!?`; English on `.!?` plus space. Paired by index.
-
-**Sticky bottom** — two mutually exclusive modes:
-
-1. **No word selected:** feedback bar. “Was this {level} passage…” (desktop) / “This passage was” (mobile). Pills **Too easy** / **Just right** / **Too hard**. After save, a status line plus **Read next**. The selected pill fills ink. Sending disables all three.
-2. **Word selected:** gloss sheet. Mobile: full-bleed bottom sheet with top rule. `sm+`: floating card centered, `min(24rem, calc(100%-2rem))`, 8px off the bottom, rounded, bordered. Max height `60vh` with overflow scroll. **Close** dismisses (tapping the same word also toggles off). **Save** / **Saved** under the gloss marks the lemma on the shelf Words list.
-
-The feedback bar is hidden while a gloss is open so the two do not stack.
-
-### 404
-
-“Passage gone” / “That reader was not found. Generate a new one.” / terracotta **Back to Levla**.
-
-### Loading
-
-Three static rule-colored bars approximating title + body. No spinner.
+Review follows the library header pattern (`← Library`, due count as tracked meta). 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
 
 ## Gloss card content order
 
-1. Surface form (2xl)
-2. Reading, if any (Japanese hiragana)
-3. Lemma (if different from surface) + CEFR band
-4. Russian morph line (`aspect · tense · imperative · case · gender · number · pos`) or Japanese grammar line (`topic marker`, `verb`, `case particle`, …)
-5. Japanese verb-suffix row, when the token is part of a chain of two or more pieces (`食べ` stem · `まし` polite · `た` past). Stem uses verb ink; endings use aux ink.
-6. English gloss, or “No gloss for this lemma yet.”
-7. **Save** / **Saved** (lemma only)
-8. Kanji list, each row: character · reading used in this word · all English meanings · on (katakana) / kun (okurigana dots, first six if the list is long) · N-level, grade, strokes, newspaper freq · radical + KRADFILE parts · name readings (first six)
-   Max height `60vh` with overflow scroll.
-
-`morphLine` in `types.ts` hides POS when a case is present (case already implies a declined form). Mood `impr` is labeled “imperative”. `jaGrammarLine` maps `role` to a short English label (topic marker, case particle, …).
+Unchanged: surface (with reading beside it) → lemma + band chip → morph line → suffix chain → gloss → Save → kanji rows (hairline-divided).
 
 ## Interaction rules
 
-- Language preference persists in `localStorage` (`levla.language`). Grammar colours persist as `levla.grammar` (`1` / `0`). Furigana as `levla.furigana`. Fade known as `levla.fade`. Device UUID (`levla.device_id`) is created on first client render.
-- Shelf fetch aborts on language change (`AbortController`).
-- Feedback is one-shot in the UI: after a rating, that button stays selected and both stay disabled. Reloading the page does not restore the selected pill (no “already rated” fetch).
-- English starts from `passage.translation` if present; otherwise the first reveal hits `/translation` and caches the string in component state.
-- Generation is intentionally slow; the form must say so rather than showing a generic spinner.
+Unchanged from the previous spec (`levla.language`, `levla.grammar`, `levla.furigana`, `levla.fade`, `levla.device_id`; abort on language change; one-shot feedback; lazy English). The demo on the landing page keeps its own local state and never calls the API. Post-sign-in redirects land on `/library`. The service worker precaches `/`, `/library`, `/review`; the PWA `start_url` is `/library`.
 
-## Accessibility (current)
+## Accessibility
 
-- Gloss panel: `role="dialog"` `aria-label="Word gloss"`; close has `aria-label="Close gloss"`.
-- Generate errors: `role="alert"`.
-- Article `lang` matches the passage language.
-- Keyboard: native `<button>` / `<Link>` / `<input>`. No custom focus ring token (browser default).
-- Word buttons are in-flow, so a long passage is a long tab sequence. There is no skip-to-feedback link.
-- Contrast: ink on paper is strong; `text-ink/40` meta and calibration warnings are the weakest and should not carry essential meaning alone (they currently do for warnings).
+- Gloss panel: `role="dialog"`, close button labelled. Demo gloss area: `role="region"`, `aria-live="polite"`.
+- Word buttons and toggles set `aria-pressed`. Segmented controls are `radiogroup` / `radio`.
+- Global `:focus-visible` ring.
+- Band strips carry an `aria-label` (`A2 on a scale of A1 to B2`).
+- `text-ink/40` remains the weakest tone and should not carry essential meaning alone.
 
 ## What not to add
 
-- Dark mode, gradients, drop shadows on cards, colored CEFR badges (A1 green / B2 red), progress rings, mascots, or a marketing landing page in this app.
-- A second typeface beyond Outfit + Literata + system Gothic.
-- A generate page that is not the restock disclosure.
-
-The terracotta + paper palette and the inverted Continue card are the visual signature. Keep them. Grammar colours are an opt-in overlay of muted inks; they must not become a third brand accent on the shelf or chrome.
+- Dark mode, gradients, drop shadows on cards, coloured CEFR badges, progress rings, mascots, testimonials, pricing.
+- A third typeface, or a second accent.
+- Anything on the landing page that is not the real product: no illustration of the reader, only the reader.

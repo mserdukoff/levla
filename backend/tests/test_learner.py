@@ -33,7 +33,7 @@ def _session():
     return sessionmaker(bind=engine)()
 
 
-def test_too_easy_raises_placement_and_picks_next():
+def test_too_easy_raises_placement_after_three_signals():
     db = _session()
     first = save_authored_passage(
         db,
@@ -53,12 +53,14 @@ def test_too_easy_raises_placement_and_picks_next():
         title="電車で本を読む",
         text="今、本を読んでいます。友達は駅にいます。",
     )
-    result = complete_read(db, first.id, "too_easy", "test-device-1")
-    assert result is not None
-    assert result["placement"] == "B1"
-    assert result["next_id"] == second.id
-    assert result["new_lemmas"] > 0
-    assert result["recycled_lemmas"] == 0
+    one = complete_read(db, first.id, "too_easy", "test-device-1")
+    assert one is not None
+    assert one["placement"] == "A2"
+    complete_read(db, first.id, "too_easy", "test-device-1")
+    three = complete_read(db, first.id, "too_easy", "test-device-1")
+    assert three is not None
+    assert three["placement"] == "B1"
+    assert three["next_id"] == second.id
 
     library = list_library(db, "ja", "test-device-1")
     assert library.placement == "B1"

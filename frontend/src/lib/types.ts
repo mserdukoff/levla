@@ -62,6 +62,24 @@ export type Calibration = {
   forbidden_pos_rate: number;
   flags: string[];
   warnings: string[];
+  allowed_constructions?: string[];
+  forbidden_used?: string[];
+  banned_constructions?: string[];
+  sample_lemmas?: string[];
+};
+
+export type AudioCue = {
+  index: number;
+  start_ms: number;
+  end_ms: number;
+  text: string;
+};
+
+export type ComprehensionQuestion = {
+  id: string;
+  prompt: string;
+  choices: string[];
+  answer_index: number;
 };
 
 export type Passage = {
@@ -77,6 +95,12 @@ export type Passage = {
   word_count: number;
   created_at: string;
   translation?: string | null;
+  audio_url?: string | null;
+  audio_cues?: AudioCue[];
+  series_id?: string | null;
+  chapter_index?: number | null;
+  comprehension?: ComprehensionQuestion[];
+  shelf_status?: string;
 };
 
 export type LibraryItem = {
@@ -93,6 +117,10 @@ export type LibraryItem = {
   recommended: boolean;
   new_lemmas: number;
   recycled_lemmas: number;
+  series_id?: string | null;
+  chapter_index?: number | null;
+  has_audio?: boolean;
+  new_lemma_pct?: number;
 };
 
 export type LibraryResponse = {
@@ -132,6 +160,27 @@ export type FeedbackResult = {
   next_id: string | null;
   new_lemmas: number;
   recycled_lemmas: number;
+};
+
+export type MeResponse = {
+  authenticated: boolean;
+  user_id: number | null;
+  email: string | null;
+  display_name: string | null;
+  guest: boolean;
+  show_russian: boolean;
+  generate_remaining: number | null;
+  require_auth: boolean;
+};
+
+export type ReviewCard = {
+  id: number;
+  lemma: string;
+  gloss: string | null;
+  reading: string | null;
+  context: string | null;
+  language: LangCode;
+  due_at: string;
 };
 
 export const LANGUAGES: { id: LangCode; label: string; native: string }[] = [

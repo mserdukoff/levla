@@ -1,35 +1,51 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import datetime, timezone
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.db import (
+    SHELF_PUBLIC,
     LearnerLemmaRow,
     LearnerReadRow,
     LearnerRow,
     LearnerStarRow,
     PassageRow,
 )
-from app.models.schemas import StarredWord
-from app.models.schemas import Token
+from app.models.schemas import StarredWord, Token
+from app.services.gloss import resolve_gloss
+from app.services.identity import Identity, apply_owner_filter, valid_device_id
 from app.services.validator import CONTENT_POS as RU_CONTENT
 from app.services.validator_ja import CONTENT_POS as JA_CONTENT
 
 LEVELS = ("A1", "A2", "B1", "B2")
 DEFAULT_LEVEL = "A2"
-_DEVICE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
+PLACEMENT_STREAK = 3
 
-
-def valid_device_id(device_id: str | None) -> str | None:
-    if not device_id:
-        return None
-    value = device_id.strip()
-    if _DEVICE.match(value):
-        return value
-    return None
+__all__ = [
+    "LEVELS",
+    "DEFAULT_LEVEL",
+    "valid_device_id",
+    "content_tokens",
+    "unique_content_lemmas",
+    "lemma_token_stats",
+    "tokens_from_row",
+    "calibration_passed",
+    "bump_level",
+    "apply_placement",
+    "get_learner",
+    "get_or_create_learner",
+    "seen_lemmas",
+    "read_ids",
+    "ingest_passage",
+    "starred_lemmas",
+    "list_stars",
+    "star_lemma",
+    "unstar_lemma",
+    "pick_next_id",
+]
 
 
 def content_tokens(tokens: list[Token], language: str) -> list[Token]:
@@ -92,22 +108,71 @@ def bump_level(level: str, rating: str) -> str:
     return LEVELS[idx]
 
 
-def get_learner(db: Session, device_id: str, language: str) -> LearnerRow | None:
-    return (
-        db.query(LearnerRow)
-        .filter(LearnerRow.device_id == device_id, LearnerRow.language == language)
-        .one_or_none()
-    )
+def apply_placement(learner: LearnerRow, rating: str) -> str:
+    """Require three consecutive same-direction ratings before a band change."""
+    up = getattr(learner, "consecutive_up", 0) or 0
+    down = getattr(learner, "consecutive_down", 0) or 0
+    if rating == "too_easy":
+        up += 1
+        down = 0
+        if up >= PLACEMENT_STREAK:
+            learner.level = bump_level(learner.level, "too_easy")
+            up = 0
+    elif rating == "too_hard":
+        down += 1
+        up = 0
+        if down >= PLACEMENT_STREAK:
+            learner.level = bump_level(learner.level, "too_hard")
+            down = 0
+    else:
+        up = 0
+        down = 0
+    learner.consecutive_up = up
+    learner.consecutive_down = down
+    learner.updated_at = datetime.now(timezone.utc)
+    return learner.level
 
 
-def get_or_create_learner(db: Session, device_id: str, language: str) -> LearnerRow:
-    row = get_learner(db, device_id, language)
+def _guest_identity(device_id: str) -> Identity:
+    return Identity(user_id=None, device_id=device_id)
+
+
+def _as_identity(identity: Identity | str, device_id: str | None = None) -> Identity:
+    if isinstance(identity, Identity):
+        return identity
+    return Identity(user_id=None, device_id=identity or device_id)
+
+
+def get_learner(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+) -> LearnerRow | None:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerRow), LearnerRow, ident)
+    return query.filter(LearnerRow.language == language).one_or_none()
+
+
+def get_or_create_learner(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+) -> LearnerRow:
+    ident = _as_identity(identity, device_id)
+    row = get_learner(db, ident, language)
     if row is not None:
+        if ident.user_id is not None and row.user_id is None:
+            row.user_id = ident.user_id
         return row
     row = LearnerRow(
-        device_id=device_id,
+        device_id=ident.device_id or f"user-{ident.user_id}",
+        user_id=ident.user_id,
         language=language,
         level=DEFAULT_LEVEL,
+        consecutive_up=0,
+        consecutive_down=0,
         updated_at=datetime.now(timezone.utc),
     )
     db.add(row)
@@ -115,66 +180,67 @@ def get_or_create_learner(db: Session, device_id: str, language: str) -> Learner
         db.flush()
     except IntegrityError:
         db.rollback()
-        row = get_learner(db, device_id, language)
+        row = get_learner(db, ident, language)
         if row is None:
             raise
     return row
 
 
-def seen_lemmas(db: Session, device_id: str, language: str) -> set[str]:
-    rows = (
-        db.query(LearnerLemmaRow.lemma)
-        .filter(
-            LearnerLemmaRow.device_id == device_id,
-            LearnerLemmaRow.language == language,
-        )
-        .all()
-    )
+def seen_lemmas(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+) -> set[str]:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerLemmaRow.lemma), LearnerLemmaRow, ident)
+    rows = query.filter(LearnerLemmaRow.language == language).all()
     return {r[0] for r in rows}
 
 
-def read_ids(db: Session, device_id: str) -> set[str]:
-    rows = (
-        db.query(LearnerReadRow.passage_id)
-        .filter(LearnerReadRow.device_id == device_id)
-        .all()
-    )
+def read_ids(
+    db: Session,
+    identity: Identity | str,
+    device_id: str | None = None,
+) -> set[str]:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerReadRow.passage_id), LearnerReadRow, ident)
+    rows = query.all()
     return {r[0] for r in rows}
 
 
 def ingest_passage(
     db: Session,
-    device_id: str,
+    identity: Identity | str,
     language: str,
     passage_id: str,
     tokens: list[Token],
+    device_id: str | None = None,
 ) -> None:
+    ident = _as_identity(identity, device_id)
     now = datetime.now(timezone.utc)
-    existing = seen_lemmas(db, device_id, language)
+    existing = seen_lemmas(db, ident, language)
+    owner_device = ident.device_id or f"user-{ident.user_id}"
     for lemma in unique_content_lemmas(tokens, language):
         if lemma in existing:
             continue
         db.add(
             LearnerLemmaRow(
-                device_id=device_id,
+                device_id=owner_device,
+                user_id=ident.user_id,
                 language=language,
                 lemma=lemma,
                 created_at=now,
             )
         )
         existing.add(lemma)
-    already = (
-        db.query(LearnerReadRow)
-        .filter(
-            LearnerReadRow.device_id == device_id,
-            LearnerReadRow.passage_id == passage_id,
-        )
-        .one_or_none()
-    )
+    already_q = apply_owner_filter(db.query(LearnerReadRow), LearnerReadRow, ident)
+    already = already_q.filter(LearnerReadRow.passage_id == passage_id).one_or_none()
     if already is None:
         db.add(
             LearnerReadRow(
-                device_id=device_id,
+                device_id=owner_device,
+                user_id=ident.user_id,
                 passage_id=passage_id,
                 created_at=now,
             )
@@ -196,25 +262,28 @@ def _level_priority(placement: str) -> list[str]:
     return order
 
 
-def starred_lemmas(db: Session, device_id: str, language: str) -> set[str]:
-    rows = (
-        db.query(LearnerStarRow.lemma)
-        .filter(
-            LearnerStarRow.device_id == device_id,
-            LearnerStarRow.language == language,
-        )
-        .all()
-    )
+def starred_lemmas(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+) -> set[str]:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerStarRow.lemma), LearnerStarRow, ident)
+    rows = query.filter(LearnerStarRow.language == language).all()
     return {r[0] for r in rows}
 
 
-def list_stars(db: Session, device_id: str, language: str) -> list[StarredWord]:
+def list_stars(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+) -> list[StarredWord]:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerStarRow), LearnerStarRow, ident)
     rows = (
-        db.query(LearnerStarRow)
-        .filter(
-            LearnerStarRow.device_id == device_id,
-            LearnerStarRow.language == language,
-        )
+        query.filter(LearnerStarRow.language == language)
         .order_by(LearnerStarRow.created_at.desc())
         .all()
     )
@@ -227,6 +296,15 @@ def list_stars(db: Session, device_id: str, language: str) -> list[StarredWord]:
             .all()
         ):
             titles[row[0]] = row[1]
+    changed = False
+    for r in rows:
+        if not r.gloss:
+            gloss = resolve_gloss(r.lemma, r.language)
+            if gloss:
+                r.gloss = gloss
+                changed = True
+    if changed:
+        db.commit()
     return [
         StarredWord(
             lemma=r.lemma,
@@ -239,31 +317,45 @@ def list_stars(db: Session, device_id: str, language: str) -> list[StarredWord]:
     ]
 
 
+def _context_sentence(tokens: list[Token], language: str, lemma: str) -> str | None:
+    from app.services.sentences import sentence_text_for_lemma
+
+    return sentence_text_for_lemma(tokens, language, lemma)
+
+
 def star_lemma(
     db: Session,
-    device_id: str,
+    identity: Identity | str,
     language: str,
     lemma: str,
     gloss: str | None,
     passage_id: str | None,
+    device_id: str | None = None,
+    reading: str | None = None,
 ) -> StarredWord:
+    ident = _as_identity(identity, device_id)
     now = datetime.now(timezone.utc)
-    row = (
-        db.query(LearnerStarRow)
-        .filter(
-            LearnerStarRow.device_id == device_id,
-            LearnerStarRow.language == language,
-            LearnerStarRow.lemma == lemma,
-        )
-        .one_or_none()
-    )
+    owner_device = ident.device_id or f"user-{ident.user_id}"
+    query = apply_owner_filter(db.query(LearnerStarRow), LearnerStarRow, ident)
+    row = query.filter(
+        LearnerStarRow.language == language,
+        LearnerStarRow.lemma == lemma,
+    ).one_or_none()
+    context = None
+    if passage_id:
+        passage = db.get(PassageRow, passage_id)
+        if passage is not None:
+            context = _context_sentence(tokens_from_row(passage), language, lemma)
     if row is None:
         row = LearnerStarRow(
-            device_id=device_id,
+            device_id=owner_device,
+            user_id=ident.user_id,
             language=language,
             lemma=lemma,
             gloss=gloss,
+            reading=reading,
             passage_id=passage_id,
+            context=context,
             created_at=now,
         )
         db.add(row)
@@ -272,6 +364,23 @@ def star_lemma(
             row.gloss = gloss
         if passage_id:
             row.passage_id = passage_id
+        if reading:
+            row.reading = reading
+        if context:
+            row.context = context
+    from app.services.srs import upsert_card
+
+    upsert_card(
+        db,
+        ident,
+        language=language,
+        lemma=lemma,
+        gloss=gloss or row.gloss,
+        reading=reading or row.reading,
+        context=context or row.context,
+        passage_id=passage_id or row.passage_id,
+        commit=False,
+    )
     db.commit()
     title = None
     if row.passage_id:
@@ -286,16 +395,19 @@ def star_lemma(
     )
 
 
-def unstar_lemma(db: Session, device_id: str, language: str, lemma: str) -> bool:
-    row = (
-        db.query(LearnerStarRow)
-        .filter(
-            LearnerStarRow.device_id == device_id,
-            LearnerStarRow.language == language,
-            LearnerStarRow.lemma == lemma,
-        )
-        .one_or_none()
-    )
+def unstar_lemma(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    lemma: str,
+    device_id: str | None = None,
+) -> bool:
+    ident = _as_identity(identity, device_id)
+    query = apply_owner_filter(db.query(LearnerStarRow), LearnerStarRow, ident)
+    row = query.filter(
+        LearnerStarRow.language == language,
+        LearnerStarRow.lemma == lemma,
+    ).one_or_none()
     if row is None:
         return False
     db.delete(row)
@@ -312,17 +424,44 @@ def pick_next_id(
 ) -> str | None:
     rows = (
         db.query(PassageRow)
-        .filter(PassageRow.language == language)
+        .filter(
+            PassageRow.language == language,
+            PassageRow.shelf_status == SHELF_PUBLIC,
+        )
         .order_by(PassageRow.created_at.desc())
         .all()
     )
+    rows = [r for r in rows if calibration_passed(r)]
     if not rows:
         return None
 
-    def score(row: PassageRow) -> tuple[int, int, float]:
-        passed = 0 if calibration_passed(row) else 1
+    def series_next() -> str | None:
+        if not exclude_id:
+            return None
+        current = db.get(PassageRow, exclude_id)
+        if current is None or not current.series_id:
+            return None
+        nxt = (
+            db.query(PassageRow)
+            .filter(
+                PassageRow.series_id == current.series_id,
+                PassageRow.shelf_status == SHELF_PUBLIC,
+                PassageRow.chapter_index > (current.chapter_index or 0),
+            )
+            .order_by(PassageRow.chapter_index.asc())
+            .first()
+        )
+        if nxt and nxt.id not in already_read:
+            return nxt.id
+        return None
+
+    series_id = series_next()
+    if series_id:
+        return series_id
+
+    def score(row: PassageRow) -> tuple[int, float]:
         created = row.created_at.timestamp() if row.created_at else 0.0
-        return (passed, 0, -created)
+        return (0, -created)
 
     for level in _level_priority(placement):
         unread = [

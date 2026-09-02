@@ -1,11 +1,21 @@
 @import "tailwindcss";
 
+/*
+  Levla — paper, ink, one accent.
+
+  Tokens are deliberately few. `--paper-deep` is the only addition to the
+  original palette: a tonal step of the same paper, used for hover washes and
+  the landing page's quieter bands. It is not a second accent.
+*/
 :root {
   --paper: #f3eee4;
   --paper-raised: #faf6ee;
+  --paper-deep: #eae3d4;
   --ink: #1b1712;
   --rule: #d7cbb8;
   --terracotta: #b84a2a;
+
+  /* grammar overlay inks — pedagogical, never brand */
   --g-topic: #b84a2a;
   --g-subject: #2c6b73;
   --g-object: #8b5420;
@@ -14,11 +24,18 @@
   --g-aux: #7a3d5c;
   --g-adj: #2a5a45;
   --g-adverb: #6a5340;
+
+  --serif: var(--font-literata), "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Times New Roman", serif;
+  --sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --gothic: var(--font-outfit), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme inline {
   --color-paper: var(--paper);
   --color-paper-raised: var(--paper-raised);
+  --color-paper-deep: var(--paper-deep);
   --color-ink: var(--ink);
   --color-rule: var(--rule);
   --color-terracotta: var(--terracotta);
@@ -30,10 +47,17 @@
   --color-g-aux: var(--g-aux);
   --color-g-adj: var(--g-adj);
   --color-g-adverb: var(--g-adverb);
-  --font-sans: var(--font-outfit);
-  --font-display: var(--font-literata);
-  --font-reading: var(--font-literata);
-  --font-ja: var(--font-outfit);
+  --font-sans: var(--sans);
+  --font-display: var(--serif);
+  --font-reading: var(--serif);
+  --font-ja: var(--gothic);
+  /* one card radius, one pill. Nothing in between. */
+  --radius-card: 6px;
+}
+
+html {
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
 }
 
 html,
@@ -44,17 +68,161 @@ body {
 }
 
 body {
-  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .font-display,
 .font-reading {
-  font-family: var(--font-literata), "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  font-family: var(--serif);
 }
 
 .font-ja {
-  font-family: var(--font-outfit), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
-    "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--gothic);
+}
+
+/* ---------- type roles ---------- */
+
+/* small tracked label: section headings on the shelf, field legends */
+@utility t-eyebrow {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: color-mix(in srgb, var(--ink) 50%, transparent);
+}
+
+/* brand kicker: serif, terracotta, wide */
+@utility t-kicker {
+  font-family: var(--serif);
+  font-size: 13px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--terracotta);
+}
+
+/* large serif display, optical size kicks in above 40px */
+@utility t-display {
+  font-family: var(--serif);
+  font-weight: 450;
+  letter-spacing: -0.024em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+
+/* serif section heading */
+@utility t-heading {
+  font-family: var(--serif);
+  font-weight: 450;
+  letter-spacing: -0.016em;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+
+/* folio numerals on the landing page: “01”, “02” */
+@utility t-folio {
+  font-family: var(--serif);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+/* quiet text action: “← Library”, “Restock the shelf”, toggles */
+@utility t-quiet {
+  font-size: 13px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, var(--ink) 50%, transparent);
+  transition: color 150ms ease;
+  &:hover {
+    color: var(--ink);
+  }
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- controls ---------- */
+
+@utility btn-primary {
+  display: inline-flex;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 1.5rem;
+  border-radius: var(--radius-card);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  transition: background-color 150ms ease, opacity 150ms ease;
+  &:hover {
+    background: color-mix(in srgb, var(--ink) 88%, var(--paper));
+  }
+  &:disabled {
+    cursor: wait;
+    opacity: 0.7;
+  }
+}
+
+/* underline input: a rule, not a box */
+@utility field-line {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+  background: transparent;
+  padding: 0.625rem 0;
+  font-size: 1.0625rem;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 150ms ease;
+  &::placeholder {
+    color: color-mix(in srgb, var(--ink) 32%, transparent);
+  }
+  &:focus {
+    border-bottom-color: var(--ink);
+  }
+}
+
+/* ---------- reader words ---------- */
+
+@utility word {
+  cursor: pointer;
+  border-radius: 3px;
+  padding-inline: 1px;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 5px;
+  text-decoration-color: color-mix(in srgb, var(--ink) 15%, transparent);
+  transition:
+    background-color 150ms ease,
+    text-decoration-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+  &:hover {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    text-decoration-color: color-mix(in srgb, var(--ink) 45%, transparent);
+  }
+}
+
+@utility word-on {
+  background: color-mix(in srgb, var(--terracotta) 16%, transparent);
+  text-decoration-line: none;
+  &:hover {
+    background: color-mix(in srgb, var(--terracotta) 20%, transparent);
+  }
+}
+
+@utility word-chain {
+  background: color-mix(in srgb, var(--terracotta) 7%, transparent);
 }
 
 article ruby {
@@ -68,6 +236,23 @@ article rt {
   color: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
+/* ---------- global states ---------- */
+
 ::selection {
   background: color-mix(in srgb, var(--terracotta) 28%, transparent);
+}
+
+:focus-visible {
+  outline: 1.5px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

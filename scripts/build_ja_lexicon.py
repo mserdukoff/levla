@@ -562,9 +562,187 @@ add(
 )
 
 
+JLPT_JSON = {
+    "A1": "https://raw.githubusercontent.com/evanclan/OpenJLPT/main/data/json/vocab/n5.json",
+    "A2": "https://raw.githubusercontent.com/evanclan/OpenJLPT/main/data/json/vocab/n4.json",
+    "B1": "https://raw.githubusercontent.com/evanclan/OpenJLPT/main/data/json/vocab/n3.json",
+    "B2": "https://raw.githubusercontent.com/evanclan/OpenJLPT/main/data/json/vocab/n2.json",
+}
+JLPT_CSV = {
+    "A1": "https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n5.csv",
+    "A2": "https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n4.csv",
+    "B1": "https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n3.csv",
+    "B2": "https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/master/src/n2.csv",
+}
+
+
+def _http_json(url: str):
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "levla-lexicon"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        return json.loads(res.read().decode("utf-8"))
+
+
+def _http_text(url: str) -> str:
+    import urllib.request
+
+    req = urllib.request.Request(url, headers={"User-Agent": "levla-lexicon"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        return res.read().decode("utf-8")
+
+
+def _ingest_openjlpt(vocab: dict[str, str], gloss: dict[str, str]) -> int:
+    added = 0
+    for band, url in JLPT_JSON.items():
+        try:
+            payload = _http_json(url)
+        except Exception as exc:
+            print(f"OpenJLPT {band} skipped: {exc}")
+            continue
+        rows = payload if isinstance(payload, list) else payload.get("vocab") or payload.get("items") or []
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            lemma = (row.get("word") or row.get("expression") or "").strip()
+            meanings = row.get("meanings") or row.get("meaning") or []
+            if isinstance(meanings, list):
+                meaning = ", ".join(str(m) for m in meanings[:2])
+            else:
+                meaning = str(meanings)
+            if not lemma or lemma in vocab:
+                continue
+            vocab[lemma] = band
+            if meaning:
+                gloss[lemma] = meaning[:80]
+            added += 1
+    return added
+
+
+def _ingest_jlpt_csv(vocab: dict[str, str], gloss: dict[str, str]) -> int:
+    import csv
+    import io
+
+    added = 0
+    for band, url in JLPT_CSV.items():
+        try:
+            text = _http_text(url)
+        except Exception as exc:
+            print(f"JLPT CSV {band} skipped: {exc}")
+            continue
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            lemma = (row.get("expression") or row.get("word") or row.get("Expression") or "").strip()
+            meaning = (row.get("meaning") or row.get("Meaning") or row.get("english") or "").strip()
+            if not lemma or lemma in vocab:
+                continue
+            vocab[lemma] = band
+            if meaning:
+                gloss[lemma] = meaning.split(";")[0][:80]
+            added += 1
+    return added
+
+JMDICT_URL = "https://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
+JMDICT_PATH = ROOT / "data" / "raw" / "JMdict_e.xml"
+
+
+def _nf_band(pris: list[str]) -> str | None:
+    nfs: list[int] = []
+    for p in pris:
+        if p.startswith("nf") and p[2:].isdigit():
+            nfs.append(int(p[2:]))
+    if nfs:
+        rank = min(nfs)
+        if rank <= 8:
+            return "A1"
+        if rank <= 16:
+            return "A2"
+        if rank <= 24:
+            return "B1"
+        if rank <= 40:
+            return "B2"
+        return None
+    if any(p in {"ichi1", "news1", "spec1", "gai1"} for p in pris):
+        return "B2"
+    return None
+
+
+def _download_jmdict() -> Path | None:
+    import gzip
+    import urllib.request
+
+    gz_path = ROOT / "data" / "raw" / "JMdict_e.gz"
+    gz_path.parent.mkdir(parents=True, exist_ok=True)
+    if not JMDICT_PATH.exists():
+        try:
+            print("Downloading JMdict_e.gz …")
+            urllib.request.urlretrieve(JMDICT_URL, gz_path)
+            with gzip.open(gz_path, "rb") as src, JMDICT_PATH.open("wb") as dest:
+                dest.write(src.read())
+        except Exception as exc:
+            print(f"JMdict download skipped: {exc}")
+            return None
+    return JMDICT_PATH if JMDICT_PATH.exists() else None
+
+
+def _parse_jmdict(path: Path) -> list[tuple[str, str, str]]:
+    import re
+    import xml.etree.ElementTree as ET
+
+    raw = path.read_text(encoding="utf-8")
+    raw = re.sub(r"<!DOCTYPE[^>]*>", "", raw, count=1)
+    raw = re.sub(r"&([a-zA-Z0-9_-]+);", r"\1", raw)
+    root = ET.fromstring(raw)
+    rows: list[tuple[str, str, str]] = []
+    for entry in root.findall("entry"):
+        kebs = [k.findtext("keb") or "" for k in entry.findall("k_ele")]
+        rebs = [r.findtext("reb") or "" for r in entry.findall("r_ele")]
+        lemma = next((k for k in kebs if k), None) or next((r for r in rebs if r), None)
+        if not lemma:
+            continue
+        pris: list[str] = []
+        for ele in entry.findall("k_ele") + entry.findall("r_ele"):
+            for pri in ele.findall("ke_pri") + ele.findall("re_pri"):
+                if pri.text:
+                    pris.append(pri.text)
+        band = _nf_band(pris)
+        if not band:
+            continue
+        gloss = ""
+        sense = entry.find("sense")
+        if sense is not None:
+            g = sense.find("gloss")
+            if g is not None and g.text:
+                gloss = g.text.strip()[:80]
+        if not gloss:
+            continue
+        rows.append((lemma, band, gloss))
+    return rows
+
+
 def main() -> None:
     vocab = {lemma: level for lemma, (level, _g) in PEDAGOGICAL.items()}
     gloss = {lemma: g for lemma, (_l, g) in PEDAGOGICAL.items()}
+
+    added_jlpt = _ingest_openjlpt(vocab, gloss)
+    print(f"Added {added_jlpt} OpenJLPT lemmas")
+    if len(vocab) < 3000:
+        added_csv = _ingest_jlpt_csv(vocab, gloss)
+        print(f"Added {added_csv} JLPT CSV lemmas")
+
+    jmdict = _download_jmdict()
+    if jmdict is not None and len(vocab) < 3000:
+        added = 0
+        for lemma, band, meaning in _parse_jmdict(jmdict):
+            if lemma in vocab:
+                continue
+            vocab[lemma] = band
+            gloss[lemma] = meaning
+            added += 1
+            if len(vocab) >= 4200:
+                break
+        print(f"Added {added} JMdict lemmas")
+
     VOCAB_OUT.parent.mkdir(parents=True, exist_ok=True)
     GLOSS_OUT.parent.mkdir(parents=True, exist_ok=True)
     VOCAB_OUT.write_text(
@@ -581,6 +759,8 @@ def main() -> None:
     print(f"Wrote {len(vocab)} lemmas → {VOCAB_OUT}")
     print(f"Wrote {len(gloss)} glosses → {GLOSS_OUT}")
     print("Bands:", dict(counts))
+    if len(vocab) < 3000:
+        raise SystemExit(f"Lexicon too small ({len(vocab)}). Need JMdict or more pedagogical entries.")
 
 
 if __name__ == "__main__":

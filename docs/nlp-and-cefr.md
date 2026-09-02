@@ -39,16 +39,15 @@ topic + CEFR + genre + language
   - script notes: Russian must mark ё and avoid Latin; Japanese must not insert spaces or furigana
 - Response must be JSON `{ "title", "text" }`. Markdown fences and a greedy `{…}` extract are tolerated. Empty text raises. Empty title falls back to the topic.
 
-If calibration fails, a second call is made with up to 20 validator flags. **Severity** is `flags + weighted rates` (see below). The less-severe attempt is stored even if it still fails.
+If calibration fails, a second call is made with up to 20 validator flags. **Severity** is `flags + weighted rates` (see below). The less-severe attempt is stored. A draft that still fails is **quarantined** (`shelf_status=quarantine`) and is not returned by the public library, next-text picker, or `/api/passages/{id}` unless `?lab=1`.
 
 Warnings that can land on the passage:
 
 - Corrective rewrite was not closer to level; kept the first draft.
 - Corrective rewrite failed; returning the first draft.
-- Passage still has out-of-level structures. Read the flags; this is a soft-fail.
-- Library text still has out-of-level flags. (seed path only)
+- Library text still has out-of-level flags. (seed path only; those rows are quarantined unless they pass)
 
-Authored seed texts skip the LLM and skip LLM gloss fill (`use_llm_gloss=False`). They still run morph + lexicon + validator. Failed seed rows are deleted and rewritten on the next boot; passed rows are left in place (translation backfilled if missing).
+Authored seed texts skip the LLM and skip LLM gloss fill (`use_llm_gloss=False`). They still run morph + lexicon + validator. Failed seed rows are deleted and rewritten on the next boot; passed rows are left in place (translation backfilled if missing). A Japanese starter catalog (~150 texts plus multi-chapter series) is seeded from `catalog_ja.py`.
 
 ### Genre hints (prompt only)
 
@@ -198,14 +197,20 @@ Content POS for over-level and learner counts: `noun, verb, i-adj, na-adj, adver
 | File | Size (approx.) | Purpose |
 | ---- | -------------- | ------- |
 | `data/vocab/ru_cefr.json` | ~5,400 lemmas | Lemma → A1–B2. Pedagogical core plus frequency banding from a 50k word list |
-| `data/vocab/ja_cefr.json` | ~500 lemmas | Pedagogical Japanese core, dictionary form |
+| `data/vocab/ja_cefr.json` | 3,000+ lemmas | Pedagogical core plus JMdict frequency bands |
 | `data/gloss/ru_en.json` | ~1,360 | Short English glosses (not every frequency lemma has a gloss) |
-| `data/gloss/ja_en.json` | ~500 | Short English glosses, keyed to Sudachi dictionary form |
+| `data/gloss/ja_en.json` | 3,000+ | Short English glosses, keyed to dictionary form |
 | `data/grammar/ru_cefr.json` | 4 levels | Allowed cases/tenses, forbidden POS/conjunctions, rate caps, prompt text |
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text |
 | `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts |
 
-Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese is a curated N5–N3-ish core, not JLPT official lists.
+Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list.
+
+Japanese banding (`scripts/build_ja_lexicon.py`):
+
+1. Hand pedagogical list wins (particles, function words, N5–N3 core with glosses).
+2. OpenJLPT N5–N2 vocabulary (plus JMdict frequency bands when available). **N5 → A1**, **N4 → A2**, **N3 → B1**, **N2 → B2**. `ichi1` / `news1` / `spec1` without a tighter nf tag land in B2.
+3. First English gloss from JMdict is stored. Target is 3,000+ dictionary forms so A1/A2 generation does not false-flag common lemmas as unknown.
 
 `data/raw/` is gitignored. Rebuild:
 
@@ -227,4 +232,4 @@ Grammar JSON is edited by hand.
 - Sudachi mode C still splits in ways that confuse て+いる and relative-clause detection.
 - `れる/られる` is tagged as both potential and passive; B1 forbids `passive` so potential られる can false-fail B1.
 - Japanese construction detection will both over- and under-flag (heuristic).
-- Soft fail means the shelf can contain texts that are harder than their label; the reader warning is the only UI for that.
+- Quarantine means failed calibrations never wear a public CEFR badge.

@@ -49,8 +49,10 @@ export function saveFurigana(on: boolean): void {
 const FADE_KEY = "levla.fade";
 
 export function loadFadeKnown(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(FADE_KEY) === "1";
+  if (typeof window === "undefined") return true;
+  const value = window.localStorage.getItem(FADE_KEY);
+  if (value === null) return true;
+  return value === "1";
 }
 
 export function saveFadeKnown(on: boolean): void {

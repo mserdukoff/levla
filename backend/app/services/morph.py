@@ -27,6 +27,7 @@ GENDER_MAP = {"masc": "masc", "femn": "fem", "neut": "neut"}
 NUMBER_MAP = {"sing": "sg", "plur": "pl"}
 ASPECT_MAP = {"impf": "impf", "perf": "perf"}
 MOOD_MAP = {"indc": "indc", "impr": "impr"}
+_NAME_GRAMMEMES = {"Name", "Surn", "Patr", "Geox", "Orgn", "Trad"}
 
 
 @lru_cache(maxsize=1)
@@ -43,6 +44,7 @@ def analyze_word_ru(word: str) -> MorphInfo:
         return MorphInfo(lemma=word.lower())
     tag = p.tag
     case = CASE_MAP.get(str(tag.case)) if tag.case else None
+    is_name = bool(tag.grammemes & _NAME_GRAMMEMES)
     return MorphInfo(
         lemma=(p.normal_form or word).lower(),
         pos=str(tag.POS) if tag.POS else None,
@@ -52,6 +54,7 @@ def analyze_word_ru(word: str) -> MorphInfo:
         tense=TENSE_MAP.get(str(tag.tense)) if tag.tense else None,
         aspect=ASPECT_MAP.get(str(tag.aspect)) if tag.aspect else None,
         mood=MOOD_MAP.get(str(tag.mood)) if tag.mood else None,
+        pos_detail="proper-noun" if is_name else None,
     )
 
 

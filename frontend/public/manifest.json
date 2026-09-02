@@ -1,0 +1,16 @@
+{
+  "name": "Levla",
+  "short_name": "Levla",
+  "start_url": "/library",
+  "display": "standalone",
+  "background_color": "#f3eee4",
+  "theme_color": "#1b1712",
+  "description": "CEFR-calibrated Russian and Japanese graded readers",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

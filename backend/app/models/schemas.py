@@ -13,7 +13,7 @@ class GenerateRequest(BaseModel):
     level: CefrLevel
     topic: str = Field(..., min_length=1, max_length=200)
     genre: str | None = Field(default=None, max_length=40)
-    language: LangCode = "ru"
+    language: LangCode = "ja"
 
 
 class GlossRequest(BaseModel):
@@ -40,6 +40,10 @@ class LibraryItem(BaseModel):
     recommended: bool = False
     new_lemmas: int = 0
     recycled_lemmas: int = 0
+    series_id: str | None = None
+    chapter_index: int | None = None
+    has_audio: bool = False
+    new_lemma_pct: float = 0.0
 
 
 class StarredWord(BaseModel):
@@ -143,11 +147,34 @@ class Calibration(BaseModel):
     forbidden_pos_rate: float
     flags: list[str]
     warnings: list[str]
+    allowed_constructions: list[str] = []
+    forbidden_used: list[str] = []
+    banned_constructions: list[str] = []
+    sample_lemmas: list[str] = []
+
+
+class AudioCue(BaseModel):
+    index: int
+    start_ms: int
+    end_ms: int
+    text: str
+
+
+class ComprehensionChoice(BaseModel):
+    id: str
+    text: str
+
+
+class ComprehensionQuestion(BaseModel):
+    id: str
+    prompt: str
+    choices: list[str]
+    answer_index: int
 
 
 class PassageResponse(BaseModel):
     id: str
-    language: LangCode = "ru"
+    language: LangCode = "ja"
     level: CefrLevel
     topic: str
     genre: str | None
@@ -158,6 +185,12 @@ class PassageResponse(BaseModel):
     word_count: int
     created_at: datetime
     translation: str | None = None
+    shelf_status: str = "public"
+    audio_url: str | None = None
+    audio_cues: list[AudioCue] = []
+    series_id: str | None = None
+    chapter_index: int | None = None
+    comprehension: list[ComprehensionQuestion] = []
 
 
 class GlossResponse(BaseModel):
@@ -184,3 +217,44 @@ class FeedbackResponse(BaseModel):
     next_id: str | None = None
     new_lemmas: int = 0
     recycled_lemmas: int = 0
+
+
+class MeResponse(BaseModel):
+    authenticated: bool
+    user_id: int | None = None
+    email: str | None = None
+    display_name: str | None = None
+    guest: bool = True
+    show_russian: bool = False
+    generate_remaining: int | None = None
+    require_auth: bool = False
+
+
+class MagicLinkRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+
+
+class ReviewCard(BaseModel):
+    id: int
+    lemma: str
+    gloss: str | None = None
+    reading: str | None = None
+    context: str | None = None
+    language: LangCode
+    due_at: datetime
+
+
+class ReviewSubmit(BaseModel):
+    card_id: int
+    rating: Literal["again", "hard", "good", "easy"]
+
+
+class ComprehensionSubmit(BaseModel):
+    passage_id: str
+    answers: list[int]
+
+
+class TrialEventRequest(BaseModel):
+    kind: str = Field(..., min_length=1, max_length=40)
+    passage_id: str | None = None
+    payload: dict | None = None

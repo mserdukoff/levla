@@ -79,14 +79,24 @@ def generate_passage_text(
     genre: str | None = None,
     correction_flags: list[str] | None = None,
     language: str = "ru",
-) -> tuple[str, str]:
-    """Return (title, text). Raises if the LLM is not configured or returns garbage."""
+    known_lemmas: list[str] | None = None,
+) -> tuple[str, str, str | None]:
+    """Return (title, text, english translation). Raises if the LLM is not configured."""
     meta = LANG_META.get(language, LANG_META["ru"])
     rules = grammar_rules(language)[level]
     sample = ", ".join(_lemma_sample(level, language))
     genre_line = ""
     if genre and genre in GENRE_HINTS:
         genre_line = f"Genre: {GENRE_HINTS[genre]}.\n"
+
+    known_line = ""
+    if known_lemmas:
+        shown = ", ".join(known_lemmas[:80])
+        known_line = (
+            "\nThis learner already knows these lemmas. Recycle about 80–90% of "
+            "content words from this set and introduce only a few new in-band lemmas "
+            f"(target new-lemma rate around 10–20%):\n{shown}\n"
+        )
 
     correction = ""
     if correction_flags:
@@ -109,17 +119,18 @@ GRAMMAR CONSTRAINTS FOR {level}:
 
 Prefer lemmas from this in-band sample (you may use other {level}-appropriate words too):
 {sample}
-
+{known_line}
 RULES:
-1. Write ONLY in {lang_name} in the passage text. The title is also {lang_name}.
+1. The title and "text" field are ONLY {lang_name}.
 2. The passage must be a complete, readable story or article with a beginning and end.
 3. {meta["script_note"]}
-4. Do not include English, notes, glosses, or vocabulary lists in the text.
+4. Put a full English translation in "translation". One English sentence per {lang_name} sentence, same order. Do not summarize. Do not add titles or notes.
 
 Respond ONLY with valid JSON:
 {{
   "title": "{lang_name} title",
-  "text": "Full {lang_name} passage as one or more paragraphs separated by newlines."
+  "text": "Full {lang_name} passage.",
+  "translation": "English translation, one sentence per source sentence."
 }}
 {correction}"""
 
@@ -134,11 +145,12 @@ Respond ONLY with valid JSON:
     data = _parse_json(content)
     title = str(data.get("title") or "").strip()
     text = str(data.get("text") or "").strip()
+    translation = str(data.get("translation") or "").strip() or None
     if not text:
         raise RuntimeError("LLM returned an empty passage")
     if not title:
         title = topic
-    return title, text
+    return title, text, translation
 
 
 def gloss_lemmas(lemmas: list[str], language: str = "ru") -> dict[str, str]:
@@ -180,12 +192,17 @@ def translate_passage(text: str, language: str) -> str | None:
     """English translation of a full passage. None if the LLM is unavailable."""
     if not text.strip() or not settings.openrouter_api_key:
         return None
-    meta = LANG_META.get(language, LANG_META["ru"])
-    prompt = f"""Translate this {meta["name"]} graded-reader passage into natural English.
-Keep the same paragraph breaks. Do not add titles, notes, or commentary.
-Respond ONLY with the English translation.
+    from app.services.sentences import split_sentences
 
-{text}"""
+    meta = LANG_META.get(language, LANG_META["ru"])
+    source = split_sentences(text, language)
+    numbered = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(source)) or text
+    prompt = f"""Translate this {meta["name"]} graded-reader passage into natural English.
+
+There are {len(source) or 1} source sentences. Write exactly that many English sentences, in the same order. Do not merge, skip, or add sentences. Do not add a title or commentary.
+Respond ONLY with the English sentences, separated by spaces (not a numbered list).
+
+{numbered}"""
     try:
         client = _client()
         completion = client.chat.completions.create(

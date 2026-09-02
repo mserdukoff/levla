@@ -20,9 +20,9 @@ The app is a **single-user demo**, not a multi-tenant product. There are no acco
 
 ## What the learner can do
 
-Two screens. That is the whole product.
+Two screens, plus a landing page at `/` that explains the claim and opens into the shelf.
 
-### Shelf (`/`)
+### Shelf (`/library`)
 
 - Switch between Japanese and Russian.
 - See current placement for that language (default **A2**) and how many lemmas have been seen.
@@ -58,7 +58,7 @@ Generated texts are stored alongside these and appear on the same shelf.
 ## Core loop
 
 ```
-open shelf  →  pick Continue (or any card)
+open /library  →  pick Continue (or any card)
      →  read, tap words for gloss
      →  Too easy / Just right / Too hard
      →  placement ±1 (or unchanged), lemmas stored, Read next

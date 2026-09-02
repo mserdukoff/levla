@@ -48,7 +48,11 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 
 ## What you can do
 
-**Shelf (`/`)**
+**Landing (`/`)**
+
+- A landing page that states the claim (CEFR as a checked constraint), runs the real reader on a sample passage, and links into the library.
+
+**Shelf (`/library`)**
 
 - Switch between Japanese and Russian.
 - See your current placement for that language and how many lemmas you have seen.

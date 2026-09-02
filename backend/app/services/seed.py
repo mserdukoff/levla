@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.models.db import PassageRow, SessionLocal
+from app.models.db import PassageRow, SessionLocal, SHELF_PUBLIC
 from app.services.generate import save_authored_passage
 from app.services.learner import calibration_passed
 from app.services.seed_translations import TRANSLATIONS
@@ -352,7 +352,9 @@ def seed_library(db: Session | None = None) -> int:
             if row is not None and calibration_passed(row):
                 if translation and not getattr(row, "translation", None):
                     row.translation = translation
-                    db.commit()
+                if getattr(row, "shelf_status", None) != SHELF_PUBLIC:
+                    row.shelf_status = SHELF_PUBLIC
+                db.commit()
                 continue
             if row is not None:
                 db.delete(row)

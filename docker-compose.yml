@@ -1,4 +1,15 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: levla
+      POSTGRES_PASSWORD: levla
+      POSTGRES_DB: levla
+    ports:
+      - "5432:5432"
+    volumes:
+      - levla-pg:/var/lib/postgresql/data
+
   backend:
     build:
       context: .
@@ -8,9 +19,11 @@ services:
     env_file:
       - backend/.env
     volumes:
-      - levla-db:/data
+      - levla-audio:/app/backend/audio
     environment:
-      DATABASE_URL: sqlite:////data/levla.db
+      DATABASE_URL: postgresql://levla:levla@postgres:5432/levla
+    depends_on:
+      - postgres
 
   frontend:
     build:
@@ -25,4 +38,5 @@ services:
       - backend
 
 volumes:
-  levla-db:
+  levla-pg:
+  levla-audio:

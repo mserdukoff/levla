@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 import re
+import threading
 from functools import lru_cache
 
 from app.models.schemas import MorphInfo, Token
 from app.services.data import vocab_bands
 from app.services.kanji import breakdown
+
+# The cached Sudachi tokenizer below is a single Rust-backed object shared
+# by every request. FastAPI runs sync endpoints in a thread pool, and two
+# threads calling tokenize() on it at once crash with "RuntimeError: Already
+# borrowed" — Sudachi's tokenize() isn't reentrant. Gloss resolution now
+# calls this on ordinary passage reads (not just generation), which made
+# concurrent reads common enough to hit this reliably, so every call is
+# serialized through this lock.
+_SUDACHI_LOCK = threading.Lock()
 
 _PUNCT_POS = {"補助記号", "空白"}
 _KATAKANA_START = 0x30A1
@@ -37,6 +47,7 @@ POS1_EN = {
     "準体助詞": "nominal",
     "非自立可能": "bound",
     "助動詞語幹": "aux-stem",
+    "固有名詞": "proper-noun",
 }
 
 CONTENT_POS_JA = {"名詞", "動詞", "形容詞", "形状詞", "副詞"}
@@ -114,7 +125,8 @@ def morph_from_sudachi(m) -> MorphInfo:
 
 def analyze_word_ja(word: str) -> MorphInfo:
     tok, mode = sudachi()
-    ms = tok.tokenize(word, mode)
+    with _SUDACHI_LOCK:
+        ms = tok.tokenize(word, mode)
     if not ms:
         return MorphInfo(lemma=word)
     return morph_from_sudachi(ms[0])
@@ -123,7 +135,8 @@ def analyze_word_ja(word: str) -> MorphInfo:
 def analyze_text_ja(text: str, language: str = "ja") -> list[Token]:
     bands = vocab_bands(language)
     tok, mode = sudachi()
-    ms = list(tok.tokenize(text, mode))
+    with _SUDACHI_LOCK:
+        ms = list(tok.tokenize(text, mode))
     tokens: list[Token] = []
     for i, m in enumerate(ms):
         surface = m.surface()

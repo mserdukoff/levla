@@ -69,7 +69,7 @@ levla/
 │   ├── Dockerfile
 │   └── .env.example
 ├── frontend/
-│   ├── src/app/                    # `/` shelf, `/passage/[id]` reader
+│   ├── src/app/                    # `/` landing, `/library` shelf, `/passage/[id]` reader
 │   ├── src/components/             # Shelf, Reader, GenerateForm
 │   ├── src/lib/                    # API client, types, device id
 │   ├── next.config.ts              # /api rewrite
@@ -146,7 +146,9 @@ Expected wait: **20–40 seconds**. No streaming. 503 if no API key; 502 on gene
 
 | Route | File | Notes |
 | ----- | ---- | ----- |
-| `/` | `src/app/page.tsx` | Title + `Shelf` |
+| `/` | `src/app/page.tsx` | Landing page (`components/landing/*`); runs the real reader on a hand-authored sample |
+| `/library` | `src/app/library/page.tsx` | `Shelf` |
+| `/review` | `src/app/review/page.tsx` | Saved-word review |
 | `/passage/[id]` | `src/app/passage/[id]/page.tsx` | SSR passage fetch, `dynamic = "force-dynamic"` |
 | `/passage/[id]` loading | `src/app/passage/[id]/loading.tsx` | Skeleton bars |
 | unmatched | `src/app/not-found.tsx` | “Passage gone” |

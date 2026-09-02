@@ -2,15 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { GenerationProgress } from "@/components/generation-progress";
+import { Segmented } from "@/components/segmented";
 import { generatePassage } from "@/lib/api";
 import { GENRES, LANGUAGES, LEVELS, type CefrLevel, type LangCode } from "@/lib/types";
 
 export function GenerateForm({
   language: languageProp,
   restock = false,
+  remaining = null,
 }: {
   language?: LangCode;
   restock?: boolean;
+  remaining?: number | null;
 }) {
   const router = useRouter();
   const [level, setLevel] = useState<CefrLevel>("A2");
@@ -48,71 +52,31 @@ export function GenerateForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-8">
+    <form onSubmit={onSubmit} className="flex flex-col gap-9">
       {!restock ? (
-      <fieldset className="flex flex-col gap-3">
-        <legend className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink/50">
-          Language
-        </legend>
-        <div className="grid grid-cols-2 gap-2">
-          {LANGUAGES.map((item) => {
-            const active = item.id === language;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setLanguage(item.id)}
-                className={`flex flex-col items-start rounded-lg border px-3 py-2.5 text-left transition ${
-                  active
-                    ? "border-ink bg-ink text-paper"
-                    : "border-rule bg-paper-raised text-ink hover:border-ink/30"
-                }`}
-              >
-                <span className="text-sm font-medium">{item.label}</span>
-                <span className={`mt-0.5 text-[13px] ${active ? "text-paper/70" : "text-ink/45"}`}>
-                  {item.native}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </fieldset>
+        <fieldset className="flex flex-col gap-3">
+          <legend className="t-eyebrow mb-3">Language</legend>
+          <Segmented
+            ariaLabel="Language"
+            options={LANGUAGES.map((l) => ({ id: l.id, label: l.label, hint: l.native }))}
+            value={language}
+            onChange={setLanguage}
+          />
+        </fieldset>
       ) : null}
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink/50">
-          Level
-        </legend>
-        <div className="grid grid-cols-4 gap-2">
-          {LEVELS.map((item) => {
-            const active = item.id === level;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setLevel(item.id)}
-                className={`flex flex-col items-start rounded-lg border px-3 py-2.5 text-left transition ${
-                  active
-                    ? "border-ink bg-ink text-paper"
-                    : "border-rule bg-paper-raised text-ink hover:border-ink/30"
-                }`}
-              >
-                <span className="font-display text-lg leading-none">{item.label}</span>
-                <span
-                  className={`mt-1 text-[11px] ${active ? "text-paper/70" : "text-ink/45"}`}
-                >
-                  {item.hint}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <legend className="t-eyebrow mb-3">Level</legend>
+        <Segmented
+          ariaLabel="CEFR level"
+          options={LEVELS.map((l) => ({ id: l.id, label: l.label, hint: l.hint }))}
+          value={level}
+          onChange={setLevel}
+        />
       </fieldset>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink/50">
-          Topic
-        </span>
+      <label className="flex flex-col gap-3">
+        <span className="t-eyebrow">Topic</span>
         <input
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
@@ -122,14 +86,12 @@ export function GenerateForm({
               : "A morning at the market, a train to Kazan…"
           }
           maxLength={200}
-          className="rounded-lg border border-rule bg-paper-raised px-4 py-3 text-base text-ink outline-none placeholder:text-ink/30 focus:border-ink"
+          className="field-line"
         />
       </label>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="text-[11px] font-medium uppercase tracking-[0.18em] text-ink/50">
-          Genre
-        </legend>
+        <legend className="t-eyebrow mb-3">Genre</legend>
         <div className="flex flex-wrap gap-2">
           {GENRES.map((item) => {
             const active = item.id === genre;
@@ -137,8 +99,9 @@ export function GenerateForm({
               <button
                 key={item.id}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setGenre(active ? null : item.id)}
-                className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+                className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
                   active
                     ? "border-terracotta bg-terracotta text-paper"
                     : "border-rule bg-paper-raised text-ink/80 hover:border-ink/30"
@@ -152,24 +115,29 @@ export function GenerateForm({
       </fieldset>
 
       {error ? (
-        <p className="rounded-lg border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta" role="alert">
+        <p
+          className="rounded-card border border-terracotta/30 bg-terracotta/10 px-4 py-3 text-sm text-terracotta"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="flex h-12 items-center justify-center rounded-lg bg-ink px-6 text-sm font-medium tracking-wide text-paper transition hover:bg-ink/90 disabled:cursor-wait disabled:opacity-70"
-      >
-        {loading ? "Writing and checking level…" : restock ? "Add to shelf" : "Generate passage"}
-      </button>
+      <div className="flex flex-col gap-3">
+        <button type="submit" disabled={loading} className="btn-primary w-full">
+          {loading ? "Writing and checking level…" : restock ? "Add to shelf" : "Generate passage"}
+        </button>
+        {remaining != null && !loading ? (
+          <p className="tnum text-center text-[13px] text-ink/45">
+            {remaining} custom passages left this month.
+          </p>
+        ) : null}
+      </div>
 
       {loading ? (
-        <p className="text-center text-sm text-ink/50">
-          Constraining grammar to {level}, then validating every word. This
-          usually takes 20–40 seconds.
-        </p>
+        <div className="border-t border-rule pt-6">
+          <GenerationProgress level={level} language={language} />
+        </div>
       ) : null}
     </form>
   );
