@@ -2,7 +2,7 @@
 
 Base path: `/api`. FastAPI OpenAPI: `http://localhost:8000/docs` when the backend is running.
 
-The Next.js origin proxies `/api/*` to the backend. Passage SSR bypasses the rewrite and calls `NLP_BACKEND_URL` directly.
+The Next.js origin proxies `/api/*` to the backend at runtime. Passage SSR bypasses the proxy and calls `NLP_BACKEND_URL` directly. On AWS, the load balancer can send `/api/*` to FastAPI instead.
 
 ## Headers
 
@@ -18,7 +18,9 @@ CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`
 | Method | Path | Body / query | Success |
 | ------ | ---- | ------------ | ------- |
 | `GET` | `/health` | | `{ "ok": true, "name": "levla" }` |
-| `POST` | `/generate` | `{ level, topic, genre?, language }` | `PassageResponse` |
+| `GET` | `/health/ready` | | `{ "ok": true, "name": "levla", "db": true }` — 500 if the database is down |
+| `POST` | `/generate` | `{ level, topic, genre?, language }` | **200** cached `PassageResponse`, or **202** `{ job_id, status }` |
+| `GET` | `/generate/{job_id}` | `X-Device-Id` | `GenerateJobResponse` — poll until `completed` or `failed` |
 | `GET` | `/library?language=ja\|ru` | `X-Device-Id` | `LibraryResponse` |
 | `GET` | `/passages/{id}` | | `PassageResponse` |
 | `GET` | `/passages/{id}/translation` | | `{ passage_id, translation }` |
@@ -37,7 +39,8 @@ CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`
 | ---- | ---- |
 | 400 | `language` is not `ru` or `ja` on `/library` |
 | 404 | Unknown passage id (passage, translation, stats, feedback) |
-| 422 | Pydantic validation (level, topic length, rating enum, …) |
+| 202 | `/generate` accepted; poll `/generate/{job_id}` |
+| 429 | Too many pending generation jobs for this device/account |
 | 502 | Generation threw after the key was present |
 | 503 | `OPENROUTER_API_KEY` missing on generate; translation still unavailable |
 

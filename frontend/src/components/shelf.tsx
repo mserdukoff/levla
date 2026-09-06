@@ -5,10 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { BandStrip } from "@/components/band";
 import { GenerateForm } from "@/components/generate-form";
 import { Segmented } from "@/components/segmented";
+import { StrokeOrderButton } from "@/components/stroke-order";
 import { fetchLibrary, fetchMe, fetchReview, logout, requestMagicLink, unstarWord } from "@/lib/api";
 import { getDeviceId, loadLanguage, saveLanguage } from "@/lib/device";
 import {
   LANGUAGES,
+  kanjiChars,
   type LangCode,
   type LibraryItem,
   type LibraryResponse,
@@ -54,31 +56,41 @@ function WordsList({
     <section className="flex flex-col gap-3">
       <SectionLabel>Words</SectionLabel>
       <ul className="flex flex-col divide-y divide-rule border-y border-rule">
-        {words.map((word) => (
-          <li key={word.lemma} className="flex items-baseline justify-between gap-4 py-3">
-            <div className="min-w-0">
-              <p className="flex flex-wrap items-baseline gap-x-2.5">
-                <span className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
-                {word.gloss ? <span className="text-sm text-ink/55">{word.gloss}</span> : null}
-              </p>
-              {word.passage_id && word.title ? (
-                <Link
-                  href={`/passage/${word.passage_id}`}
-                  className={`mt-0.5 block text-[13px] text-ink/40 transition-colors hover:text-ink ${font}`}
-                >
-                  {word.title}
-                </Link>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => onRemove(word.lemma)}
-              className="t-quiet shrink-0 underline decoration-ink/15 underline-offset-4"
-            >
-              Remove
-            </button>
-          </li>
-        ))}
+        {words.map((word) => {
+          const kanji = language === "ja" ? kanjiChars(word.lemma) : [];
+          return (
+            <li key={word.lemma} className="flex items-start justify-between gap-4 py-3">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-baseline gap-x-2.5">
+                  <span className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
+                  {word.gloss ? <span className="text-sm text-ink/55">{word.gloss}</span> : null}
+                </p>
+                {kanji.length > 0 ? (
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    {kanji.map((ch, i) => (
+                      <StrokeOrderButton key={`${ch}-${i}`} char={ch} />
+                    ))}
+                  </div>
+                ) : null}
+                {word.passage_id && word.title ? (
+                  <Link
+                    href={`/passage/${word.passage_id}`}
+                    className={`mt-0.5 block text-[13px] text-ink/40 transition-colors hover:text-ink ${font}`}
+                  >
+                    {word.title}
+                  </Link>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(word.lemma)}
+                className="t-quiet shrink-0 underline decoration-ink/15 underline-offset-4"
+              >
+                Remove
+              </button>
+            </li>
+          );
+        })}
       </ul>
       <p className="t-quiet">
         Export{" "}
@@ -374,6 +386,10 @@ export function Shelf() {
         </Link>
       ) : null}
 
+      {library?.words && library.words.length > 0 ? (
+        <WordsList words={library.words} language={language} onRemove={onRemoveWord} />
+      ) : null}
+
       {rest.length > 0 ? (
         <section className="flex flex-col gap-3">
           <SectionLabel>The shelf</SectionLabel>
@@ -383,10 +399,6 @@ export function Shelf() {
             ))}
           </ul>
         </section>
-      ) : null}
-
-      {library?.words && library.words.length > 0 ? (
-        <WordsList words={library.words} language={language} onRemove={onRemoveWord} />
       ) : null}
 
       <section id="restock" className="scroll-mt-8 flex flex-col gap-3">

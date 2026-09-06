@@ -2,19 +2,13 @@ from __future__ import annotations
 
 import json
 import logging
-from pathlib import Path
 
 from app.core.config import settings
 from app.models.db import PassageRow
+from app.services import audio_store
 from app.services.sentences import split_sentences
 
 logger = logging.getLogger(__name__)
-
-
-def _audio_dir() -> Path:
-    path = settings.audio_path
-    path.mkdir(parents=True, exist_ok=True)
-    return path
 
 
 def synthesize_passage(row: PassageRow) -> tuple[str, list[dict]] | None:
@@ -23,8 +17,7 @@ def synthesize_passage(row: PassageRow) -> tuple[str, list[dict]] | None:
     sentences = split_sentences(row.text, language)
     if not sentences:
         return None
-    dest = _audio_dir() / f"{row.id}.mp3"
-    if dest.exists() and row.audio_cues_json:
+    if audio_store.exists(row.id) and row.audio_cues_json:
         try:
             cues = json.loads(row.audio_cues_json)
             return f"/api/audio/{row.id}.mp3", cues
@@ -32,11 +25,11 @@ def synthesize_passage(row: PassageRow) -> tuple[str, list[dict]] | None:
             pass
     if not settings.azure_speech_key:
         cues = _estimate_cues(sentences, language)
-        dest.write_bytes(_silent_mp3())
+        audio_store.put_mp3(row.id, _silent_mp3())
         return f"/api/audio/{row.id}.mp3", cues
     try:
         audio, cues = _azure_ssml(sentences, language)
-        dest.write_bytes(audio)
+        audio_store.put_mp3(row.id, audio)
         return f"/api/audio/{row.id}.mp3", cues
     except Exception:
         logger.exception("Azure TTS failed for %s", row.id)

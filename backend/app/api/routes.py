@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
-from fastapi.responses import RedirectResponse, Response as PlainResponse
+from fastapi.responses import RedirectResponse, Response as PlainResponse, JSONResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.db import PassageRow, SessionLocal, UserRow
+from app.models.db import GenerationJobRow, PassageRow, SessionLocal, UserRow
 from app.models.schemas import (
     ComprehensionSubmit,
     FeedbackRequest,
     FeedbackResponse,
+    GenerateJobResponse,
     GenerateRequest,
     GlossRequest,
     GlossResponse,
@@ -36,8 +38,13 @@ from app.services.auth import (
 from app.services.generate import (
     complete_read,
     ensure_translation,
-    generate_passage,
+    find_cached_passage,
     get_passage,
+)
+from app.services.generation_jobs import (
+    enqueue_generation,
+    job_owned_by,
+    job_to_response,
 )
 from app.services.gloss import resolve_gloss
 from app.services.identity import Identity, valid_device_id
@@ -84,6 +91,12 @@ def get_identity(
 @router.get("/health")
 def health():
     return {"ok": True, "name": "levla"}
+
+
+@router.get("/health/ready")
+def ready(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"ok": True, "name": "levla", "db": True}
 
 
 @router.get("/me", response_model=MeResponse)
@@ -199,7 +212,7 @@ def auth_logout(response: Response):
     return {"ok": True}
 
 
-@router.post("/generate", response_model=PassageResponse)
+@router.post("/generate")
 def post_generate(
     body: GenerateRequest,
     db: Session = Depends(get_db),
@@ -210,6 +223,10 @@ def post_generate(
             status_code=401,
             detail="Sign in to generate a custom passage. The catalog is free to read.",
         )
+    topic = body.topic.strip()
+    cached = find_cached_passage(db, body.level, topic, body.genre, body.language)
+    if cached is not None:
+        return cached
     if settings.require_auth:
         consume_generate(db, identity)
     known = (
@@ -218,20 +235,35 @@ def post_generate(
         else []
     )
     try:
-        return generate_passage(
+        job = enqueue_generation(
             db,
-            body.level,
-            body.topic.strip(),
-            body.genre,
-            body.language,
+            level=body.level,
+            topic=topic,
+            genre=body.genre,
+            language=body.language,
+            identity=identity,
             known_lemmas=known or None,
         )
     except HTTPException:
         raise
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Generation failed: {e}") from e
+    payload = job_to_response(db, job)
+    return JSONResponse(status_code=202, content=payload.model_dump(mode="json"))
+
+
+@router.get("/generate/{job_id}", response_model=GenerateJobResponse)
+def get_generate_job(
+    job_id: str,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    job = db.get(GenerationJobRow, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Generation job not found")
+    if not job_owned_by(job, identity):
+        raise HTTPException(status_code=404, detail="Generation job not found")
+    return job_to_response(db, job)
 
 
 @router.get("/library", response_model=LibraryResponse)
@@ -547,8 +579,12 @@ def get_trial_metrics(days: int = 30, db: Session = Depends(get_db)):
 def get_audio(filename: str):
     from pathlib import Path
 
+    from app.services import audio_store
+
     safe = Path(filename).name
-    path = settings.audio_path / safe
-    if not path.exists() or path.suffix.lower() != ".mp3":
+    if safe.suffix.lower() != ".mp3":
         raise HTTPException(status_code=404, detail="Audio not found")
-    return PlainResponse(path.read_bytes(), media_type="audio/mpeg")
+    data = audio_store.get_mp3(safe.stem)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Audio not found")
+    return PlainResponse(data, media_type="audio/mpeg")

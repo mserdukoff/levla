@@ -93,6 +93,7 @@ Vertical stacks on the app screens use gaps of **3 / 9 / 12** (12 / 36 / 48 px).
 | Band strip | 4 px |
 | Genre chips, feedback pills | `rounded-full` |
 | Clickable word | 3 px |
+| Kanji stroke diagram | none (hairline square) |
 | Inputs | none: `field-line` is a bottom rule only |
 
 ## Controls
@@ -107,7 +108,10 @@ Vertical stacks on the app screens use gaps of **3 / 9 / 12** (12 / 36 / 48 px).
 
 No icons. Typographic arrows only (`←`, `→`, `↓`). Transitions are colour and border, 150 ms. `prefers-reduced-motion` collapses them. No page transitions, no skeleton shimmer.
 
-The one animated element is the **generation progress hairline** (`generation-progress.tsx`): a 1 px rule that fills asymptotically (never past 94 %) while four stages (Writing at A2 → Analyzing every word → Scoring → Rewriting if it missed) move from ink/30 to ink on a timer, with an elapsed-seconds count. It is a paced account of what the backend does, not a measured one, and the copy says "Usually 20–40 seconds".
+Two animated elements, both paced rather than decorative:
+
+1. The **generation progress hairline** (`generation-progress.tsx`): a 1 px rule that fills asymptotically (never past 94 %) while four stages (Writing at A2 → Analyzing every word → Scoring → Rewriting if it missed) move from ink/30 to ink on a timer, with an elapsed-seconds count. It is a paced account of what the backend does, not a measured one, and the copy says "Usually 20–40 seconds".
+2. **Kanji stroke order** (`stroke-order.tsx`): when a Japanese word opens in the gloss, each kanji shows a KanjiVG diagram immediately. Faint traces of the character sit under ink strokes that draw in sequence, with numbers appearing as each stroke starts. Click the diagram to replay. `prefers-reduced-motion` shows the completed numbered diagram with no drawing.
 
 The gloss panel keeps its soft upward shadow on `sm+` because it floats.
 
@@ -133,7 +137,7 @@ The whole page follows one language choice (the demo's segmented control).
 5. **Continue**: the inverted card. Topic and chapter top-left, inverted band strip top-right, title, meta line, **Read →**.
 6. Review row (only when cards are due).
 7. **The shelf**: hairline rows. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised.
-8. **Words**: hairline rows with Remove; export links.
+8. **Words**: hairline rows with Remove; Japanese lemmas show stroke-order diagrams; export links.
 9. **Restock**: a section label and **Restock the shelf →**; open state shows one sentence and the form, with **Hide restock** below. **Review saved words** sits beside it when nothing is due.
 
 ### Restock form
@@ -150,17 +154,17 @@ Toolbar: a hairline-bounded row. Left, toggles **English · Sentence · Grammar 
 
 Article rules are unchanged (word buttons, hover, selection, chain highlight, fade known, furigana). Calibration warnings print with a terracotta left rule.
 
-English / Sentence blocks carry an eyebrow (`English`, `This sentence`).
+The **English** block sits under the passage with an eyebrow. Full translation and **Sentence** share that block: Sentence turns off the gloss and fills the same English section with the tapped sentence. In Sentence mode the article selects whole sentences (hover and click), not individual words.
 
-Sticky bottom bar and gloss panel behave as before. The gloss floats at `min(26rem, 100% − 2rem)` on `sm+`. Unselected feedback pills dim after a rating; **Read next →** sits at the right of the status line.
+Sticky bottom bar and gloss panel behave as before. The gloss floats at `min(38rem, 100% − 2rem)` on `sm+`, up to `75vh`. Unselected feedback pills dim after a rating; **Read next →** sits at the right of the status line.
 
 ### Review, 404, loading
 
-Review follows the library header pattern (`← Library`, due count as tracked meta). 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
+Review follows the library header pattern (`← Library`, due count as tracked meta). Japanese cards show stroke-order diagrams under the lemma. 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
 
 ## Gloss card content order
 
-Unchanged: surface (with reading beside it) → lemma + band chip → morph line → suffix chain → gloss → Save → kanji rows (hairline-divided).
+Unchanged: surface (with reading beside it) → lemma + band chip → morph line → suffix chain → gloss → Save → kanji rows (hairline-divided). Each kanji row opens with its stroke-order diagram already playing; tap the diagram to replay.
 
 ## Interaction rules
 
@@ -169,7 +173,7 @@ Unchanged from the previous spec (`levla.language`, `levla.grammar`, `levla.furi
 ## Accessibility
 
 - Gloss panel: `role="dialog"`, close button labelled. Demo gloss area: `role="region"`, `aria-live="polite"`.
-- Word buttons and toggles set `aria-pressed`. Segmented controls are `radiogroup` / `radio`.
+- Word buttons and toggles set `aria-pressed`. Segmented controls are `radiogroup` / `radio`. Kanji stroke diagrams in the gloss are buttons labelled to replay stroke order.
 - Global `:focus-visible` ring.
 - Band strips carry an `aria-label` (`A2 on a scale of A1 to B2`).
 - `text-ink/40` remains the weakest tone and should not carry essential meaning alone.

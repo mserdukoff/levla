@@ -11,5 +11,6 @@ frontend/node_modules/
 .DS_Store
 *.egg-info/
 dist/
-data/raw/
+backend/audio/
+*.mp3
 

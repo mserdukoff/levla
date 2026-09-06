@@ -70,10 +70,15 @@ def _to_response(row: PassageRow) -> PassageResponse:
     language = getattr(row, "language", None) or "ru"
     if language == "ja":
         from app.services.kanji import breakdown
+        from app.services.morph_ja import spoken_reading
 
         for tok in tokens:
             if tok.is_word:
-                reading = tok.morph.reading if tok.morph else None
+                reading = spoken_reading(
+                    tok.text, tok.morph.reading if tok.morph else None
+                )
+                if tok.morph:
+                    tok.morph.reading = reading
                 tok.kanji = breakdown(tok.text, reading)
     from app.services.grammar import attach_grammar
 
@@ -213,6 +218,36 @@ def _analyze_and_validate(
     return tokens, result
 
 
+def topic_hash(language: str, level: str, topic: str, genre: str | None) -> str:
+    import hashlib
+
+    return hashlib.sha256(
+        f"{language}|{level}|{topic.strip().lower()}|{genre or ''}".encode()
+    ).hexdigest()
+
+
+def find_cached_passage(
+    db: Session,
+    level: str,
+    topic: str,
+    genre: str | None,
+    language: str,
+) -> PassageResponse | None:
+    th = topic_hash(language, level, topic, genre)
+    cached = (
+        db.query(PassageRow)
+        .filter(
+            PassageRow.topic_hash == th,
+            PassageRow.shelf_status == SHELF_PUBLIC,
+        )
+        .order_by(PassageRow.created_at.desc())
+        .first()
+    )
+    if cached is None:
+        return None
+    return _to_response(cached)
+
+
 def generate_passage(
     db: Session,
     level: str,
@@ -221,22 +256,9 @@ def generate_passage(
     language: str = "ru",
     known_lemmas: list[str] | None = None,
 ) -> PassageResponse:
-    import hashlib
-
-    topic_hash = hashlib.sha256(
-        f"{language}|{level}|{topic.strip().lower()}|{genre or ''}".encode()
-    ).hexdigest()
-    cached = (
-        db.query(PassageRow)
-        .filter(
-            PassageRow.topic_hash == topic_hash,
-            PassageRow.shelf_status == SHELF_PUBLIC,
-        )
-        .order_by(PassageRow.created_at.desc())
-        .first()
-    )
+    cached = find_cached_passage(db, level, topic, genre, language)
     if cached is not None:
-        return _to_response(cached)
+        return cached
 
     title, text, translation = generate_passage_text(
         level, topic, genre, language=language, known_lemmas=known_lemmas
@@ -289,7 +311,7 @@ def generate_passage(
         tokens=tokens,
         calibration=calibration,
         translation=translation,
-        topic_hash=topic_hash,
+        topic_hash=topic_hash(language, level, topic, genre),
     )
     if not result.passed:
         logger.info("Quarantined failed draft %s (%s %s)", row.id, language, level)

@@ -1,0 +1,35 @@
+{
+  "family": "levla-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "ARN_EXECUTION_ROLE",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/levla-frontend:TAG",
+      "essential": true,
+      "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "NLP_BACKEND_URL", "value": "http://backend:8000" },
+        { "name": "NODE_ENV", "value": "production" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 20
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/levla-frontend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

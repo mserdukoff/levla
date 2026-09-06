@@ -172,6 +172,9 @@ class ComprehensionQuestion(BaseModel):
     answer_index: int
 
 
+GenerateJobStatus = Literal["pending", "running", "completed", "failed"]
+
+
 class PassageResponse(BaseModel):
     id: str
     language: LangCode = "ja"
@@ -191,6 +194,16 @@ class PassageResponse(BaseModel):
     series_id: str | None = None
     chapter_index: int | None = None
     comprehension: list[ComprehensionQuestion] = []
+
+
+class GenerateJobResponse(BaseModel):
+    job_id: str
+    status: GenerateJobStatus
+    passage: PassageResponse | None = None
+    error: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
 
 class GlossResponse(BaseModel):

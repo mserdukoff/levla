@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect } from "react";
 import { BandChip } from "@/components/band";
+import { StrokeOrderButton } from "@/components/stroke-order";
+import { fetchStrokeDiagram } from "@/lib/kanjivg";
 import {
   jaGrammarLine,
   morphLine,
@@ -32,83 +35,91 @@ function readingLine(items: string[], cap = 6): string {
   return `${clean.slice(0, cap).join(" · ")}…`;
 }
 
+function KanjiRow({ part }: { part: KanjiPart }) {
+  const on = readingLine(part.on, 6);
+  const kun = readingLine(part.kun, 6);
+  const facts = kanjiFacts(part);
+  const nanori = readingLine(part.nanori ?? [], 6);
+  const components = (part.parts ?? []).filter(
+    (p) => p && p !== part.char && p !== part.radical,
+  );
+  return (
+    <li className="flex items-start gap-4 py-3">
+      <StrokeOrderButton char={part.char} />
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="flex flex-wrap items-baseline gap-x-2">
+          {part.reading ? (
+            <span className="font-ja text-sm text-ink/55">{part.reading}</span>
+          ) : null}
+          {part.meaning ? (
+            <span className="text-sm text-ink/85">{part.meaning}</span>
+          ) : null}
+        </p>
+        {on || kun ? (
+          <p className="text-[12px] leading-snug text-ink/50">
+            {on ? (
+              <>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+                  on{" "}
+                </span>
+                <span className="font-ja">{on}</span>
+              </>
+            ) : null}
+            {on && kun ? <span className="text-ink/25"> · </span> : null}
+            {kun ? (
+              <>
+                <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+                  kun{" "}
+                </span>
+                <span className="font-ja">{kun}</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        {facts ? (
+          <p className="tnum text-[10px] uppercase tracking-[0.14em] text-ink/40">
+            {facts}
+          </p>
+        ) : null}
+        {part.radical || components.length > 0 ? (
+          <p className="text-[12px] text-ink/45">
+            {part.radical ? (
+              <>
+                <span className="font-ja">{part.radical}</span>
+                {part.radical_name ? ` ${part.radical_name}` : ""}
+              </>
+            ) : null}
+            {part.radical && components.length > 0 ? (
+              <span className="mx-1.5 text-ink/25">·</span>
+            ) : null}
+            {components.length > 0 ? (
+              <span className="font-ja">{components.join(" ")}</span>
+            ) : null}
+          </p>
+        ) : null}
+        {nanori ? (
+          <p className="text-[12px] text-ink/40">
+            <span className="text-[10px] uppercase tracking-[0.14em]">names </span>
+            <span className="font-ja">{nanori}</span>
+          </p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 function KanjiList({ parts }: { parts: KanjiPart[] }) {
+  const chars = parts.map((part) => part.char).join("");
+
+  useEffect(() => {
+    for (const char of chars) void fetchStrokeDiagram(char);
+  }, [chars]);
+
   return (
     <ul className="mt-4 flex flex-col divide-y divide-rule border-t border-rule">
-      {parts.map((part, i) => {
-        const on = readingLine(part.on, 6);
-        const kun = readingLine(part.kun, 6);
-        const facts = kanjiFacts(part);
-        const nanori = readingLine(part.nanori ?? [], 6);
-        const components = (part.parts ?? []).filter(
-          (p) => p && p !== part.char && p !== part.radical,
-        );
-        return (
-          <li key={`${part.char}-${i}`} className="flex items-start gap-4 py-3">
-            <span className="font-ja w-9 shrink-0 text-[1.75rem] leading-none text-ink">
-              {part.char}
-            </span>
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="flex flex-wrap items-baseline gap-x-2">
-                {part.reading ? (
-                  <span className="font-ja text-sm text-ink/55">{part.reading}</span>
-                ) : null}
-                {part.meaning ? (
-                  <span className="text-sm text-ink/85">{part.meaning}</span>
-                ) : null}
-              </p>
-              {on || kun ? (
-                <p className="text-[12px] leading-snug text-ink/50">
-                  {on ? (
-                    <>
-                      <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
-                        on{" "}
-                      </span>
-                      <span className="font-ja">{on}</span>
-                    </>
-                  ) : null}
-                  {on && kun ? <span className="text-ink/25"> · </span> : null}
-                  {kun ? (
-                    <>
-                      <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
-                        kun{" "}
-                      </span>
-                      <span className="font-ja">{kun}</span>
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-              {facts ? (
-                <p className="tnum text-[10px] uppercase tracking-[0.14em] text-ink/40">
-                  {facts}
-                </p>
-              ) : null}
-              {part.radical || components.length > 0 ? (
-                <p className="text-[12px] text-ink/45">
-                  {part.radical ? (
-                    <>
-                      <span className="font-ja">{part.radical}</span>
-                      {part.radical_name ? ` ${part.radical_name}` : ""}
-                    </>
-                  ) : null}
-                  {part.radical && components.length > 0 ? (
-                    <span className="mx-1.5 text-ink/25">·</span>
-                  ) : null}
-                  {components.length > 0 ? (
-                    <span className="font-ja">{components.join(" ")}</span>
-                  ) : null}
-                </p>
-              ) : null}
-              {nanori ? (
-                <p className="text-[12px] text-ink/40">
-                  <span className="text-[10px] uppercase tracking-[0.14em]">names </span>
-                  <span className="font-ja">{nanori}</span>
-                </p>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
+      {parts.map((part, i) => (
+        <KanjiRow key={`${part.char}-${i}`} part={part} />
+      ))}
     </ul>
   );
 }
@@ -161,7 +172,7 @@ export function GlossCard({
   const showLemma = Boolean(token.lemma && token.lemma !== token.text);
   const jp = ja ? "font-ja" : "font-reading";
   return (
-    <div className={`flex flex-col overflow-y-auto pr-1 ${maxHeight ? "max-h-[60vh]" : ""}`}>
+    <div className={`flex flex-col overflow-y-auto pr-1 ${maxHeight ? "max-h-[75vh]" : ""}`}>
       <p className="flex flex-wrap items-baseline gap-x-3">
         <span className={`${jp} text-[1.75rem] leading-tight text-ink`}>{token.text}</span>
         {morph?.reading ? (
@@ -198,7 +209,9 @@ export function GlossCard({
           {saved ? "Saved" : "Save"}
         </button>
       ) : null}
-      {kanji.length > 0 ? <KanjiList parts={kanji} /> : null}
+      {kanji.length > 0 ? (
+        <KanjiList key={`${token.text}-${token.lemma ?? ""}`} parts={kanji} />
+      ) : null}
     </div>
   );
 }

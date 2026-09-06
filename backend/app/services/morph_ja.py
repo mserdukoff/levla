@@ -52,6 +52,18 @@ POS1_EN = {
 
 CONTENT_POS_JA = {"名詞", "動詞", "形容詞", "形状詞", "副詞"}
 
+# UniDic lists a few everyday words under their formal dictionary reading.
+# 私 as a pronoun is ワタクシ there; A1–B2 texts mean わたし.
+_SPOKEN_READING = {
+    ("私", "わたくし"): "わたし",
+}
+
+
+def spoken_reading(surface: str, reading: str | None) -> str | None:
+    if not reading:
+        return reading
+    return _SPOKEN_READING.get((surface, reading), reading)
+
 
 def kata_to_hira(text: str) -> str:
     out = []
@@ -106,9 +118,9 @@ def morph_from_sudachi(m) -> MorphInfo:
     pos = _pos_tuple(m)
     pos0 = pos[0] if pos else None
     form = pos[5] if len(pos) > 5 and pos[5] not in {"*", ""} else None
-    reading = kata_to_hira(m.reading_form() or "")
     lemma = m.dictionary_form() or m.surface()
     surface = m.surface()
+    reading = spoken_reading(surface, kata_to_hira(m.reading_form() or "")) or ""
     if reading == kata_to_hira(surface) or reading == lemma:
         # still useful for kanji
         if not re.search(r"[\u4e00-\u9faf]", surface):

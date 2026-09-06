@@ -305,9 +305,25 @@ export function Reader({ passage }: { passage: Passage }) {
 
   const lemmaTotal = stats ? stats.new_lemmas + stats.recycled_lemmas : 0;
   const newPct = lemmaTotal > 0 ? Math.round(((stats?.new_lemmas ?? 0) / lemmaTotal) * 100) : null;
+  const glossOpen = Boolean(selectedToken?.is_word && !showSentence);
+  const focusSentence =
+    showSentence && selected != null ? (sentenceIds[selected] ?? null) : null;
+  const sentenceCaption =
+    showSentence && selected != null
+      ? englishLoading
+        ? "Loading English…"
+        : englishError
+          ? englishError
+          : (sentenceEnglish(passage.tokens, passage.language, selected, english) ??
+            "No English for this sentence yet.")
+      : null;
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[42rem] flex-col px-5 pb-32 pt-7 sm:px-8 sm:pt-9">
+    <div
+      className={`mx-auto flex min-h-full w-full max-w-[42rem] flex-col px-5 pt-7 sm:px-8 sm:pt-9 ${
+        glossOpen ? "pb-[min(40rem,80vh)]" : "pb-32"
+      }`}
+    >
       <header className="flex items-center justify-between gap-4">
         <Link href="/library" className="t-quiet">
           ← Library
@@ -375,37 +391,25 @@ export function Reader({ passage }: { passage: Passage }) {
         knownLemmas={stats?.known_lemmas ?? []}
         sentenceIds={sentenceIds}
         audioSentence={audioSentence}
+        focusSentence={focusSentence}
+        sentenceMode={showSentence}
         className="mt-10 text-[1.35rem] sm:text-[1.45rem]"
       />
 
-      {showEnglish ? (
+      {showEnglish || (showSentence && sentenceCaption) ? (
         <div className="mt-12 border-t border-rule pt-8">
           <p className="t-eyebrow mb-4">English</p>
           {englishLoading ? (
             <p className="text-sm text-ink/45">Loading English…</p>
           ) : englishError ? (
             <p className="text-sm text-terracotta">{englishError}</p>
-          ) : english ? (
+          ) : showEnglish && english ? (
             <p className="whitespace-pre-wrap font-reading text-[1.05rem] leading-[1.7] text-ink/75">
               {english}
             </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {showSentence ? (
-        <div className="mt-10 border-t border-rule pt-6">
-          <p className="t-eyebrow mb-3">This sentence</p>
-          {englishLoading ? (
-            <p className="text-sm text-ink/45">Loading English…</p>
-          ) : englishError ? (
-            <p className="text-sm text-terracotta">{englishError}</p>
-          ) : selected == null ? (
-            <p className="text-sm text-ink/45">Tap a word to see that sentence in English.</p>
           ) : (
-            <p className="font-reading text-[1.05rem] leading-[1.7] text-ink/75">
-              {sentenceEnglish(passage.tokens, passage.language, selected, english) ??
-                "No English for this sentence yet."}
+            <p className="whitespace-pre-wrap font-reading text-[1.05rem] leading-[1.7] text-ink/75">
+              {sentenceCaption}
             </p>
           )}
         </div>
@@ -417,9 +421,9 @@ export function Reader({ passage }: { passage: Passage }) {
         </p>
       ) : null}
 
-      {selectedToken?.is_word ? (
+      {glossOpen && selectedToken?.is_word ? (
         <div
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-rule bg-paper-raised px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-8px_30px_rgba(27,23,18,0.08)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[min(26rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-card sm:border sm:px-6 sm:pb-5 sm:pt-5"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-rule bg-paper-raised px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_30px_rgba(27,23,18,0.08)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[min(38rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-card sm:border sm:px-8 sm:pb-7 sm:pt-6"
           role="dialog"
           aria-label="Word gloss"
         >

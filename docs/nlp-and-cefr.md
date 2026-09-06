@@ -87,7 +87,7 @@ POS is left as pymorphy (`NOUN`, `VERB`, `INFN`, `ADJF`, `PRTF`, `GRND`, …). C
 - POS 1 mapped through `POS1_EN` onto `pos_detail` (`係助詞→binding`, `格助詞→case`, `接続助詞→conjunctive`, `終助詞→final`, `非自立可能→bound`, …).
 - `form` is POS slot 5 (inflection), e.g. `連体形`, `仮定形`.
 - `conj_type` is POS slot 4 simplified: `godan`, `ichidan`, `sahen`, `kahen`, `i-adj`, `aux`.
-- Reading: Sudachi `reading_form()` converted katakana→hiragana. Dropped when the surface is already kana-only and the reading equals the surface or lemma.
+- Reading: Sudachi `reading_form()` converted katakana→hiragana. Dropped when the surface is already kana-only and the reading equals the surface or lemma. A small spoken-form map overrides UniDic’s formal dictionary reading for 私 (`わたくし` → `わたし`).
 - Punctuation (`補助記号`) and whitespace (`空白`) are non-words.
 - Kanji breakdown runs at tokenize time, and again on every passage read so stored tokens pick up lexicon updates.
 
@@ -104,6 +104,8 @@ For each kanji in the surface, Levla tries to consume a **prefix of the remainin
 Candidates are tried longest-first. Okurigana kana in the surface also advance the remaining reading. Each part carries the matched slice (or `null`), on in katakana, kun with okurigana dots, all English meanings lowercased, plus strokes / JLPT / grade / freq / radical / parts. Breakdown runs again when a stored passage is read, so older tokens pick up new fields.
 
 This is heuristic alignment, not a morphological gold standard. Tests lock 市場, 学生, 食べる, 本.
+
+Stroke-order diagrams are not in the lexicon. The gloss card fetches [KanjiVG](https://kanjivg.tagaini.net/) SVGs (Japanese stroke order, the same source Jisho uses) via `GET /kanji-strokes/{code}` and animates the paths in the browser. `code` is the character’s 5-digit hex codepoint (`食` → `098df`). Characters KanjiVG does not cover stay as a static glyph.
 
 ## Grammar roles and verb suffixes (`grammar.py`)
 

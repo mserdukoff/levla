@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { StrokeOrderButton } from "@/components/stroke-order";
 import { fetchReview, submitReview } from "@/lib/api";
 import { loadLanguage } from "@/lib/device";
-import type { ReviewCard } from "@/lib/types";
+import { kanjiChars, type LangCode, type ReviewCard } from "@/lib/types";
 
 const RATINGS = ["again", "hard", "good", "easy"] as const;
 type Rating = (typeof RATINGS)[number];
@@ -14,16 +15,19 @@ function ReviewRow({
   font,
   rated,
   error,
+  language,
   onRate,
 }: {
   card: ReviewCard;
   font: string;
   rated: Rating | null;
   error: string | null;
+  language: LangCode;
   onRate: (rating: Rating) => void;
 }) {
   const [show, setShow] = useState(false);
   const done = rated !== null;
+  const kanji = language === "ja" ? kanjiChars(card.lemma) : [];
   return (
     <li className={`flex flex-col gap-3 py-6 transition-opacity ${done ? "opacity-45" : ""}`}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -33,6 +37,13 @@ function ReviewRow({
           <span className="ml-auto text-[13px] capitalize text-ink/40">Rated {rated}</span>
         ) : null}
       </div>
+      {kanji.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {kanji.map((ch, i) => (
+            <StrokeOrderButton key={`${ch}-${i}`} char={ch} />
+          ))}
+        </div>
+      ) : null}
       {done ? null : show ? (
         <>
           <p className="text-base leading-relaxed text-ink/85">{card.gloss ?? "No gloss"}</p>
@@ -163,6 +174,7 @@ export default function ReviewPage() {
               font={font}
               rated={rated[card.id] ?? null}
               error={rowErrors[card.id] ?? null}
+              language={language}
               onRate={(r) => void rate(card.id, r)}
             />
           ))}

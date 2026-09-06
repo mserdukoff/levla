@@ -44,7 +44,10 @@ def _client() -> OpenAI:
     return OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=settings.openrouter_api_key,
-        default_headers={"HTTP-Referer": "http://localhost:3000", "X-Title": "Levla"},
+        default_headers={
+            "HTTP-Referer": settings.public_base_url,
+            "X-Title": "Levla",
+        },
     )
 
 

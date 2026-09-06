@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { furiganaReading, isContentWord, type LangCode, type Token } from "@/lib/types";
 
 export const ROLE_TEXT: Record<string, string> = {
@@ -48,9 +49,56 @@ export function GrammarLegend({ language, className = "" }: { language: LangCode
   );
 }
 
+function TokenFace({ token, reading }: { token: Token; reading: string | null }) {
+  if (reading) {
+    return (
+      <ruby>
+        {token.text}
+        <rt>{reading}</rt>
+      </ruby>
+    );
+  }
+  return token.text;
+}
+
+function tokenLook({
+  token,
+  language,
+  grammarColors,
+  fadeKnown,
+  knownLemmas,
+  furigana,
+}: {
+  token: Token;
+  language: LangCode;
+  grammarColors: boolean;
+  fadeKnown: boolean;
+  knownLemmas: string[];
+  furigana: boolean;
+}) {
+  const roleCls = grammarColors && token.role ? ROLE_TEXT[token.role] : "";
+  const faded =
+    fadeKnown &&
+    knownLemmas.length > 0 &&
+    isContentWord(token, language) &&
+    Boolean(token.lemma && knownLemmas.includes(token.lemma));
+  const reading = furigana ? furiganaReading(token) : null;
+  const colorCls = roleCls || (faded && !grammarColors ? "text-ink/40" : "text-ink");
+  const fadeCls = faded && grammarColors ? "opacity-40" : "";
+  return { reading, colorCls, fadeCls };
+}
+
+function firstWordIndex(tokens: Token[], ids: number[], sid: number): number | null {
+  for (let i = 0; i < tokens.length; i++) {
+    if (ids[i] === sid && tokens[i].is_word) return i;
+  }
+  return null;
+}
+
 /**
  * The passage itself: every word is a button. Shared by the reader and the
- * landing-page demo so the hero shows the real thing.
+ * landing-page demo so the hero shows the real thing. Sentence mode selects
+ * whole sentences instead.
  */
 export function PassageArticle({
   tokens,
@@ -63,6 +111,8 @@ export function PassageArticle({
   knownLemmas = [],
   sentenceIds,
   audioSentence = null,
+  focusSentence = null,
+  sentenceMode = false,
   className = "",
 }: {
   tokens: Token[];
@@ -75,61 +125,96 @@ export function PassageArticle({
   knownLemmas?: string[];
   sentenceIds?: number[];
   audioSentence?: number | null;
+  focusSentence?: number | null;
+  sentenceMode?: boolean;
   className?: string;
 }) {
   const ja = language === "ja";
   const selectedToken = selected != null ? tokens[selected] : null;
   const selectedConjId = selectedToken?.conj_id != null ? selectedToken.conj_id : null;
   const rubyOn = furigana && ja;
+  const [hoverSid, setHoverSid] = useState<number | null>(null);
+  const ids = sentenceIds != null && sentenceIds.length === tokens.length ? sentenceIds : null;
+  const bySentence = sentenceMode && ids != null;
+
   return (
     <article
       lang={ja ? "ja" : "ru"}
-      className={`text-ink ${rubyOn ? "leading-[2.35]" : "leading-[1.85]"} ${
+      className={`shrink-0 text-ink ${rubyOn ? "leading-[2.35]" : "leading-[1.85]"} ${
         ja ? "font-ja" : "font-reading"
       } ${className}`}
+      onMouseLeave={() => setHoverSid(null)}
     >
       {tokens.map((token, i) => {
+        const sid = ids?.[i] ?? null;
+        const sentenceOn = bySentence && sid != null && sid === focusSentence;
+        const sentenceHover =
+          bySentence && sid != null && hoverSid === sid && !sentenceOn;
+        const liveLine =
+          !bySentence &&
+          audioSentence != null &&
+          ids != null &&
+          ids[i] === audioSentence;
+
         if (!token.is_word) {
           return (
-            <span key={i}>
+            <span
+              key={i}
+              className={sentenceOn ? "sentence-on" : sentenceHover ? "sentence-hot" : ""}
+              onMouseEnter={() => {
+                if (bySentence && sid != null) setHoverSid(sid);
+              }}
+              onClick={() => {
+                if (!bySentence || sid == null) return;
+                const first = firstWordIndex(tokens, ids, sid);
+                if (first == null) return;
+                onSelect(sentenceOn ? null : first);
+              }}
+            >
               {token.text}
               {token.ws}
             </span>
           );
         }
-        const isOn = selected === i;
+
+        const isOn = !bySentence && selected === i;
         const inChain =
-          selectedConjId != null && token.conj_id != null && token.conj_id === selectedConjId;
-        const roleCls = grammarColors && token.role ? ROLE_TEXT[token.role] : "";
-        const faded =
-          fadeKnown &&
-          knownLemmas.length > 0 &&
-          isContentWord(token, language) &&
-          Boolean(token.lemma && knownLemmas.includes(token.lemma));
-        const reading = furigana ? furiganaReading(token) : null;
-        const liveLine =
-          audioSentence != null && sentenceIds != null && sentenceIds[i] === audioSentence;
-        const colorCls = roleCls || (faded && !grammarColors ? "text-ink/40" : "text-ink");
-        const fadeCls = faded && grammarColors ? "opacity-40" : "";
-        const lineCls = liveLine ? "bg-terracotta/12" : "";
+          !bySentence &&
+          selectedConjId != null &&
+          token.conj_id != null &&
+          token.conj_id === selectedConjId;
+        const look = tokenLook({
+          token,
+          language,
+          grammarColors,
+          fadeKnown,
+          knownLemmas,
+          furigana,
+        });
         return (
           <span key={i}>
             <button
               type="button"
-              onClick={() => onSelect(isOn ? null : i)}
-              aria-pressed={isOn}
-              className={`word ${colorCls} ${fadeCls} ${lineCls} ${
-                isOn ? "word-on" : inChain ? "word-chain" : ""
+              onMouseEnter={() => {
+                if (bySentence && sid != null) setHoverSid(sid);
+              }}
+              onClick={() => {
+                if (bySentence && sid != null) {
+                  const first = firstWordIndex(tokens, ids, sid);
+                  if (first == null) return;
+                  onSelect(sentenceOn ? null : first);
+                  return;
+                }
+                onSelect(isOn ? null : i);
+              }}
+              aria-pressed={bySentence ? sentenceOn : isOn}
+              className={`${bySentence ? "word-plain" : "word"} ${look.colorCls} ${look.fadeCls} ${
+                liveLine ? "bg-terracotta/12" : ""
+              } ${isOn ? "word-on" : inChain ? "word-chain" : ""} ${
+                sentenceOn ? "sentence-on" : sentenceHover ? "sentence-hot" : ""
               }`}
             >
-              {reading ? (
-                <ruby>
-                  {token.text}
-                  <rt>{reading}</rt>
-                </ruby>
-              ) : (
-                token.text
-              )}
+              <TokenFace token={token} reading={look.reading} />
             </button>
             {token.ws}
           </span>

@@ -10,6 +10,7 @@ import type {
   PassageStats,
   ReviewCard,
   StarredWord,
+  GenerateJobResponse,
 } from "./types";
 
 async function readError(res: Response): Promise<string> {
@@ -59,6 +60,27 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", opts({ method: "POST" }));
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollGenerateJob(jobId: string): Promise<Passage> {
+  for (;;) {
+    await sleep(1500);
+    const res = await fetch(`/api/generate/${jobId}`, opts({ cache: "no-store" }));
+    if (!res.ok) {
+      throw new Error(await readError(res));
+    }
+    const job: GenerateJobResponse = await res.json();
+    if (job.status === "completed" && job.passage) {
+      return job.passage;
+    }
+    if (job.status === "failed") {
+      throw new Error(job.error ?? "Generation failed.");
+    }
+  }
+}
+
 export async function generatePassage(body: {
   level: CefrLevel;
   topic: string;
@@ -76,6 +98,10 @@ export async function generatePassage(body: {
   }, true));
   if (!res.ok) {
     throw new Error(await readError(res));
+  }
+  if (res.status === 202) {
+    const job: GenerateJobResponse = await res.json();
+    return pollGenerateJob(job.job_id);
   }
   return res.json();
 }

@@ -162,6 +162,18 @@ export type FeedbackResult = {
   recycled_lemmas: number;
 };
 
+export type GenerateJobStatus = "pending" | "running" | "completed" | "failed";
+
+export type GenerateJobResponse = {
+  job_id: string;
+  status: GenerateJobStatus;
+  passage: Passage | null;
+  error: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
 export type MeResponse = {
   authenticated: boolean;
   user_id: number | null;
@@ -267,6 +279,10 @@ export function isContentWord(token: Token, language: LangCode): boolean {
 }
 
 const KANJI = /[\u4e00-\u9faf]/;
+
+export function kanjiChars(text: string): string[] {
+  return [...text].filter((ch) => KANJI.test(ch));
+}
 
 export function furiganaReading(token: Token): string | null {
   const reading = token.morph?.reading;

@@ -1,0 +1,49 @@
+{
+  "family": "levla-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "ARN_EXECUTION_ROLE",
+  "taskRoleArn": "ARN_TASK_ROLE",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "ACCOUNT.dkr.ecr.REGION.amazonaws.com/levla-backend:TAG",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "APP_ENV", "value": "production" },
+        { "name": "LOG_LEVEL", "value": "info" },
+        { "name": "PUBLIC_BASE_URL", "value": "https://YOUR_DOMAIN" },
+        { "name": "DB_SSLMODE", "value": "require" },
+        { "name": "AWS_REGION", "value": "us-east-1" },
+        { "name": "S3_AUDIO_BUCKET", "value": "YOUR_AUDIO_BUCKET" },
+        { "name": "WEB_CONCURRENCY", "value": "2" },
+        { "name": "GENERATE_WORKERS", "value": "2" }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL", "valueFrom": "ARN_SECRET:DATABASE_URL::" },
+        { "name": "JWT_SECRET", "valueFrom": "ARN_SECRET:JWT_SECRET::" },
+        { "name": "OPENROUTER_API_KEY", "valueFrom": "ARN_SECRET:OPENROUTER_API_KEY::" },
+        { "name": "GOOGLE_CLIENT_SECRET", "valueFrom": "ARN_SECRET:GOOGLE_CLIENT_SECRET::" },
+        { "name": "AZURE_SPEECH_KEY", "valueFrom": "ARN_SECRET:AZURE_SPEECH_KEY::" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 300
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/levla-backend",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

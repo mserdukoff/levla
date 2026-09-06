@@ -216,6 +216,8 @@ body {
 @utility word-on {
   background: color-mix(in srgb, var(--terracotta) 16%, transparent);
   text-decoration-line: none;
+  scroll-margin-top: 6rem;
+  scroll-margin-bottom: min(28rem, 62vh);
   &:hover {
     background: color-mix(in srgb, var(--terracotta) 20%, transparent);
   }
@@ -223,6 +225,21 @@ body {
 
 @utility word-chain {
   background: color-mix(in srgb, var(--terracotta) 7%, transparent);
+}
+
+@utility word-plain {
+  cursor: pointer;
+  border-radius: 3px;
+  padding-inline: 1px;
+  transition: background-color 150ms ease;
+}
+
+@utility sentence-hot {
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+
+@utility sentence-on {
+  background: color-mix(in srgb, var(--terracotta) 16%, transparent);
 }
 
 article ruby {

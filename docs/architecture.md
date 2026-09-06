@@ -6,19 +6,20 @@
 | ----- | ------ |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
 | Backend | FastAPI (sync), SQLAlchemy 2, Pydantic v2 |
-| Database | SQLite (`levla.db`) |
+| Database | SQLite locally; Postgres 16 in Compose and on AWS |
 | Russian NLP | [razdel](https://github.com/natasha/razdel) tokenize + [pymorphy3](https://github.com/no-plagiarism/pymorphy3) lemma/tag |
 | Japanese NLP | [Sudachi](https://github.com/WorksApplications/Sudachi) split mode C (`sudachipy` + `sudachidict_core`) |
 | LLM | OpenRouter (`openai/gpt-4o-mini` by default) via the OpenAI Python SDK |
 | Runtime | Python 3.12+, Node 20+ (frontend Docker image uses Node 22) |
-| Packaging | `docker-compose.yml`: frontend `:3000`, backend `:8000`, named volume `levla-db` |
+| Packaging | `docker-compose.yml`: frontend `:3000`, backend `:8000`, Postgres, volume `levla-audio` |
+| Production | ECS Fargate + ALB + RDS + S3 — see [aws.md](./aws.md) |
 
 The FastAPI app is **synchronous**. NLP analyzers and SQLite are simpler without an async session. Generation is a blocking request that can take 20–40 seconds; there is no job queue or streaming.
 
 ## System diagram
 
 ```
-┌─────────────────────────────┐     rewrite /api/*      ┌─────────────────────────────┐
+┌─────────────────────────────┐     /api proxy          ┌─────────────────────────────┐
 │  Next.js 16 (React 19)      │ ──────────────────────► │  FastAPI                    │
 │  frontend/                  │                         │  backend/                   │
 │  :3000                      │  SSR fetch for reader   │  :8000                      │
@@ -32,9 +33,10 @@ The FastAPI app is **synchronous**. NLP analyzers and SQLite are simpler without
                                                             OpenRouter (optional)
 ```
 
-- The browser talks to `/api/...` on the Next origin. `frontend/next.config.ts` rewrites those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`).
+- The browser talks to `/api/...` on the Next origin. `frontend/src/app/api/[...path]/route.ts` proxies those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`) at runtime.
+- Stroke-order diagrams are a frontend-only route, `GET /kanji-strokes/{hex}`, which fetches a [KanjiVG](https://kanjivg.tagaini.net/) SVG and returns parsed path data. It does not go through the FastAPI proxy.
 - Passage pages are **dynamic** (`force-dynamic`, `cache: "no-store"`). The Next server fetches `${NLP_BACKEND_URL}/api/passages/:id` at request time so the first paint already has tokens.
-- CORS on FastAPI allows `http://localhost:3000` and `http://127.0.0.1:3000` by default (`CORS_ORIGINS`).
+- CORS on FastAPI allows localhost by default and always includes `PUBLIC_BASE_URL`.
 - Seed library + tap-to-gloss work **without** an OpenRouter key. Generation, LLM gloss fill, and translation require `OPENROUTER_API_KEY`.
 
 ## Repository layout
@@ -70,8 +72,9 @@ levla/
 │   └── .env.example
 ├── frontend/
 │   ├── src/app/                    # `/` landing, `/library` shelf, `/passage/[id]` reader
-│   ├── src/components/             # Shelf, Reader, GenerateForm
-│   ├── src/lib/                    # API client, types, device id
+│   ├── src/app/kanji-strokes/      # KanjiVG proxy for stroke-order diagrams
+│   ├── src/components/             # Shelf, Reader, GenerateForm, GlossCard, StrokeOrder
+│   ├── src/lib/                    # API client, types, device id, KanjiVG parser
 │   ├── next.config.ts              # /api rewrite
 │   └── Dockerfile
 ├── data/
@@ -108,7 +111,7 @@ SQLite is created on startup. `init_db()`:
 
 `passages.id` is a UUID string. Tokens and calibration are stored as JSON text, not normalized rows — the reader always loads a complete analyzed passage.
 
-Default local URL: `sqlite:///./backend/levla.db`. Compose sets `sqlite:////data/levla.db` on volume `levla-db`.
+Default local URL: `sqlite:///./backend/levla.db`. Compose sets `postgresql://levla:levla@postgres:5432/levla`. AWS uses RDS with `DB_SSLMODE=require`.
 
 ## Request flow
 
@@ -127,13 +130,14 @@ Default local URL: `sqlite:///./backend/levla.db`. Compose sets `sqlite:////data
 
 ### Generate
 
-1. `POST /api/generate` `{ level, topic, genre?, language }`.
-2. LLM draft → morph analysis → gloss attach → CEFR validate.
-3. On fail: rewrite at lower temperature with flags; keep the less-severe attempt.
-4. Best-effort English translation.
-5. Persist and return the full `PassageResponse`. Frontend navigates to `/passage/{id}`.
+1. `POST /api/generate` `{ level, topic, genre?, language }` returns **202** with `{ job_id, status: "pending" }`, or **200** with a cached `PassageResponse` when the same topic was already generated.
+2. Background worker threads (or a dedicated `worker` service) claim jobs from Postgres with `FOR UPDATE SKIP LOCKED` and run the LLM + validate + persist pipeline.
+3. Client polls `GET /api/generate/{job_id}` until `status` is `completed` or `failed`.
+4. On fail: rewrite at lower temperature with flags; keep the less-severe attempt.
+5. Best-effort English translation.
+6. Persist and return the full `PassageResponse`. Frontend navigates to `/passage/{id}`.
 
-Expected wait: **20–40 seconds**. No streaming. 503 if no API key; 502 on generation failure.
+Expected wait: **20–40 seconds**. Reads and shelf loads are no longer blocked while generation runs.
 
 ### Feedback
 
@@ -151,6 +155,7 @@ Expected wait: **20–40 seconds**. No streaming. 503 if no API key; 502 on gene
 | `/review` | `src/app/review/page.tsx` | Saved-word review |
 | `/passage/[id]` | `src/app/passage/[id]/page.tsx` | SSR passage fetch, `dynamic = "force-dynamic"` |
 | `/passage/[id]` loading | `src/app/passage/[id]/loading.tsx` | Skeleton bars |
+| `/kanji-strokes/[code]` | `src/app/kanji-strokes/[code]/route.ts` | KanjiVG proxy → JSON path data |
 | unmatched | `src/app/not-found.tsx` | “Passage gone” |
 
 There is no generate route of its own. Restock is a disclosure on the shelf.
@@ -165,18 +170,23 @@ Client-only modules (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`) use `"use c
 | -------- | ------- | ------- |
 | `OPENROUTER_API_KEY` | empty | Required for `/generate`, LLM gloss fill, and translation |
 | `LLM_MODEL` | `openai/gpt-4o-mini` | OpenRouter model id |
-| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL |
-| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated |
+| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. `postgres://` is rewritten to `postgresql+psycopg2://` |
+| `DB_SSLMODE` | empty | Set `require` for RDS |
+| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated. `PUBLIC_BASE_URL` is always included |
+| `APP_ENV` | `development` | `production` requires a real `JWT_SECRET` and sets `Secure` cookies |
+| `JWT_SECRET` | `dev-change-me` | Signs auth cookies |
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Public origin (OAuth, CORS, OpenRouter referer) |
+| `S3_AUDIO_BUCKET` | empty | Shared MP3 storage for multi-task deploys |
 
-Data files are always `{repo}/data`, derived from the backend package path — not configurable.
+Data files default to `{repo}/data`. Override with `DATA_DIR`.
 
 **Frontend**
 
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
-| `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Rewrite target for `/api/*` and SSR passage fetch |
+| `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Backend origin for `/api` proxy and SSR passage fetch (runtime) |
 
-The frontend Docker image is built with `NLP_BACKEND_URL=http://backend:8000` so rewrites stay on the Compose network.
+The frontend Docker image defaults `NLP_BACKEND_URL=http://backend:8000`. Compose and ECS can override it without rebuilding.
 
 ## Docker
 
@@ -185,11 +195,14 @@ docker compose up --build
 ```
 
 - Frontend: http://localhost:3000
-- Backend: http://localhost:8000 (`/docs` is FastAPI OpenAPI)
+- Backend: http://localhost:8000 (`/health`, `/api/health/ready`, `/docs`)
 - `backend/.env` must exist
-- Database lives in volume `levla-db`
+- Postgres: volume `levla-pg`
+- Audio: volume `levla-audio` (or S3 when `S3_AUDIO_BUCKET` is set)
 
-Backend image copies `backend/` **and** `data/` so lexicons are available at `/app/data`. Frontend image is a three-stage Next build (`deps` → `builder` → `runner`).
+Backend image copies `backend/` **and** `data/` so lexicons are available at `/app/data`. Frontend image is a standalone Next.js build (`deps` → `builder` → `runner`).
+
+AWS (ECS Fargate, ALB path routing, RDS, S3) is documented in [aws.md](./aws.md). Task definition templates live in `infra/aws/`.
 
 ## Tests
 
@@ -226,8 +239,8 @@ Grammar and vocab JSON are loaded with `lru_cache`. Restart the backend after ed
 
 ## Limitations that follow from the architecture
 
-- **SQLite** is fine for a single-user demo. Not tuned for concurrent writers (generation is a long write).
-- **No job queue.** The generate HTTP request holds a worker for the whole LLM + validate + rewrite path.
+- **SQLite** is fine for a single-user demo. Compose and AWS use Postgres.
+- **Generation is async.** `POST /generate` enqueues a job; worker threads process it. Scale with `GENERATE_WORKERS` per task and/or a dedicated `worker` ECS service. ALB idle timeout must still be 120s for translation and other long calls.
 - **No accounts.** Clearing site data resets placement and seen lemmas. There is no sync across devices. `feedback` rows are not device-scoped.
 - **Soft fail.** A passage that still violates the ruleset is stored and readable, with a warning. Calibration is a gate with a retry, not a hard reject.
 - **Analyzer errors** become CEFR errors: the wrong lemma or POS will flag or miss constructions.

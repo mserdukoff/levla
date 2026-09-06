@@ -65,11 +65,11 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 - Read the passage as clickable words. Tap a word for:
   - surface form, lemma, CEFR band
   - Russian: case, gender, number, tense, aspect, mood
-  - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown, kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, and parts
+  - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown, kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, parts, and a stroke-order diagram that plays as soon as the gloss opens.
   - English gloss
 - Optionally colour grammar (particles, verbs, endings, adjectives). Off by default.
 - Optionally furigana over kanji (Japanese), and fade already-seen content words.
-- Save a lemma from the gloss; it appears on a **Words** list on the shelf.
+- Save a lemma from the gloss; it appears on a **Words** list on the shelf, with stroke-order diagrams for Japanese.
 - Reveal a full **English** translation, or **this sentence** only.
 - Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps it. All three ingest lemmas and give you **Read next**.
 
@@ -137,7 +137,7 @@ Lexicon lookup (`data/gloss/{ru,ja}_en.json`). Unknown lemmas in generated text 
 
 For each kanji in a word, Levla tries to consume a prefix of the word reading using on/kun candidates (including voiced, handakuten, and sokuon variants). Each part carries the matched reading, on (katakana) / kun (okurigana dots), English meanings, stroke count, JLPT N-level, school grade, newspaper frequency, Kangxi radical, and KRADFILE parts from `data/kanji/ja.json` (~13k characters, built from KANJIDIC2). Stored passages are re-aligned on read so the extra fields show up without regenerating text.
 
-Jisho.org has no kanji API (its public endpoint is word search only). The lexicon is the same EDRDG data Jisho is built on, bundled locally.
+Jisho.org has no kanji API (its public endpoint is word search only). The lexicon is the same EDRDG data Jisho is built on, bundled locally. Stroke-order diagrams in the gloss use [KanjiVG](https://kanjivg.tagaini.net/) (the same source Jisho animates): opening a word fetches its SVG, then Levla draws the strokes in Japanese order.
 
 ---
 
@@ -215,7 +215,7 @@ Counts are **token occurrences**, not unique lemmas. The shelf uses this so a re
 ## Architecture
 
 ```
-┌─────────────────────────────┐     rewrite /api/*      ┌─────────────────────────────┐
+┌─────────────────────────────┐     /api proxy          ┌─────────────────────────────┐
 │  Next.js 16 (React 19)      │ ──────────────────────► │  FastAPI                    │
 │  frontend/                  │                         │  backend/                   │
 │  :3000                      │  SSR fetch for reader   │  :8000                      │
@@ -224,14 +224,16 @@ Counts are **token occurrences**, not unique lemmas. The shelf uses this so a re
 └─────────────────────────────┘                         └──────────────┬──────────────┘
                                                                        │
                                                                        ▼
-                                                            SQLite (levla.db)
+                                                            Postgres (Compose / AWS)
+                                                            or SQLite (local)
                                                             data/*.json lexicons
+                                                            S3 audio (optional)
                                                             OpenRouter (optional)
 ```
 
-- **Frontend** talks to `/api/...` on its own origin. `next.config.ts` rewrites those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`).
+- **Frontend** talks to `/api/...` on its own origin. Next.js proxies those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`) at runtime.
 - Passage pages are **dynamic** (`force-dynamic`, `cache: "no-store"`). The server fetches `/api/passages/:id` at request time so the first paint already has tokens.
-- **Backend** is a sync FastAPI app (SQLAlchemy session per request, CORS for localhost:3000). SQLite is created on startup; a `language` / `translation` column is added if an older file is missing them; then the seed library is applied.
+- **Backend** is a sync FastAPI app (SQLAlchemy session per request). On startup it waits for the database, creates tables, and seeds the library.
 
 ---
 
@@ -267,10 +269,10 @@ levla/
 │   ├── Dockerfile
 │   └── .env.example
 ├── frontend/
-│   ├── src/app/                    # `/` shelf, `/passage/[id]` reader
-│   ├── src/components/             # Shelf, Reader, GenerateForm
-│   ├── src/lib/                    # API client, types, device id
-│   ├── next.config.ts              # /api rewrite
+│   ├── src/app/                    # `/` landing, `/library` shelf, `/passage/[id]` reader
+│   ├── src/components/             # Shelf, Reader, GenerateForm, GlossCard
+│   ├── src/lib/                    # API client, types, device id, KanjiVG parser
+│   ├── next.config.ts
 │   └── Dockerfile
 ├── data/
 │   ├── grammar/{ru,ja}_cefr.json
@@ -298,7 +300,7 @@ levla/
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text. |
 | `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts. |
 
-Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese vocab is a curated N5–N3-ish core, not JLPT official lists. Kanji JLPT tags on the gloss card come from [kanjiapi.dev](https://kanjiapi.dev/) (Jonathan Waller’s lists); readings, meanings, strokes, grade, frequency, and radicals come from [KANJIDIC2](https://www.edrdg.org/wiki/KANJIDIC_Project.html) and [KRADFILE](https://www.edrdg.org/krad/kradinf.html), used under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html).
+Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese vocab is a curated N5–N3-ish core, not JLPT official lists. Kanji JLPT tags on the gloss card come from [kanjiapi.dev](https://kanjiapi.dev/) (Jonathan Waller’s lists); readings, meanings, strokes, grade, frequency, and radicals come from [KANJIDIC2](https://www.edrdg.org/wiki/KANJIDIC_Project.html) and [KRADFILE](https://www.edrdg.org/krad/kradinf.html), used under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html). Stroke-order diagrams are [KanjiVG](https://kanjivg.tagaini.net/), © Ulrich Apel, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 
 `data/raw/` is gitignored. `scripts/build_lexicon.py` expects `data/raw/ru_50k.txt` if you rebuild Russian from frequency. `scripts/build_kanji.py` downloads KANJIDIC2, KRADFILE, and JLPT lists into `data/raw/` then writes `data/kanji/ja.json`.
 
@@ -311,7 +313,8 @@ Base path: `/api`. OpenAPI is at `http://localhost:8000/docs` when the backend i
 | Method | Path | Body / query | Notes |
 | ------ | ---- | ------------ | ----- |
 | `GET` | `/health` | | `{ "ok": true, "name": "levla" }` |
-| `POST` | `/generate` | `{ level, topic, genre?, language }` | LLM + validate + persist. 503 if no API key. 502 on generation failure. |
+| `POST` | `/generate` | `{ level, topic, genre?, language }` | **200** cached passage, or **202** job id to poll |
+| `GET` | `/generate/{job_id}` | header `X-Device-Id` | Job status; includes `passage` when complete |
 | `GET` | `/library?language=ja\|ru` | header `X-Device-Id` | Placement, seen lemma count, `next_id`, items with new/known/read/recommended. |
 | `GET` | `/passages/{id}` | | Full passage: text, tokens, calibration, optional translation. |
 | `GET` | `/passages/{id}/translation` | | Returns stored English or generates and stores it. 503 if still unavailable. |
@@ -422,8 +425,11 @@ docker compose up --build
 
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - Backend: [http://localhost:8000](http://localhost:8000)
-- Database: named volume `levla-db` at `/data/levla.db` inside the backend container
-- The frontend image is built with `NLP_BACKEND_URL=http://backend:8000` so `/api` rewrites stay on the Compose network
+- Database: Compose Postgres (`levla-pg`). Audio MP3s: named volume `levla-audio`
+- The frontend container uses `NLP_BACKEND_URL=http://backend:8000` at **runtime** so `/api` and SSR stay on the Compose network
+- Backend waits for Postgres, then creates tables and seeds the library on first boot
+
+Images are production-shaped (non-root users, health checks, `APP_ENV=production` baked into the backend image). Compose overrides `APP_ENV=development` so a local `JWT_SECRET=dev-change-me` still boots. See [docs/aws.md](docs/aws.md) for ECS / RDS / S3.
 
 ---
 
@@ -477,14 +483,22 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 | -------- | ------- | ------- |
 | `OPENROUTER_API_KEY` | empty | Required for `/generate`, LLM gloss fill, and translation |
 | `LLM_MODEL` | `openai/gpt-4o-mini` | OpenRouter model id |
-| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. Compose sets `sqlite:////data/levla.db` |
-| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated |
+| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. Compose sets Postgres. `postgres://` is rewritten to `postgresql+psycopg2://` |
+| `DB_SSLMODE` | empty | Set `require` for RDS |
+| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated. `PUBLIC_BASE_URL` is always added |
+| `APP_ENV` | `development` | `production` requires a real `JWT_SECRET` and sets `Secure` cookies |
+| `JWT_SECRET` | `dev-change-me` | Signs auth cookies |
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Public origin (OAuth, CORS, OpenRouter referer) |
+| `S3_AUDIO_BUCKET` | empty | If set, passage MP3s go to S3 instead of local disk |
+| `SKIP_SEED` | `false` | Skip library/catalog seed (extra ECS tasks after first boot) |
+| `GENERATE_WORKERS` | `2` | Background threads per process that run generation jobs. Set `0` on API tasks if a dedicated worker service handles generation |
+| `GENERATE_MAX_PENDING` | `3` | Max queued/running jobs per device or signed-in user |
 
 **Frontend**
 
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
-| `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Rewrite target for `/api/*` and SSR passage fetch |
+| `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Backend origin for SSR passage fetch and the `/api` proxy. Read at runtime |
 
 ---
 
@@ -496,7 +510,7 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 - **Analyzer errors.** pymorphy3 and Sudachi can pick the wrong lemma or POS; the validator will then flag or miss constructions.
 - **Japanese construction detection** is heuristic (て+いる, 連体形+noun, a keigo lemma list). It will both over- and under-flag.
 - **Generation cost and latency.** Two completion calls plus gloss plus translation is normal on a fail-then-rewrite path. No streaming.
-- **SQLite.** Fine for a single-user or small demo. Not tuned for concurrent writers.
+- **SQLite.** Fine for a single-user or small demo. Compose and AWS use Postgres.
 - **Languages.** Only `ru` and `ja`. Adding a language means grammar JSON, vocab/gloss, a morph module, a validator, seed texts, and UI labels.
 
 Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JLPT lists.
@@ -513,3 +527,4 @@ Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JL
 | [docs/api.md](docs/api.md) | Endpoints, headers, payloads, status codes |
 | [docs/nlp-and-cefr.md](docs/nlp-and-cefr.md) | Generation, analyzers, validators, lexicons, kanji |
 | [docs/learner-model.md](docs/learner-model.md) | Device id, placement, new/known counts, next-text ranking |
+| [docs/aws.md](docs/aws.md) | Step-by-step AWS hosting (ECS, ALB, RDS, S3) |

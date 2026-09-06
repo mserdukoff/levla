@@ -38,19 +38,29 @@ def decode_token(token: str) -> int | None:
         return None
 
 
+def _cookie_kwargs() -> dict:
+    kwargs: dict = {
+        "httponly": True,
+        "samesite": settings.cookie_samesite,
+        "secure": settings.effective_cookie_secure,
+        "path": "/",
+    }
+    if settings.cookie_domain:
+        kwargs["domain"] = settings.cookie_domain
+    return kwargs
+
+
 def set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         settings.auth_cookie_name,
         token,
-        httponly=True,
-        samesite="lax",
         max_age=30 * 24 * 3600,
-        path="/",
+        **_cookie_kwargs(),
     )
 
 
 def clear_auth_cookie(response: Response) -> None:
-    response.delete_cookie(settings.auth_cookie_name, path="/")
+    response.delete_cookie(settings.auth_cookie_name, **_cookie_kwargs())
 
 
 def user_id_from_request(request: Request) -> int | None:

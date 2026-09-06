@@ -48,7 +48,12 @@ def test_tokens_include_kanji_breakdown():
     assert tok.kanji[1].reading == "じょう"
 
 
-def test_kana_only_has_no_kanji_parts():
+def test_watashi_uses_spoken_reading():
+    tok = _by_text("私は学生です。", "私")
+    assert tok.morph and tok.morph.reading == "わたし"
+    assert tok.kanji
+    assert tok.kanji[0].char == "私"
+    assert tok.kanji[0].reading == "わたし"
     tok = _by_text("これは本です。", "これ")
     assert tok.kanji == []
 

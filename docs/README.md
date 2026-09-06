@@ -10,5 +10,6 @@ This folder is the product, technical, and design specification for Levla. It de
 | [API](./api.md) | HTTP endpoints, headers, payloads, error codes |
 | [NLP and CEFR](./nlp-and-cefr.md) | Generation, analyzers, validators, lexicons, kanji |
 | [Learner model](./learner-model.md) | Device identity, placement, lemmas, next-text ranking |
+| [AWS](./aws.md) | Step-by-step hosting on ECS Fargate, ALB, RDS, and S3 |
 
 For a shorter operator’s guide (how to run, env vars, tests), see the [root README](../README.md).
