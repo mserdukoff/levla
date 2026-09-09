@@ -2,7 +2,7 @@
 
 Levla is meant to feel like a **small printed reader**, not a language-app dashboard. Paper, ink, one accent, long reading measure, almost no chrome.
 
-Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, the shared components (`band.tsx`, `segmented.tsx`, `passage-article.tsx`, `gloss-card.tsx`, `generation-progress.tsx`), the screens (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`), and the landing page (`components/landing/*`). There is no component library, no dark mode, no illustrations.
+Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, the shared components (`band.tsx`, `segmented.tsx`, `passage-article.tsx`, `gloss-card.tsx`, `generation-progress.tsx`, `seal.tsx`), the screens (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`), and the landing page (`components/landing/*`). There is no component library, no dark mode, no illustrations. The exam seal is the one brand object; it is not an illustration of a character.
 
 ## Rationale for the 2026 redesign
 
@@ -25,7 +25,7 @@ Kept on purpose: the palette, the two typefaces, ink-on-paper inversion as the o
 | Kicker | `Russian · Japanese · A1–B2` |
 | Library kicker | `{Language} · Library` |
 
-Copy is short, second-person, and specific. No gamification ("streak", "XP"), no mascot, no exclamation marks in chrome. Numbers are set tabular (`tnum`).
+Copy is short, second-person, and specific. No gamification ("streak", "XP"), no creature mascot, no exclamation marks in chrome. Numbers are set tabular (`tnum`). The only brand object is the **exam seal** (`seal.tsx`): one double-ring stamp for every language, terracotta ink, inscription from `SEAL_COPY`. It never appears in the gloss. Adding a language is a copy row (`script`, pass word, fail word), not a new drawing. Missing languages fall back to PASS / FAIL.
 
 ## Color
 
@@ -44,7 +44,7 @@ Grammar-colour inks (`--g-*`) are unchanged and remain an opt-in overlay.
 
 Derived states use opacity modifiers, not extra tokens: `text-ink/70 /55 /50 /45 /40`, `hover:bg-paper-raised`, `bg-terracotta/16` (selected word), `border-terracotta/30 bg-terracotta/10` (error panel).
 
-Terracotta appears on the landing page in exactly three places: the kicker, the underlines and flags on the drifted draft, and its "would fail" summary line. The checked draft is ink only. That contrast is the point.
+Terracotta appears on the landing page on the kicker, the underlines and flags on the drifted draft, its "would fail" summary line, and the exam seals on both proof sheets. The checked draft’s type is ink only; the pass seal is the terracotta on that sheet.
 
 ## Typography
 
@@ -108,10 +108,11 @@ Vertical stacks on the app screens use gaps of **3 / 9 / 12** (12 / 36 / 48 px).
 
 No icons. Typographic arrows only (`←`, `→`, `↓`). Transitions are colour and border, 150 ms. `prefers-reduced-motion` collapses them. No page transitions, no skeleton shimmer.
 
-Two animated elements, both paced rather than decorative:
+Three animated elements, all paced rather than decorative:
 
-1. The **generation progress hairline** (`generation-progress.tsx`): a 1 px rule that fills asymptotically (never past 94 %) while four stages (Writing at A2 → Analyzing every word → Scoring → Rewriting if it missed) move from ink/30 to ink on a timer, with an elapsed-seconds count. It is a paced account of what the backend does, not a measured one, and the copy says "Usually 20–40 seconds".
+1. The **generation progress hairline** (`generation-progress.tsx`): a 1 px rule that fills asymptotically (never past 94 %) while five stages (Writing at A2 → Analyzing every word → Scoring → Rewriting if it missed → Stamping {level}) move from ink/30 to ink on a timer, with an elapsed-seconds count. It is a paced account of what the backend does, not a measured one, and the copy says "Usually 20–40 seconds". When the job returns, the hairline completes, the fifth stage is the active one, and the exam seal presses before navigation.
 2. **Kanji stroke order** (`stroke-order.tsx`): when a Japanese word opens in the gloss, each kanji shows a KanjiVG diagram immediately. Faint traces of the character sit under ink strokes that draw in sequence, with numbers appearing as each stroke starts. Click the diagram to replay. `prefers-reduced-motion` shows the completed numbered diagram with no drawing.
+3. The **exam seal** (`seal.tsx`): one press, scale 1.16 → 1 with a few degrees of rotation, 280 ms. `prefers-reduced-motion` shows the seal already down. On inverted surfaces (Continue) the seal uses paper instead of terracotta.
 
 The gloss panel keeps its soft upward shadow on `sm+` because it floats.
 
@@ -121,7 +122,7 @@ The gloss panel keeps its soft upward shadow on `sm+` because it floats.
 
 1. Nav: wordmark, anchor links (The check, The loop), **Library →**.
 2. Hero: kicker, headline, lede, **Open the library**, and the **reader demo** (`reader-demo.tsx`): a raised proof sheet with a band strip, language segmented control, title, Grammar / Furigana toggles, the passage as clickable words, and the gloss area beneath. One word is preselected on load (`食べ` / `продавцу`) so the gloss is visible immediately. Sample passages live in `demo-data.ts` in the real `Token` shape.
-3. **01 The claim**: two proof sheets (`drift.tsx`). Left, a prompted draft with the analyzer's flags marked in terracotta (`ている · B1`, `keigo · B2`, …) and "4 constructions above A2 · would fail". Right, the checked draft in an ink-bordered sheet with its report (over-level lemmas, banned constructions, flags caught) and "passes A2". Below, the four-step procedure (Constrain, Analyze, Score, Rewrite).
+3. **01 The claim**: two proof sheets (`drift.tsx`). Left, a prompted draft with the analyzer's flags marked in terracotta (`ている · B1`, `keigo · B2`, …) and "4 constructions above A2 · would fail", with a fail exam seal pressed into the sheet. Right, the checked draft in an ink-bordered sheet with its report (over-level lemmas, banned constructions, flags caught), a pass seal, and "passes A2". Below, the four-step procedure (Constrain, Analyze, Score, Rewrite).
 4. **02 The loop**: five numbered steps; step three shows the feedback pills, step four two band strips (A2 → B1).
 5. **03 Who it's for**: For / Not.
 6. Close: "Pick a passage." and the button again. Footer: Levla · Morphology by Sudachi and pymorphy3 · A single-user demo.
@@ -134,23 +135,23 @@ The whole page follows one language choice (the demo's segmented control).
 2. Kicker `{Language} · Library`, heading **Your {Language} is at {band}.**, band strip, status line (`{n} lemmas seen.` / `Rate a passage to move it.` + `Three ratings in a row move the band.`).
 3. Auth panel (only when the backend requires it): hairline-bounded row or email form.
 4. Error panel.
-5. **Continue**: the inverted card. Topic and chapter top-left, inverted band strip top-right, title, meta line, **Read →**.
+5. **Continue**: the inverted card. Topic and chapter top-left, inverted band strip and a mark-size exam seal top-right, title, meta line, **Read →**.
 6. Review row (only when cards are due).
-7. **The shelf**: hairline rows. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised.
-8. **Words**: hairline rows with Remove; Japanese lemmas show stroke-order diagrams; export links.
+7. **The shelf**: hairline rows. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised. A mark-size fail seal sits on rows that failed calibration; passed rows stay unmarked.
+8. **Words**: hairline rows with Remove; lemma, gloss, source title; export links. Stroke-order diagrams stay off this list — they belong on review.
 9. **Restock**: a section label and **Restock the shelf →**; open state shows one sentence and the form, with **Hide restock** below. **Review saved words** sits beside it when nothing is due.
 
 ### Restock form
 
-Language and level are segmented controls (level cells: serif band + hint). Topic is a `field-line` input. Genre stays as terracotta-selected pills. Submit is `btn-primary`, full width, then the generation progress block under a hairline while busy. Quota line under the button when known.
+Language and level are segmented controls (level cells: serif band + hint). Topic is a `field-line` input. Genre stays as terracotta-selected pills. Submit is `btn-primary`, full width, then the generation progress block under a hairline while busy. Quota line under the button when known. When the job returns, the fifth stage (“Stamping {level}”) activates, the exam seal presses with the real `calibration.passed` verdict, and navigation waits ~900 ms (or a **Read →** click). `prefers-reduced-motion` skips the wait.
 
 ### Reader (`/passage/[id]`)
 
 Header: **← Library** left; tracked meta (`{n} words · {n} new · {n} known`, `sm+`) and a band strip right.
 
-Topic line as eyebrow (`{topic} · chapter n · {n}% new`), then the title. Audio bar if present.
+Topic line as eyebrow (`{topic} · chapter n · {n}% new`), then the title, with a corner exam seal on the title block. The seal’s verdict is `calibration.passed` (pass inscription or fail), even if the passage is still readable. Audio bar if present.
 
-Toolbar: a hairline-bounded row. Left, toggles **English · Sentence · Grammar · Furigana (ja) · Known**. Right, **Why this is {band}** which opens the calibration report as a definition list inside the same row. Legend appears under the toggles when Grammar is on.
+Toolbar: a hairline-bounded row. Left, toggles **English · Sentence · Grammar · Furigana (ja) · Known**. Right, **Why this is {band}** which opens the calibration report as a definition list inside the same row, with a smaller seal on that report. Legend appears under the toggles when Grammar is on.
 
 Article rules are unchanged (word buttons, hover, selection, chain highlight, fade known, furigana). Calibration warnings print with a terracotta left rule.
 
@@ -160,7 +161,7 @@ Sticky bottom bar and gloss panel behave as before. The gloss floats at `min(38r
 
 ### Review, 404, loading
 
-Review follows the library header pattern (`← Library`, due count as tracked meta). Japanese cards show stroke-order diagrams under the lemma. 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
+Review follows the library header pattern (`← Library`, due count as tracked meta). Japanese cards show stroke-order diagrams only after **Show**, together with the gloss and ratings. 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
 
 ## Gloss card content order
 
@@ -173,13 +174,14 @@ Unchanged from the previous spec (`levla.language`, `levla.grammar`, `levla.furi
 ## Accessibility
 
 - Gloss panel: `role="dialog"`, close button labelled. Demo gloss area: `role="region"`, `aria-live="polite"`.
-- Word buttons and toggles set `aria-pressed`. Segmented controls are `radiogroup` / `radio`. Kanji stroke diagrams in the gloss are buttons labelled to replay stroke order.
+- Word buttons and toggles set `aria-pressed`. Segmented controls are `radiogroup` / `radio`. Kanji stroke diagrams in the gloss, and on review after **Show**, are buttons labelled to replay stroke order. Exam seals are `role="img"` with the inscription and band as the label.
 - Global `:focus-visible` ring.
 - Band strips carry an `aria-label` (`A2 on a scale of A1 to B2`).
 - `text-ink/40` remains the weakest tone and should not carry essential meaning alone.
 
 ## What not to add
 
-- Dark mode, gradients, drop shadows on cards, coloured CEFR badges, progress rings, mascots, testimonials, pricing.
+- Dark mode, gradients, drop shadows on cards, coloured CEFR badges, progress rings, creature mascots, testimonials, pricing.
 - A third typeface, or a second accent.
+- A second seal geometry per language, a face or speech bubble on the seal, or the seal inside the gloss card.
 - Anything on the landing page that is not the real product: no illustration of the reader, only the reader.

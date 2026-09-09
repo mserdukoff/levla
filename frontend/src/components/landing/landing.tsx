@@ -130,7 +130,7 @@ export function Landing() {
           }
         />
         <div className="mt-14 sm:mt-16">
-          <Drift lang={lang} />
+          <Drift key={lang} lang={lang} />
         </div>
         <ol className="mt-16 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
           {PROCEDURE.map((step, i) => (

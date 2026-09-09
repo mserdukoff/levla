@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Seal } from "@/components/seal";
 import type { CefrLevel, LangCode } from "@/lib/types";
 
 type Stage = { at: number; label: string; detail: string };
@@ -31,32 +32,44 @@ function stages(level: CefrLevel, language: LangCode): Stage[] {
       label: "Rewriting, if it missed",
       detail: "A failing draft goes back with its flags. The closer attempt is kept.",
     },
+    {
+      at: Number.POSITIVE_INFINITY,
+      label: `Stamping ${level}`,
+      detail: "The checker presses the verdict onto the page.",
+    },
   ];
 }
 
 /**
  * Generation takes 20–40 s and the API is a single call, so this is a paced
  * account of what the backend is doing, not a measured one. The hairline
- * approaches but never reaches the end on its own; navigation finishes it.
+ * approaches but never reaches the end on its own; the stamp finishes it.
  */
 export function GenerationProgress({
   level,
   language,
+  verdict = null,
+  onRead,
 }: {
   level: CefrLevel;
   language: LangCode;
+  verdict?: "pass" | "fail" | null;
+  onRead?: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
+  const stamped = verdict != null;
 
   useEffect(() => {
+    if (stamped) return;
     const start = Date.now();
     const id = window.setInterval(() => setElapsed((Date.now() - start) / 1000), 250);
     return () => window.clearInterval(id);
-  }, []);
+  }, [stamped]);
 
   const list = stages(level, language);
-  const active = list.reduce((acc, stage, i) => (elapsed >= stage.at ? i : acc), 0);
-  const pct = Math.min(94, 100 * (1 - Math.exp(-elapsed / 22)));
+  const paced = list.slice(0, -1).reduce((acc, stage, i) => (elapsed >= stage.at ? i : acc), 0);
+  const active = stamped ? list.length - 1 : paced;
+  const pct = stamped ? 100 : Math.min(94, 100 * (1 - Math.exp(-elapsed / 22)));
   const seconds = Math.floor(elapsed);
 
   return (
@@ -99,10 +112,27 @@ export function GenerationProgress({
           );
         })}
       </ol>
-      <p className="tnum text-[13px] text-ink/45">
-        Usually 20–40 seconds · {seconds}s
-        {seconds > 45 ? " · Still checking. A rewrite is a second full pass." : ""}
-      </p>
+      {stamped ? (
+        <div className="flex flex-col items-center gap-4 border-t border-rule pt-6">
+          <Seal
+            verdict={verdict}
+            language={language}
+            level={level}
+            size="hero"
+            animate
+          />
+          {onRead ? (
+            <button type="button" onClick={onRead} className="t-quiet text-ink">
+              Read →
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <p className="tnum text-[13px] text-ink/45">
+          Usually 20–40 seconds · {seconds}s
+          {seconds > 45 ? " · Still checking. A rewrite is a second full pass." : ""}
+        </p>
+      )}
     </div>
   );
 }

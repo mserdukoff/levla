@@ -69,7 +69,7 @@ The reading UI is built around that analysis: every word already has lemma, POS,
   - English gloss
 - Optionally colour grammar (particles, verbs, endings, adjectives). Off by default.
 - Optionally furigana over kanji (Japanese), and fade already-seen content words.
-- Save a lemma from the gloss; it appears on a **Words** list on the shelf, with stroke-order diagrams for Japanese.
+- Save a lemma from the gloss; it appears on a **Words** list on the shelf. On **Review**, Japanese stroke-order diagrams appear after **Show**.
 - Reveal a full **English** translation, or **this sentence** only.
 - Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps it. All three ingest lemmas and give you **Read next**.
 

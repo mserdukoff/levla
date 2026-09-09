@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { GenerationProgress } from "@/components/generation-progress";
 import { Segmented } from "@/components/segmented";
 import { generatePassage } from "@/lib/api";
@@ -23,10 +23,27 @@ export function GenerateForm({
   const [genre, setGenre] = useState<string | null>("daily_life");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verdict, setVerdict] = useState<"pass" | "fail" | null>(null);
+  const goRef = useRef<number | null>(null);
+  const destRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (languageProp) setLanguage(languageProp);
   }, [languageProp]);
+
+  useEffect(() => {
+    return () => {
+      if (goRef.current != null) window.clearTimeout(goRef.current);
+    };
+  }, []);
+
+  function goRead() {
+    if (goRef.current != null) {
+      window.clearTimeout(goRef.current);
+      goRef.current = null;
+    }
+    if (destRef.current) router.push(destRef.current);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -37,6 +54,7 @@ export function GenerateForm({
     }
     setError(null);
     setLoading(true);
+    setVerdict(null);
     try {
       const passage = await generatePassage({
         level,
@@ -44,7 +62,10 @@ export function GenerateForm({
         genre,
         language,
       });
-      router.push(`/passage/${passage.id}`);
+      destRef.current = `/passage/${passage.id}`;
+      setVerdict(passage.calibration.passed ? "pass" : "fail");
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      goRef.current = window.setTimeout(goRead, reduced ? 0 : 900);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed.");
       setLoading(false);
@@ -125,7 +146,13 @@ export function GenerateForm({
 
       <div className="flex flex-col gap-3">
         <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? "Writing and checking level…" : restock ? "Add to shelf" : "Generate passage"}
+          {loading
+            ? verdict
+              ? "Stamped."
+              : "Writing and checking level…"
+            : restock
+              ? "Add to shelf"
+              : "Generate passage"}
         </button>
         {remaining != null && !loading ? (
           <p className="tnum text-center text-[13px] text-ink/45">
@@ -136,7 +163,12 @@ export function GenerateForm({
 
       {loading ? (
         <div className="border-t border-rule pt-6">
-          <GenerationProgress level={level} language={language} />
+          <GenerationProgress
+            level={level}
+            language={language}
+            verdict={verdict}
+            onRead={verdict ? goRead : undefined}
+          />
         </div>
       ) : null}
     </form>

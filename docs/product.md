@@ -40,7 +40,7 @@ Two screens, plus a landing page at `/` that explains the claim and opens into t
 - Optionally **colour grammar**: particles (は topic, が subject, を object, others), verbs, endings, adjectives. Off by default; persists in `localStorage`.
 - Optionally **furigana** over kanji (Japanese). Off by default.
 - Optionally **fade known** content words the learner has already finished in other texts.
-- Save a lemma from the gloss; a **Words** list on the shelf (not SRS). Japanese saved words show the same stroke-order diagrams as the gloss.
+- Save a lemma from the gloss; a **Words** list on the shelf (not SRS). Stroke-order diagrams are not on that list — on **Review**, they appear after **Show**.
 - Reveal a full **English** translation, or **this sentence** only, in the same English section under the passage. Sentence mode does not open the word gloss.
 - Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps the level. All three ingest lemmas and pick **Read next**.
 

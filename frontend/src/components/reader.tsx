@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BandStrip } from "@/components/band";
 import { GlossCard } from "@/components/gloss-card";
 import { GrammarLegend, PassageArticle } from "@/components/passage-article";
+import { Seal } from "@/components/seal";
 import { fetchPassageStats, fetchTranslation, sendFeedback, starWord, unstarWord } from "@/lib/api";
 import {
   loadFadeKnown,
@@ -65,14 +66,24 @@ function GrammarPassport({ passage, open }: { passage: Passage; open: boolean })
     v: used.length > 0 ? used.join(", ") : "none",
   });
   return (
-    <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-rule pt-5 text-sm">
-      {rows.map((row) => (
-        <div key={row.k} className="contents">
-          <dt className="t-eyebrow pt-[3px]">{row.k}</dt>
-          <dd className="tnum leading-relaxed text-ink/70">{row.v}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="relative mt-5 border-t border-rule pt-5">
+      <div className="pointer-events-none absolute right-0 top-5">
+        <Seal
+          verdict={cal.passed ? "pass" : "fail"}
+          language={passage.language}
+          level={passage.level}
+          size="mark"
+        />
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 pr-12 text-sm">
+        {rows.map((row) => (
+          <div key={row.k} className="contents">
+            <dt className="t-eyebrow pt-[3px]">{row.k}</dt>
+            <dd className="tnum leading-relaxed text-ink/70">{row.v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
@@ -337,7 +348,7 @@ export function Reader({ passage }: { passage: Passage }) {
         </div>
       </header>
 
-      <div className="mt-12 sm:mt-14">
+      <div className="relative mt-12 pr-[6.5rem] sm:mt-14 sm:pr-[7.5rem]">
         <p className="t-eyebrow">
           {passage.topic}
           {newPct != null ? ` · ${newPct}% new` : ""}
@@ -347,6 +358,15 @@ export function Reader({ passage }: { passage: Passage }) {
         >
           {passage.title}
         </h1>
+        <div className="pointer-events-none absolute -right-1 top-0 sm:right-0">
+          <Seal
+            verdict={passage.calibration.passed ? "pass" : "fail"}
+            language={passage.language}
+            level={passage.level}
+            size="corner"
+            animate
+          />
+        </div>
       </div>
 
       <AudioBar passage={passage} activeSentence={audioSentence} onSentence={setAudioSentence} />

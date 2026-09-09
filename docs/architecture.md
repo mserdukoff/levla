@@ -234,6 +234,7 @@ Only `ru` and `ja` are supported. A third language needs:
 4. Seed texts + translations
 5. UI labels in `frontend/src/lib/types.ts`
 6. `SUPPORTED` in `backend/app/services/data.py` and language checks on `/library`
+7. A row in `frontend/src/lib/seal-copy.ts` (`script`, pass word, fail word). Prefer a short exam-stamp word (about 2–8 letters or 2–4 CJK). Missing keys fall back to Latin PASS / FAIL; do not ship a blank seal. Script picks the typeface (`cjk` → gothic, `cyrillic` / `latin` → Literata). An `rtl` flag is reserved for Arabic/Hebrew.
 
 Grammar and vocab JSON are loaded with `lru_cache`. Restart the backend after editing them.
 

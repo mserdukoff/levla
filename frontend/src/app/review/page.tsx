@@ -37,15 +37,15 @@ function ReviewRow({
           <span className="ml-auto text-[13px] capitalize text-ink/40">Rated {rated}</span>
         ) : null}
       </div>
-      {kanji.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {kanji.map((ch, i) => (
-            <StrokeOrderButton key={`${ch}-${i}`} char={ch} />
-          ))}
-        </div>
-      ) : null}
       {done ? null : show ? (
         <>
+          {kanji.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {kanji.map((ch, i) => (
+                <StrokeOrderButton key={`${ch}-${i}`} char={ch} />
+              ))}
+            </div>
+          ) : null}
           <p className="text-base leading-relaxed text-ink/85">{card.gloss ?? "No gloss"}</p>
           {card.context ? (
             <p className={`${font} text-sm leading-relaxed text-ink/55`}>{card.context}</p>

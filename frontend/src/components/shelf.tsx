@@ -5,12 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 import { BandStrip } from "@/components/band";
 import { GenerateForm } from "@/components/generate-form";
 import { Segmented } from "@/components/segmented";
-import { StrokeOrderButton } from "@/components/stroke-order";
+import { Seal } from "@/components/seal";
 import { fetchLibrary, fetchMe, fetchReview, logout, requestMagicLink, unstarWord } from "@/lib/api";
 import { getDeviceId, loadLanguage, saveLanguage } from "@/lib/device";
 import {
   LANGUAGES,
-  kanjiChars,
   type LangCode,
   type LibraryItem,
   type LibraryResponse,
@@ -56,41 +55,31 @@ function WordsList({
     <section className="flex flex-col gap-3">
       <SectionLabel>Words</SectionLabel>
       <ul className="flex flex-col divide-y divide-rule border-y border-rule">
-        {words.map((word) => {
-          const kanji = language === "ja" ? kanjiChars(word.lemma) : [];
-          return (
-            <li key={word.lemma} className="flex items-start justify-between gap-4 py-3">
-              <div className="min-w-0">
-                <p className="flex flex-wrap items-baseline gap-x-2.5">
-                  <span className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
-                  {word.gloss ? <span className="text-sm text-ink/55">{word.gloss}</span> : null}
-                </p>
-                {kanji.length > 0 ? (
-                  <div className="mt-2.5 flex flex-wrap gap-2">
-                    {kanji.map((ch, i) => (
-                      <StrokeOrderButton key={`${ch}-${i}`} char={ch} />
-                    ))}
-                  </div>
-                ) : null}
-                {word.passage_id && word.title ? (
-                  <Link
-                    href={`/passage/${word.passage_id}`}
-                    className={`mt-0.5 block text-[13px] text-ink/40 transition-colors hover:text-ink ${font}`}
-                  >
-                    {word.title}
-                  </Link>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => onRemove(word.lemma)}
-                className="t-quiet shrink-0 underline decoration-ink/15 underline-offset-4"
-              >
-                Remove
-              </button>
-            </li>
-          );
-        })}
+        {words.map((word) => (
+          <li key={word.lemma} className="flex items-start justify-between gap-4 py-3">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-baseline gap-x-2.5">
+                <span className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
+                {word.gloss ? <span className="text-sm text-ink/55">{word.gloss}</span> : null}
+              </p>
+              {word.passage_id && word.title ? (
+                <Link
+                  href={`/passage/${word.passage_id}`}
+                  className={`mt-0.5 block text-[13px] text-ink/40 transition-colors hover:text-ink ${font}`}
+                >
+                  {word.title}
+                </Link>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => onRemove(word.lemma)}
+              className="t-quiet shrink-0 underline decoration-ink/15 underline-offset-4"
+            >
+              Remove
+            </button>
+          </li>
+        ))}
       </ul>
       <p className="t-quiet">
         Export{" "}
@@ -122,7 +111,16 @@ function ContinueCard({ item }: { item: LibraryItem }) {
     >
       <div className="flex items-start justify-between gap-4">
         <p className="text-[13px] text-paper/60">{item.topic}</p>
-        <BandStrip level={item.level} inverted />
+        <div className="flex items-start gap-3">
+          <Seal
+            verdict={item.passed ? "pass" : "fail"}
+            language={item.language}
+            level={item.level}
+            size="mark"
+            inverted
+          />
+          <BandStrip level={item.level} inverted />
+        </div>
       </div>
       <h3 className={`mt-5 text-[1.6rem] leading-[1.2] sm:text-[1.9rem] ${font}`}>{item.title}</h3>
       <div className="tnum mt-7 flex items-baseline justify-between gap-3 text-[13px]">
@@ -143,7 +141,15 @@ function ShelfRow({ item }: { item: LibraryItem }) {
         className="group grid grid-cols-[1fr_auto] items-baseline gap-x-4 px-3 py-3.5 transition-colors hover:bg-paper-raised"
       >
         <h3 className={`text-[1.125rem] leading-snug text-ink ${font}`}>{item.title}</h3>
-        <span className="tnum font-display text-[11px] tracking-[0.12em] text-ink/45">
+        <span className="tnum flex items-center gap-2 font-display text-[11px] tracking-[0.12em] text-ink/45">
+          {!item.passed ? (
+            <Seal
+              verdict="fail"
+              language={item.language}
+              level={item.level}
+              size="mark"
+            />
+          ) : null}
           {item.level}
           {item.chapter_index ? ` · ch ${item.chapter_index}` : ""}
         </span>

@@ -253,6 +253,43 @@ article rt {
   color: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
+/* ---------- exam seal ---------- */
+
+.seal {
+  color: var(--terracotta);
+  transform: rotate(-6deg);
+  transform-origin: 50% 55%;
+}
+
+.seal-inverted {
+  color: var(--paper);
+}
+
+@keyframes seal-press {
+  0% {
+    transform: scale(1.16) rotate(-10deg);
+    opacity: 0.2;
+  }
+  72% {
+    transform: scale(0.97) rotate(-5.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+    opacity: 1;
+  }
+}
+
+.seal-animate {
+  animation: seal-press 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-animate {
+    animation: none;
+  }
+}
+
 /* ---------- global states ---------- */
 
 ::selection {
