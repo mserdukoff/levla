@@ -7,9 +7,11 @@ import { fetchStrokeDiagram } from "@/lib/kanjivg";
 import {
   jaGrammarLine,
   morphLine,
+  readingFont,
   type ConjPiece,
   type KanjiPart,
   type LangCode,
+  type RootPart,
   type Token,
 } from "@/lib/types";
 
@@ -124,11 +126,65 @@ function KanjiList({ parts }: { parts: KanjiPart[] }) {
   );
 }
 
+function RootRow({ part }: { part: RootPart }) {
+  return (
+    <li className="flex items-start gap-4 py-3">
+      <span
+        dir="rtl"
+        className="font-ar mt-0.5 min-w-[4.5rem] text-[1.65rem] leading-none text-ink"
+      >
+        {part.letters}
+      </span>
+      <div className="flex min-w-0 flex-col gap-1">
+        {part.form || part.form_name || part.pattern ? (
+          <p className="text-[12px] leading-snug text-ink/50">
+            <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+              wazn{" "}
+            </span>
+            {part.form ? <span>Form {part.form}</span> : null}
+            {part.form && part.form_name ? (
+              <span className="text-ink/25"> · </span>
+            ) : null}
+            {part.form_name ? (
+              <span className="font-ar" dir="rtl">
+                {part.form_name}
+              </span>
+            ) : null}
+            {part.pattern && part.pattern !== part.form_name ? (
+              <>
+                {part.form || part.form_name ? (
+                  <span className="text-ink/25"> · </span>
+                ) : null}
+                <span className="font-mono">{part.pattern}</span>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        {part.meaning ? (
+          <p className="text-sm text-ink/85">{part.meaning}</p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function RootList({ part }: { part: RootPart }) {
+  return (
+    <ul className="mt-4 flex flex-col divide-y divide-rule border-t border-rule">
+      <RootRow part={part} />
+    </ul>
+  );
+}
+
 function ConjBreakdown({ pieces, language }: { pieces: ConjPiece[]; language: LangCode }) {
   if (pieces.length < 2) return null;
-  const jp = language === "ja" ? "font-ja" : "font-reading";
+  const jp = readingFont(language);
+  const ar = language === "ar";
   return (
-    <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2">
+    <ul
+      dir={ar ? "rtl" : undefined}
+      className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2"
+    >
       {pieces.map((piece, i) => {
         const color = piece.label === "stem" ? "text-g-verb" : "text-g-aux";
         return (
@@ -146,7 +202,7 @@ function ConjBreakdown({ pieces, language }: { pieces: ConjPiece[]; language: La
 
 /**
  * Word gloss. Content order is fixed by the spec:
- * surface → reading → lemma + band → morph line → suffix chain → gloss → save → kanji.
+ * surface → reading → lemma + band → morph line → suffix chain → gloss → save → kanji / root.
  */
 export function GlossCard({
   token,
@@ -166,17 +222,19 @@ export function GlossCard({
   const morph = token.morph;
   const line = morph ? morphLine(morph) : "";
   const ja = language === "ja";
+  const ar = language === "ar";
   const jaLine = ja ? jaGrammarLine(token) : "";
   const kanji = token.kanji ?? [];
+  const root = token.root ?? null;
   const conj = token.conj ?? [];
   const showLemma = Boolean(token.lemma && token.lemma !== token.text);
-  const jp = ja ? "font-ja" : "font-reading";
+  const jp = readingFont(language);
   return (
     <div className={`flex flex-col overflow-y-auto pr-1 ${maxHeight ? "max-h-[75vh]" : ""}`}>
-      <p className="flex flex-wrap items-baseline gap-x-3">
+      <p className="flex flex-wrap items-baseline gap-x-3" dir={ar ? "rtl" : undefined}>
         <span className={`${jp} text-[1.75rem] leading-tight text-ink`}>{token.text}</span>
-        {morph?.reading ? (
-          <span className={`${ja ? "font-ja" : ""} text-sm text-ink/50`}>{morph.reading}</span>
+        {morph?.reading && morph.reading !== token.text ? (
+          <span className={`${jp} text-sm text-ink/50`}>{morph.reading}</span>
         ) : null}
       </p>
       {showLemma || token.level ? (
@@ -193,7 +251,7 @@ export function GlossCard({
       {ja && jaLine ? (
         <p className="mt-1.5 font-mono text-[12px] tracking-wide text-ink/50">{jaLine}</p>
       ) : null}
-      {ja ? <ConjBreakdown pieces={conj} language={language} /> : null}
+      {ja || ar ? <ConjBreakdown pieces={conj} language={language} /> : null}
       <p className="mt-3 text-[1.0625rem] leading-snug text-ink/90">
         {token.gloss ?? "No gloss for this lemma yet."}
       </p>
@@ -212,6 +270,7 @@ export function GlossCard({
       {kanji.length > 0 ? (
         <KanjiList key={`${token.text}-${token.lemma ?? ""}`} parts={kanji} />
       ) : null}
+      {root && root.letters ? <RootList part={root} /> : null}
     </div>
   );
 }

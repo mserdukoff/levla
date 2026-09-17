@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BandStrip } from "@/components/band";
+import { DemoBanner } from "@/components/demo-banner";
+import { isDemo } from "@/lib/demo";
 import type { LangCode } from "@/lib/types";
 import { Drift } from "./drift";
 import { ReaderDemo } from "./reader-demo";
@@ -72,8 +74,9 @@ export function Landing() {
   return (
     <main className="mx-auto w-full max-w-[74rem] px-5 sm:px-8 lg:px-12">
       <header className="flex items-center justify-between py-6 sm:py-7">
-        <span className="font-display text-[1.375rem] font-medium tracking-[-0.02em] text-ink">
+        <span className="flex items-baseline gap-2.5 font-display text-[1.375rem] font-medium tracking-[-0.02em] text-ink">
           Levla
+          {isDemo() ? <span className="t-eyebrow">Demo</span> : null}
         </span>
         <nav className="flex items-center gap-7">
           <a href="#check" className="t-quiet hidden sm:inline">
@@ -88,15 +91,17 @@ export function Landing() {
         </nav>
       </header>
 
+      <DemoBanner />
+
       {/* ---------- hero ---------- */}
       <section className="grid gap-12 border-t border-rule pt-12 lg:grid-cols-12 lg:gap-12 lg:pt-16">
         <div className="flex flex-col lg:col-span-5">
-          <p className="t-kicker">Russian · Japanese · Beginner to upper-intermediate</p>
+          <p className="t-kicker">Japanese · Arabic · Italian · Russian · Beginner to upper-intermediate</p>
           <h1 className="t-display mt-6 text-[2.9rem] text-ink sm:text-[3.6rem] lg:text-[4rem]">
             Reading practice that actually matches what you know.
           </h1>
           <p className="mt-7 max-w-[30rem] text-[1.125rem] leading-[1.6] text-ink/70 sm:text-[1.2rem]">
-            Levla writes short stories in Russian and Japanese for exactly where you are, then
+            Levla writes short stories in Japanese, Arabic, Italian, and Russian for exactly where you are, then
             checks every single one before it reaches you, so the grammar never jumps ahead of
             what you’ve actually learned. Tap any word for what it means, how it’s used, and why.
           </p>
@@ -126,6 +131,8 @@ export function Landing() {
           lede={
             lang === "ja"
               ? "Ask any AI tool for “easy Japanese” and it quietly slips in grammar you haven’t met yet — a plain form here, an honorific there — until you’re back to guessing instead of reading. We check every passage line by line before you ever see it, so a beginner text actually reads like one."
+              : lang === "ar"
+                ? "Ask any AI tool for “easy Arabic” and it quietly slips in a verb form or a particle you haven’t met yet — إنّ here, a dual there — until you’re back to guessing instead of reading. We check every passage line by line before you ever see it, so a beginner text actually reads like one."
               : "Ask any AI tool for “easy Russian” and it quietly slips in a case or a verb form you haven’t met yet, until you’re back to guessing instead of reading. We check every passage line by line before you ever see it, so a beginner text actually reads like one."
           }
         />
@@ -191,7 +198,7 @@ export function Landing() {
           <div className="lg:col-span-4 lg:col-start-5">
             <p className="t-eyebrow">For</p>
             <p className="mt-4 text-[1.0625rem] leading-[1.65] text-ink/80">
-              Serious hobbyists and heritage learners of Russian or Japanese. You have outgrown
+              Serious hobbyists and heritage learners of Japanese, Arabic, Italian, or Russian. You have outgrown
               textbook dialogues, native material is still a wall, and you have stopped trusting
               anything labelled “AI-generated A2”.
             </p>
@@ -214,8 +221,9 @@ export function Landing() {
           <div className="lg:col-span-8 lg:col-start-5">
             <h2 className="t-display text-[2.6rem] text-ink sm:text-[3.4rem]">Pick a passage.</h2>
             <p className="mt-6 max-w-[30rem] text-[1.0625rem] leading-[1.65] text-ink/70 sm:text-[1.125rem]">
-              Every level already has passages waiting. Ask for one on any topic you like, and
-              it’ll go through the same check before it reaches you.
+              {isDemo()
+                ? "Every language already has A1, A2, and B1 passages waiting. Tap any word. Rate the text. Your placement stays in this browser."
+                : "Every level already has passages waiting. Ask for one on any topic you like, and it’ll go through the same check before it reaches you."}
             </p>
             <div className="mt-9">
               <Link href="/library" className="btn-primary">

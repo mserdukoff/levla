@@ -32,11 +32,11 @@ topic + CEFR + genre + language
 - Model: `LLM_MODEL` (default `openai/gpt-4o-mini`) via OpenRouter (`https://openrouter.ai/api/v1`).
 - First draft temperature **0.7**, 45s timeout. Correction pass **0.4**.
 - Prompt includes:
-  - language-specific length: Russian **400–700 words**; Japanese **22–40 short sentences**
-  - `prompt_constraints` from `data/grammar/{ru,ja}_cefr.json` for that level
+  - language-specific length: Russian **400–700 words**; Italian **350–600 words**; Arabic **280–500 words**; Japanese **22–40 short sentences**
+  - `prompt_constraints` from `data/grammar/{ru,ja,it,ar}_cefr.json` for that level
   - a deterministic-ish random sample of **~48 lemmas** at or below the target band (`random.Random(language + level + str(len(pool)))`)
   - genre hint, if the genre is one of `daily_life`, `travel`, `news`, `folklore`, `work`
-  - script notes: Russian must mark ё and avoid Latin; Japanese must not insert spaces or furigana
+  - script notes: Russian must mark ё and avoid Latin; Italian must mark accents (è, perché, città); Arabic must be unvowelled MSA with hamza; Japanese must not insert spaces or furigana
 - Response must be JSON `{ "title", "text" }`. Markdown fences and a greedy `{…}` extract are tolerated. Empty text raises. Empty title falls back to the topic.
 
 If calibration fails, a second call is made with up to 20 validator flags. **Severity** is `flags + weighted rates` (see below). The less-severe attempt is stored. A draft that still fails is **quarantined** (`shelf_status=quarantine`) and is not returned by the public library, next-text picker, or `/api/passages/{id}` unless `?lab=1`.
@@ -80,6 +80,42 @@ Dispatcher: `morph.py` → `analyze_text` / `analyze_word`.
 
 POS is left as pymorphy (`NOUN`, `VERB`, `INFN`, `ADJF`, `PRTF`, `GRND`, …). CEFR band is `vocab_bands["ru"].get(lemma)`.
 
+### Italian
+
+- **spaCy** `it_core_news_md` splits the string; trailing whitespace between tokens is stored on `ws`.
+- A token is a word iff it contains a Latin letter.
+- UD morph features map onto `MorphInfo`:
+
+| spaCy UD | Levla |
+| -------- | ----- |
+| tense `Pres/Past/Fut/Imp` | `pres / past / fut / impf` |
+| mood `Ind/Imp/Sub/Cnd` | `indc / impr / subj / cond` |
+| VerbForm `Fin/Inf/Part/Ger` | `fin / inf / part / ger` |
+| gender `Masc/Fem` | `masc / fem` |
+| number `Sing/Plur` | `sg / pl` |
+
+POS is left as UD (`NOUN`, `VERB`, `ADJ`, `AUX`, `ADP`, …). Proper nouns set `pos_detail` to `proper-noun`. Lemma keys are lowercased. CEFR band is `vocab_bands["it"].get(lemma)`.
+
+### Arabic
+
+- **CAMeL Tools** MSA analyzer (`MorphologyDB` + optional `MLEDisambiguator`). Tokenization is custom and whitespace-preserving; punctuation including `؟` is a non-word.
+- A token is a word iff it contains an Arabic letter. Lemmas are undiacritized and alef-normalized (`أإآٱ` → `ا`, `ى` → `ي`).
+- CAMeL features map onto `MorphInfo`:
+
+| CAMeL | Levla |
+| ----- | ----- |
+| asp `p/i/c` | tense `past / pres`; aspect `perf / impf`; mood `impr` when asp is `c` |
+| mod `i/s/j` | mood `indc / subj / juss` |
+| vox `a/p` | voice `act / pass` |
+| cas `n/a/g` | case `nom / acc / gen` |
+| stt `d/i/c` | state `def / indef / const` |
+| per / gen / num | person `1/2/3`, gender `masc/fem`, number `sg/du/pl` |
+| pattern | `conj_type`; verbs also get Form I–X on `form` |
+| diac | `reading` (tashkeel), shown as ruby when Vowels is on |
+| root | `Token.root` via `roots.py` |
+
+POS is mapped toward UD (`NOUN`, `VERB`, `ADJ`, `ADP`, `PART`, …). Proper nouns set `pos_detail` to `proper-noun`. If the CAMeL database is missing, tokens still split but features and roots stay empty.
+
 ### Japanese
 
 - **Sudachi** dictionary, **split mode C** (coarse; fewer morpheme cuts than A/B).
@@ -107,11 +143,19 @@ This is heuristic alignment, not a morphological gold standard. Tests lock 市�
 
 Stroke-order diagrams are not in the lexicon. The gloss card fetches [KanjiVG](https://kanjivg.tagaini.net/) SVGs (Japanese stroke order, the same source Jisho uses) via `GET /kanji-strokes/{code}` and animates the paths in the browser. `code` is the character’s 5-digit hex codepoint (`食` → `098df`). Characters KanjiVG does not cover stay as a static glyph.
 
+### Roots (`roots.py`)
+
+`data/roots/ar.json` (~197 roots): spaced letters plus a short English gloss. Built by `scripts/build_ar_lexicon.py`.
+
+Each content token can carry one `RootPart` (`letters` like `ك ت ب`, `pattern` / وزن, Form I–X for verbs, `form_name` like فَعَّلَ, `meaning`). Mapping CAMeL Buckwalter patterns onto Forms I–X is heuristic. `attach_roots` runs again when a stored passage is read, so older tokens pick up lexicon meanings.
+
+This is the gloss-card analog of kanji: one root per word, not a list of characters.
+
 ## Grammar roles and verb suffixes (`grammar.py`)
 
 After morph (and again on every passage read), `attach_grammar` fills `role`, `conj`, and `conj_id`.
 
-**Colour roles.** Japanese: は → `topic`, が → `subject`, を → `object`, other 助詞 → `particle`, 動詞 → `verb`, 助動詞 and non-head chain members → `aux`, i/na-adjectives → `adj`, adverbs → `adverb`. Nouns and pronouns stay uncoloured. Russian: `VERB`/`INFN`/`PRTF`/`GRND` → `verb`, adjectives → `adj`, `PREP`/`CONJ`/`PRCL` → `particle`, `ADVB` → `adverb`.
+**Colour roles.** Japanese: は → `topic`, が → `subject`, を → `object`, other 助詞 → `particle`, 動詞 → `verb`, 助動詞 and non-head chain members → `aux`, i/na-adjectives → `adj`, adverbs → `adverb`. Nouns and pronouns stay uncoloured. Russian: `VERB`/`INFN`/`PRTF`/`GRND` → `verb`, adjectives → `adj`, `PREP`/`CONJ`/`PRCL` → `particle`, `ADVB` → `adverb`. Italian and Arabic use the same Latin map: `VERB` → `verb`, `ADJ` → `adj`, `ADP`/`PART`/`DET`/`SCONJ`/`CCONJ` → `particle`, `ADV` → `adverb`.
 
 **Japanese conjugation chains.** A chain starts at a verb, i-adj, na-adj, or aux (copula です after a noun). It continues through auxiliaries (ます, た, ない, れる, させる, …), conjunctive particles (て, で, ば, ながら), and subsidiary verbs after て (いる, しまう, みる, おく, …). Dictionary-form heads split the last kana (`食べる` → 食べ stem + る dictionary; `高い` → 高 + い). Labels include polite, past, te-form, negative, progressive, causative, passive / potential, conditional, volitional, copula, adnominal.
 
@@ -119,8 +163,8 @@ Tapping any piece of the chain in the reader shows the same breakdown. Tests loc
 
 ## Glosses
 
-1. Lexicon `data/gloss/{ru,ja}_en.json` keyed by lemma (Russian lookup is case-insensitive).
-2. Remaining lemmas: one-shot LLM batch (`gloss_lemmas`), temperature 0, JSON object lemma→1–5 word English gloss. Russian keys lowercased. Failure → empty dict; those tokens stay unglossed.
+1. Lexicon `data/gloss/{ru,ja,it,ar}_en.json` keyed by lemma (Russian and Italian lookup is case-insensitive; Arabic lookup uses the same undiacritized alef-normalized key as the morph module).
+2. Remaining lemmas: one-shot LLM batch (`gloss_lemmas`), temperature 0, JSON object lemma→1–5 word English gloss. Russian and Italian keys lowercased. Failure → empty dict; those tokens stay unglossed.
 3. Live `POST /gloss` without a matching passage token does **not** call the LLM; lexicon only.
 
 ## Validators
@@ -194,17 +238,80 @@ Unknown content lemmas count as over-level. The skip for “names” only fires 
 
 Content POS for over-level and learner counts: `noun, verb, i-adj, na-adj, adverb`.
 
+### Italian (`validator_it.py` + `data/grammar/it_cefr.json`)
+
+Constructions are detected from spaCy tokens:
+
+| Flag | Detection |
+| ---- | --------- |
+| `passato_prossimo` | AUX *essere/avere* followed by `VerbForm=part` |
+| `imperfetto` | tense `impf` |
+| `futuro` | tense `fut` |
+| `condizionale` | mood `cond` |
+| `congiuntivo` | mood `subj` |
+| `gerundio` | form `ger` |
+| `participio` | form `part` not in a compound tense |
+| `passato_remoto` | finite past indicative |
+| `relative_che` | lemma *che* after a noun |
+| `clitic` / `clitic_cluster` | object clitics / fused or adjacent clitics |
+
+**Any** hit on a forbidden construction fails the draft. Over-level lemma rate and subordinate rate still have caps. Proper nouns are skipped for over-level.
+
+| Level | Allowed (simplified) |
+| ----- | -------------------- |
+| **A1** | Present indicative. No compounds, gerunds, subjunctives, relatives, clitics. |
+| **A2** | Passato prossimo, futuro, simple clitics, *perché / quando / se*. |
+| **B1** | Imperfetto, condizionale, gerundio, relative *che*. No congiuntivo. |
+| **B2** | Congiuntivo allowed. Passato remoto still banned. |
+
+Content POS for over-level and learner counts: `NOUN, VERB, ADJ, ADV, PROPN`.
+
+### Arabic (`validator_ar.py` + `data/grammar/ar_cefr.json`)
+
+Constructions are detected from CAMeL tokens:
+
+| Flag | Detection |
+| ---- | --------- |
+| `perfect` | tense `past` |
+| `imperfect` | tense `pres` |
+| `future` | tense `fut` (سـ / سوف) |
+| `dual` | number `du` |
+| `inna` | إنّ / أنّ and sisters |
+| `relative` | الذي / التي / … |
+| `kana` / `kana_compound` | كان (and sisters) / كان + verb |
+| `jussive` / `subjunctive` | mood `juss` / `subj` |
+| `passive` | voice `pass` |
+| `form_ii` … `form_x` / `derived_form` | verb Form II–X |
+
+**Any** hit on a forbidden construction fails the draft. Over-level lemma rate and subordinate rate still have caps. Proper nouns are skipped for over-level.
+
+| Level | Allowed (simplified) |
+| ----- | -------------------- |
+| **A1** | Present Form I and nominal sentences. No past, future, dual, إنّ, الذي, كان+verb, لم/لن, passive, Forms II–X. |
+| **A2** | Past and future, Form II/IV, لأن / إذا / عندما. |
+| **B1** | إنّ, الذي, dual, jussive/subjunctive, Forms II/IV/V/VII/VIII/X. Still no passive, VI, IX. |
+| **B2** | Passive and remaining forms allowed. |
+
+Content POS for over-level and learner counts: `NOUN, VERB, ADJ, ADV, PROPN`.
+
 ## Lexicons
 
 | File | Size (approx.) | Purpose |
 | ---- | -------------- | ------- |
 | `data/vocab/ru_cefr.json` | ~5,400 lemmas | Lemma → A1–B2. Pedagogical core plus frequency banding from a 50k word list |
 | `data/vocab/ja_cefr.json` | 3,000+ lemmas | Pedagogical core plus JMdict frequency bands |
+| `data/vocab/it_cefr.json` | ~1,000 lemmas | Pedagogical Italian core, dictionary form |
+| `data/vocab/ar_cefr.json` | ~775 lemmas | Pedagogical MSA core, undiacritized dictionary form |
 | `data/gloss/ru_en.json` | ~1,360 | Short English glosses (not every frequency lemma has a gloss) |
 | `data/gloss/ja_en.json` | 3,000+ | Short English glosses, keyed to dictionary form |
+| `data/gloss/it_en.json` | ~1,000 | Short English glosses, keyed to lowercased lemma |
+| `data/gloss/ar_en.json` | ~775 | Short English glosses, keyed to undiacritized lemma |
 | `data/grammar/ru_cefr.json` | 4 levels | Allowed cases/tenses, forbidden POS/conjunctions, rate caps, prompt text |
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text |
+| `data/grammar/it_cefr.json` | 4 levels | Forbidden constructions, tenses/moods, rate caps, prompt text |
+| `data/grammar/ar_cefr.json` | 4 levels | Forbidden constructions, tenses/moods, verb forms, rate caps, prompt text |
 | `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts |
+| `data/roots/ar.json` | ~197 | Arabic root → spaced letters + English gloss |
 
 Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list.
 
@@ -220,6 +327,8 @@ Japanese banding (`scripts/build_ja_lexicon.py`):
 python3 scripts/build_ja_lexicon.py
 python3 scripts/build_kanji.py
 python3 scripts/build_lexicon.py   # needs pymorphy3; optionally data/raw/ru_50k.txt
+python3 scripts/build_it_lexicon.py
+python3 scripts/build_ar_lexicon.py
 ```
 
 Grammar JSON is edited by hand.
@@ -230,8 +339,11 @@ Grammar JSON is edited by hand.
 
 ## Known NLP failure modes
 
+- spaCy Italian first-token morph can miss passato remoto vs compound past; the validator then flags or misses it.
 - pymorphy3 first-parse can be the wrong lemma or case; the validator then flags or misses it.
 - Sudachi mode C still splits in ways that confuse て+いる and relative-clause detection.
 - `れる/られる` is tagged as both potential and passive; B1 forbids `passive` so potential られる can false-fail B1.
 - Japanese construction detection will both over- and under-flag (heuristic).
+- CAMeL Form I–X mapping is heuristic on وزن patterns; a mis-tagged Form II verb can fail an A1 seed.
+- Without the CAMeL morphology database, Arabic tokens still split but POS/root stay empty, so the validator barely flags grammar.
 - Quarantine means failed calibrations never wear a public CEFR badge.

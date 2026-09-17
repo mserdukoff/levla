@@ -5,11 +5,17 @@ import re
 from app.models.schemas import Token
 
 JA_END = set("。！？")
-RU_END = set(".!?…")
+LATIN_END = set(".!?…")
+AR_END = set(".!?…؟")
 
 
 def sentence_ids(tokens: list[Token], language: str) -> list[int]:
-    end = JA_END if language == "ja" else RU_END
+    if language == "ja":
+        end = JA_END
+    elif language == "ar":
+        end = AR_END
+    else:
+        end = LATIN_END
     ids: list[int] = []
     sid = 0
     for tok in tokens:
@@ -22,6 +28,9 @@ def sentence_ids(tokens: list[Token], language: str) -> list[int]:
 def split_sentences(text: str, language: str) -> list[str]:
     if language == "ja":
         parts = re.split(r"(?<=[。！？])", text)
+        return [p.strip() for p in parts if p.strip()]
+    if language == "ar":
+        parts = re.split(r"(?<=[.!?…؟])(?:\s+|$)", text.strip())
         return [p.strip() for p in parts if p.strip()]
     parts = re.split(r"(?<=[.!?…])(?:\s+|$)", text.strip())
     return [p.strip() for p in parts if p.strip()]

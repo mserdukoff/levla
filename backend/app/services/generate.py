@@ -80,6 +80,10 @@ def _to_response(row: PassageRow) -> PassageResponse:
                 if tok.morph:
                     tok.morph.reading = reading
                 tok.kanji = breakdown(tok.text, reading)
+    elif language == "ar":
+        from app.services.roots import attach_roots
+
+        attach_roots(tokens)
     from app.services.grammar import attach_grammar
 
     attach_grammar(tokens, language)

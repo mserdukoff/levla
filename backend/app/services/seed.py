@@ -331,6 +331,126 @@ SEED: list[dict] = [
             "сказал, что завтра мы поедем в другой район. Если будет дождь, мы останемся дома."
         ),
     },
+    {
+        "language": "it",
+        "level": "A1",
+        "topic": "a student at home",
+        "genre": "daily_life",
+        "title": "Anna a casa",
+        "text": (
+            "Anna è studentessa. Anna è qui. Questa è una stanza. La stanza è nuova. "
+            "Questo è un libro. Il libro è nuovo. Questo è tè. Il tè è buono. "
+            "La mamma è qui. La mamma è buona. Il giorno è buono. Io sono studente."
+        ),
+    },
+    {
+        "language": "it",
+        "level": "A1",
+        "topic": "food on the table",
+        "genre": "daily_life",
+        "title": "Tè e pane",
+        "text": (
+            "Questo è tè. Il tè è buono. Questa è acqua. L'acqua è fredda. Questo è un libro. Il libro è nuovo. "
+            "Questa è la mamma. La mamma è qui. Questa è Anna. Anna è studentessa. "
+            "Io sono studente. Il giorno è buono. La stanza è nuova."
+        ),
+    },
+    {
+        "language": "it",
+        "level": "A2",
+        "topic": "a morning at the market",
+        "genre": "daily_life",
+        "title": "Mattina al mercato",
+        "text": (
+            "Oggi Anna va al mercato. Il mercato è vicino a casa. Anna compra pane e acqua. "
+            "La mamma compra mele. Ieri ha comprato pane. Oggi legge un libro. "
+            "Al mercato ci sono molte persone. Poi Anna va a casa. Il tè è già caldo."
+        ),
+    },
+    {
+        "language": "it",
+        "level": "A2",
+        "topic": "a train to the city",
+        "genre": "travel",
+        "title": "Un treno in città",
+        "text": (
+            "Oggi vado in città. La stazione è vicina. Compro un biglietto. "
+            "Sul treno leggo un libro e bevo acqua. Ieri sono stato a casa. "
+            "Un amico aspetta alla stazione. La città è grande. L'hotel è vicino."
+        ),
+    },
+    {
+        "language": "it",
+        "level": "B1",
+        "topic": "reading on the train",
+        "genre": "daily_life",
+        "title": "Un libro sul treno",
+        "text": (
+            "Adesso sono sul treno e leggo un libro. Quando ero bambino, leggevo sempre sul treno. "
+            "Il lavoro oggi non aspetta, perché è domenica. "
+            "Poi compro acqua alla stazione. La città è già vicina."
+        ),
+    },
+    {
+        "language": "ar",
+        "level": "A1",
+        "topic": "a student at home",
+        "genre": "daily_life",
+        "title": "أحمد في البيت",
+        "text": (
+            "هذا أحمد. أحمد طالب. أحمد هنا. هذا بيت. البيت كبير. "
+            "هذه غرفة. الغرفة جديدة. هذا كتاب. الكتاب جديد. "
+            "أمي هنا. أبي في البيت. الشاي جيد. الماء بارد. أنا طالب."
+        ),
+    },
+    {
+        "language": "ar",
+        "level": "A1",
+        "topic": "tea and bread",
+        "genre": "daily_life",
+        "title": "شاي وخبز",
+        "text": (
+            "هذا شاي. الشاي جيد. هذا ماء. الماء بارد. هذا خبز. الخبز جديد. "
+            "هذه أمي. أمي هنا. هذا أحمد. أحمد طالب. "
+            "أنا طالب. اليوم جيد. الغرفة جديدة."
+        ),
+    },
+    {
+        "language": "ar",
+        "level": "A2",
+        "topic": "a morning at the market",
+        "genre": "daily_life",
+        "title": "صباح في السوق",
+        "text": (
+            "اليوم أذهب إلى السوق. السوق قريب من البيت. أشتري خبزا وماء. "
+            "أمي تشتري تفاحا. أمس اشتريت خبزا. اليوم أقرأ كتابا. "
+            "في السوق ناس كثير. ثم أذهب إلى البيت. الشاي حار."
+        ),
+    },
+    {
+        "language": "ar",
+        "level": "A2",
+        "topic": "a train to the city",
+        "genre": "travel",
+        "title": "قطار إلى المدينة",
+        "text": (
+            "اليوم أذهب إلى المدينة. المحطة قريبة. أشتري تذكرة. "
+            "في القطار أقرأ كتابا وأشرب ماء. أمس كنت في البيت. "
+            "صديق ينتظر في المحطة. المدينة كبيرة. الفندق قريب."
+        ),
+    },
+    {
+        "language": "ar",
+        "level": "B1",
+        "topic": "reading on the train",
+        "genre": "daily_life",
+        "title": "كتاب في القطار",
+        "text": (
+            "الآن أنا في القطار وأقرأ كتابا. عندما كنت صغيرا كنت أقرأ في القطار دائما. "
+            "العمل اليوم لا ينتظر، لأن اليوم عطلة. "
+            "ثم أشتري ماء في المحطة. المدينة قريبة الآن."
+        ),
+    },
 ]
 
 

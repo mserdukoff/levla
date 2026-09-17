@@ -26,13 +26,15 @@ A1 ⇄ A2 ⇄ B1 ⇄ B2
 
 There is no half-step, no consecutive-rating hysteresis, and no use of calibration `passed` when bumping. A soft-fail A2 text marked too hard still moves the learner to A1.
 
-Japanese and Russian placements are independent rows.
+Japanese, Italian, Russian, and Arabic placements are independent rows.
 
 ## New vs. known
 
 Content POS only:
 
 - **Russian:** `NOUN`, `ADJF`, `ADJS`, `VERB`, `INFN`, `ADVB`, `PRED`, `NUMR`
+- **Italian:** `NOUN`, `VERB`, `ADJ`, `ADV`, `PROPN`
+- **Arabic:** `NOUN`, `VERB`, `ADJ`, `ADV`, `PROPN`
 - **Japanese:** `noun`, `verb`, `i-adj`, `na-adj`, `adverb`
 
 Counts on the shelf and reader are **token occurrences**, not unique lemmas. A recycled word that appears three times counts as three “known.” Unique lemmas are what get stored in `learner_lemmas` and what `seen_lemmas` reports on the shelf line.

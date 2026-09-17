@@ -61,6 +61,30 @@ _RU_ROLE = {
     "ADVB": "adverb",
 }
 
+_IT_ROLE = {
+    "VERB": "verb",
+    "AUX": "verb",
+    "ADJ": "adj",
+    "ADP": "particle",
+    "PART": "particle",
+    "DET": "particle",
+    "ADV": "adverb",
+    "SCONJ": "particle",
+    "CCONJ": "particle",
+}
+
+_AR_ROLE = {
+    "VERB": "verb",
+    "ADJ": "adj",
+    "ADP": "particle",
+    "PART": "particle",
+    "DET": "particle",
+    "ADV": "adverb",
+    "SCONJ": "particle",
+    "CCONJ": "particle",
+}
+
+
 def attach_grammar(tokens: list[Token], language: str) -> list[Token]:
     """Fill role / conj / conj_id. Safe to run again on stored tokens."""
     for tok in tokens:
@@ -69,8 +93,13 @@ def attach_grammar(tokens: list[Token], language: str) -> list[Token]:
         tok.conj_id = None
     if language == "ja":
         _attach_ja(tokens)
+    elif language == "it":
+        _attach_latin(tokens, _IT_ROLE)
+    elif language == "ar":
+        _attach_latin(tokens, _AR_ROLE)
+        _attach_ar_clitics(tokens)
     else:
-        _attach_ru(tokens)
+        _attach_latin(tokens, _RU_ROLE)
     return tokens
 
 
@@ -94,11 +123,29 @@ def _form0(tok: Token) -> str:
     return _form(tok).split("-")[0]
 
 
-def _attach_ru(tokens: list[Token]) -> None:
+def _attach_latin(tokens: list[Token], role_map: dict[str, str]) -> None:
     for tok in tokens:
         if not tok.is_word or not tok.morph:
             continue
-        tok.role = _RU_ROLE.get(_pos(tok))
+        tok.role = role_map.get(_pos(tok))
+
+
+def _attach_ar_clitics(tokens: list[Token]) -> None:
+    from app.services.morph_ar import clitic_pieces
+
+    for i, tok in enumerate(tokens):
+        if not tok.is_word or not tok.morph:
+            continue
+        pieces = clitic_pieces(
+            tok.text,
+            tok.lemma or tok.morph.lemma,
+            tok.morph.enclitic,
+            tok.morph.pos,
+        )
+        if len(pieces) < 2:
+            continue
+        tok.conj = pieces
+        tok.conj_id = i
 
 
 def _ja_base_role(tok: Token) -> str | None:

@@ -1,0 +1,149 @@
+{
+  "language": "it",
+  "levels": ["A1", "A2", "B1", "B2"],
+  "tense_aliases": {
+    "Pres": "pres",
+    "Past": "past",
+    "Fut": "fut",
+    "Imp": "impf"
+  },
+  "mood_aliases": {
+    "Ind": "indc",
+    "Imp": "impr",
+    "Sub": "subj",
+    "Cnd": "cond"
+  },
+  "form_aliases": {
+    "Fin": "fin",
+    "Inf": "inf",
+    "Part": "part",
+    "Ger": "ger"
+  },
+  "A1": {
+    "allowed_tenses": ["pres"],
+    "allowed_moods": ["indc"],
+    "allowed_verb_forms": ["fin", "inf"],
+    "forbidden_pos": [],
+    "forbidden_constructions": [
+      "passato_prossimo",
+      "imperfetto",
+      "futuro",
+      "condizionale",
+      "congiuntivo",
+      "gerundio",
+      "participio",
+      "passato_remoto",
+      "relative_che",
+      "clitic_cluster",
+      "clitic"
+    ],
+    "forbidden_conjunctions": [
+      "perché",
+      "quando",
+      "se",
+      "mentre",
+      "sebbene",
+      "benché",
+      "affinché",
+      "nonostante",
+      "poiché",
+      "siccome",
+      "purché",
+      "qualora"
+    ],
+    "allowed_subordinate": [],
+    "max_subordinate_rate": 0.0,
+    "max_overlevel_lemma_rate": 0.15,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 0.12,
+    "max_forbidden_pos_rate": 0.02,
+    "prompt_constraints": "Use ONLY present indicative. Short simple sentences. Infinitives after verbs like volere, potere, dovere are OK. Do NOT use passato prossimo, imperfetto, futuro, condizionale, congiuntivo, gerundio, participio, passato remoto, relative clauses with che, or object clitics (lo, la, mi, ti, gli, le, ci, vi, ne). No subordinate clauses with perché, quando, se, mentre. Formal Lei is OK. Mark accents (è, perché, città)."
+  },
+  "A2": {
+    "allowed_tenses": ["pres", "past", "fut"],
+    "allowed_moods": ["indc"],
+    "allowed_verb_forms": ["fin", "inf", "part"],
+    "forbidden_pos": [],
+    "forbidden_constructions": [
+      "imperfetto",
+      "condizionale",
+      "congiuntivo",
+      "gerundio",
+      "participio",
+      "passato_remoto",
+      "relative_che",
+      "clitic_cluster"
+    ],
+    "forbidden_conjunctions": [
+      "mentre",
+      "sebbene",
+      "benché",
+      "affinché",
+      "nonostante",
+      "poiché",
+      "siccome",
+      "purché",
+      "qualora"
+    ],
+    "allowed_subordinate": ["perché", "quando", "se"],
+    "max_subordinate_rate": 0.08,
+    "max_overlevel_lemma_rate": 0.18,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 0.02,
+    "prompt_constraints": "Present, passato prossimo, and futuro semplice are OK. Simple object clitics (lo, la, mi, ti) OK. Subordinate clauses with perché, quando, se OK. Questions and negation OK. Do NOT use imperfetto, condizionale, congiuntivo, gerundio, participio as a clause, passato remoto, relative che, or clitic clusters (me lo, glielo). Keep sentences short."
+  },
+  "B1": {
+    "allowed_tenses": ["pres", "past", "fut", "impf"],
+    "allowed_moods": ["indc", "impr", "cond"],
+    "allowed_verb_forms": ["fin", "inf", "part", "ger"],
+    "forbidden_pos": [],
+    "forbidden_constructions": [
+      "congiuntivo",
+      "passato_remoto"
+    ],
+    "forbidden_conjunctions": [
+      "sebbene",
+      "benché",
+      "affinché",
+      "purché",
+      "qualora"
+    ],
+    "allowed_subordinate": ["perché", "quando", "se", "che", "mentre", "poiché"],
+    "max_subordinate_rate": 0.28,
+    "max_overlevel_lemma_rate": 0.22,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 0.03,
+    "prompt_constraints": "Imperfetto, condizionale presente, gerundio, relative clauses with che, and the imperative are welcome. Passato prossimo vs imperfetto contrast is OK. Do NOT use congiuntivo or passato remoto. Avoid sebbene, benché, affinché, purché, qualora."
+  },
+  "B2": {
+    "allowed_tenses": ["pres", "past", "fut", "impf"],
+    "allowed_moods": ["indc", "impr", "cond", "subj"],
+    "allowed_verb_forms": ["fin", "inf", "part", "ger"],
+    "forbidden_pos": [],
+    "forbidden_constructions": ["passato_remoto"],
+    "forbidden_conjunctions": [],
+    "allowed_subordinate": [
+      "perché",
+      "quando",
+      "se",
+      "che",
+      "mentre",
+      "poiché",
+      "siccome",
+      "sebbene",
+      "benché",
+      "affinché",
+      "nonostante",
+      "purché",
+      "qualora"
+    ],
+    "max_subordinate_rate": 0.45,
+    "max_overlevel_lemma_rate": 0.3,
+    "max_forbidden_case_rate": 1.0,
+    "max_forbidden_tense_rate": 0.0,
+    "max_forbidden_pos_rate": 1.0,
+    "prompt_constraints": "Congiuntivo presente and imperfetto, periodo ipotetico, and hypotaxis are allowed. Calibrate vocabulary to B2. Do NOT use passato remoto (literary). Avoid rare C1+ literary syntax."
+  }
+}

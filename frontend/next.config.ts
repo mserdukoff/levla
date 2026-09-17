@@ -3,10 +3,15 @@ import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
 const frontendDir = path.dirname(fileURLToPath(import.meta.url));
+const isVercel = process.env.VERCEL === "1";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Docker / ECS use standalone. Vercel’s Next.js builder does not.
+  ...(isVercel ? {} : { output: "standalone" as const }),
   outputFileTracingRoot: frontendDir,
+  env: {
+    NEXT_PUBLIC_DEMO: process.env.NEXT_PUBLIC_DEMO ?? (isVercel ? "1" : ""),
+  },
   turbopack: { root: frontendDir },
   // The dev server blocks JS-chunk requests whose Origin doesn't match an
   // allowed host, as a DNS-rebinding guard — "localhost" is allowed by

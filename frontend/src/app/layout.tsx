@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Literata, Outfit } from "next/font/google";
+import { Literata, Noto_Naskh_Arabic, Outfit } from "next/font/google";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -17,13 +17,20 @@ const literata = Literata({
   display: "swap",
 });
 
+const naskh = Noto_Naskh_Arabic({
+  variable: "--font-naskh",
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
     default: "Levla — graded readers",
     template: "%s · Levla",
   },
   description:
-    "CEFR-calibrated Russian and Japanese passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss.",
+    "CEFR-calibrated Japanese, Arabic, Italian, and Russian passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -39,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} ${literata.variable} h-full antialiased`}
+      className={`${outfit.variable} ${literata.variable} ${naskh.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-paper text-ink">
         {children}

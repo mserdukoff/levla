@@ -217,4 +217,84 @@ TRANSLATIONS: dict[tuple[str, str], str] = {
         "I was reading a book by the window while the tea grew cold. A friend who lives nearby "
         "said that tomorrow we will go to another part of town. If it rains, we will stay home."
     ),
+    (
+        "it",
+        "Anna a casa",
+    ): (
+        "Anna is a student. Anna is here. This is a room. The room is new. "
+        "This is a book. The book is new. This is tea. The tea is good. "
+        "Mom is here. Mom is kind. The day is good. I am a student."
+    ),
+    (
+        "it",
+        "Tè e pane",
+    ): (
+        "This is tea. The tea is good. This is water. The water is cold. This is a book. The book is new. "
+        "This is mom. Mom is here. This is Anna. Anna is a student. "
+        "I am a student. The day is good. The room is new."
+    ),
+    (
+        "it",
+        "Mattina al mercato",
+    ): (
+        "Today Anna goes to the market. The market is near the house. Anna buys bread and water. "
+        "Mom buys apples. Yesterday she bought bread. Today she reads a book. "
+        "There are many people at the market. Then Anna goes home. The tea is already hot."
+    ),
+    (
+        "it",
+        "Un treno in città",
+    ): (
+        "Today I go to the city. The station is nearby. I buy a ticket. "
+        "On the train I read a book and drink water. Yesterday I was at home. "
+        "A friend waits at the station. The city is large. The hotel is nearby."
+    ),
+    (
+        "it",
+        "Un libro sul treno",
+    ): (
+        "Right now I am on a train and reading a book. When I was a child, I always read on the train. "
+        "Work is not waiting today, because it is Sunday. "
+        "Then I buy water at the station. The city is already close."
+    ),
+    (
+        "ar",
+        "أحمد في البيت",
+    ): (
+        "This is Ahmad. Ahmad is a student. Ahmad is here. This is a house. The house is big. "
+        "This is a room. The room is new. This is a book. The book is new. "
+        "Mom is here. Dad is in the house. The tea is good. The water is cold. I am a student."
+    ),
+    (
+        "ar",
+        "شاي وخبز",
+    ): (
+        "This is tea. The tea is good. This is water. The water is cold. This is bread. The bread is new. "
+        "This is mom. Mom is here. This is Ahmad. Ahmad is a student. "
+        "I am a student. The day is good. The room is new."
+    ),
+    (
+        "ar",
+        "صباح في السوق",
+    ): (
+        "Today I go to the market. The market is near the house. I buy bread and water. "
+        "Mom buys apples. Yesterday I bought bread. Today I read a book. "
+        "There are many people at the market. Then I go home. The tea is hot."
+    ),
+    (
+        "ar",
+        "قطار إلى المدينة",
+    ): (
+        "Today I go to the city. The station is nearby. I buy a ticket. "
+        "On the train I read a book and drink water. Yesterday I was at home. "
+        "A friend waits at the station. The city is large. The hotel is nearby."
+    ),
+    (
+        "ar",
+        "كتاب في القطار",
+    ): (
+        "Right now I am on the train and reading a book. When I was little I always read on the train. "
+        "Work is not waiting today, because it is a holiday. "
+        "Then I buy water at the station. The city is already close."
+    ),
 }

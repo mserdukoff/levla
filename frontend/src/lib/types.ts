@@ -1,5 +1,5 @@
 export type CefrLevel = "A1" | "A2" | "B1" | "B2";
-export type LangCode = "ru" | "ja";
+export type LangCode = "ru" | "ja" | "it" | "ar";
 export type FeedbackRating = "too_easy" | "too_hard" | "just_right";
 
 export type MorphInfo = {
@@ -15,6 +15,10 @@ export type MorphInfo = {
   form: string | null;
   pos_detail?: string | null;
   conj_type?: string | null;
+  voice?: string | null;
+  person?: string | null;
+  state?: string | null;
+  enclitic?: string | null;
 };
 
 export type ConjPiece = {
@@ -38,6 +42,14 @@ export type KanjiPart = {
   nanori?: string[];
 };
 
+export type RootPart = {
+  letters: string;
+  pattern: string | null;
+  form: string | null;
+  form_name: string | null;
+  meaning: string;
+};
+
 export type Token = {
   text: string;
   ws: string;
@@ -47,6 +59,7 @@ export type Token = {
   gloss: string | null;
   level: string | null;
   kanji?: KanjiPart[];
+  root?: RootPart | null;
   role?: string | null;
   conj?: ConjPiece[];
   conj_id?: number | null;
@@ -181,6 +194,8 @@ export type MeResponse = {
   display_name: string | null;
   guest: boolean;
   show_russian: boolean;
+  show_italian: boolean;
+  show_arabic: boolean;
   generate_remaining: number | null;
   require_auth: boolean;
 };
@@ -196,8 +211,10 @@ export type ReviewCard = {
 };
 
 export const LANGUAGES: { id: LangCode; label: string; native: string }[] = [
-  { id: "ru", label: "Russian", native: "Русский" },
   { id: "ja", label: "Japanese", native: "日本語" },
+  { id: "ar", label: "Arabic", native: "العربية" },
+  { id: "it", label: "Italian", native: "Italiano" },
+  { id: "ru", label: "Russian", native: "Русский" },
 ];
 
 export const LEVELS: { id: CefrLevel; label: string; hint: string }[] = [
@@ -216,11 +233,23 @@ export const GENRES: { id: string; label: string }[] = [
 ];
 
 export function morphLine(morph: MorphInfo): string {
+  const mood =
+    morph.mood === "impr"
+      ? "imperative"
+      : morph.mood === "subj"
+        ? "subjunctive"
+        : morph.mood === "cond"
+          ? "conditional"
+          : morph.mood;
   const parts = [
     morph.aspect,
     morph.tense,
-    morph.mood === "impr" ? "imperative" : null,
+    mood,
+    morph.voice === "act" ? "active" : morph.voice === "pass" ? "passive" : morph.voice,
+    morph.person ? `${morph.person}` : null,
+    morph.form && morph.form !== "fin" ? (morph.form.length <= 3 && /^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/.test(morph.form) ? `form ${morph.form}` : morph.form) : null,
     morph.case,
+    morph.state,
     morph.gender,
     morph.number,
     morph.pos && !morph.case ? morph.pos : null,
@@ -271,11 +300,31 @@ const RU_CONTENT = new Set([
   "PRED",
   "NUMR",
 ]);
+const IT_CONTENT = new Set(["NOUN", "VERB", "ADJ", "ADV", "PROPN"]);
+
+const AR_CONTENT = new Set(["NOUN", "VERB", "ADJ", "ADV", "PROPN"]);
+
+const CONTENT_BY_LANG: Record<LangCode, Set<string>> = {
+  ja: JA_CONTENT,
+  ru: RU_CONTENT,
+  it: IT_CONTENT,
+  ar: AR_CONTENT,
+};
 
 export function isContentWord(token: Token, language: LangCode): boolean {
   const pos = token.morph?.pos;
   if (!pos) return false;
-  return language === "ja" ? JA_CONTENT.has(pos) : RU_CONTENT.has(pos);
+  return CONTENT_BY_LANG[language].has(pos);
+}
+
+export function readingFont(language: LangCode): string {
+  if (language === "ja") return "font-ja";
+  if (language === "ar") return "font-ar";
+  return "font-reading";
+}
+
+export function isRtl(language: LangCode): boolean {
+  return language === "ar";
 }
 
 const KANJI = /[\u4e00-\u9faf]/;
@@ -286,6 +335,9 @@ export function kanjiChars(text: string): string[] {
 
 export function furiganaReading(token: Token): string | null {
   const reading = token.morph?.reading;
-  if (!reading || !KANJI.test(token.text)) return null;
-  return reading;
+  if (!reading) return null;
+  if (KANJI.test(token.text)) return reading;
+  // Arabic: show tashkeel when the analyzer restored vowels.
+  if (reading !== token.text && /[\u064B-\u0652]/.test(reading)) return reading;
+  return null;
 }

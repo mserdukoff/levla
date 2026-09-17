@@ -1,0 +1,790 @@
+{
+  "اتي": {
+    "letters": "ا ت ي",
+    "meaning": "come"
+  },
+  "اثر": {
+    "letters": "ا ث ر",
+    "meaning": "affect"
+  },
+  "اخذ": {
+    "letters": "ا خ ذ",
+    "meaning": "take"
+  },
+  "اكل": {
+    "letters": "ا ك ل",
+    "meaning": "eat"
+  },
+  "امر": {
+    "letters": "ا م ر",
+    "meaning": "command"
+  },
+  "امن": {
+    "letters": "ا م ن",
+    "meaning": "be safe"
+  },
+  "باع": {
+    "letters": "ب ا ع",
+    "meaning": "sell"
+  },
+  "بان": {
+    "letters": "ب ا ن",
+    "meaning": "become clear"
+  },
+  "بحث": {
+    "letters": "ب ح ث",
+    "meaning": "search"
+  },
+  "بدء": {
+    "letters": "ب د ء",
+    "meaning": "begin"
+  },
+  "بدا": {
+    "letters": "ب د ا",
+    "meaning": "begin"
+  },
+  "بدل": {
+    "letters": "ب د ل",
+    "meaning": "replace"
+  },
+  "بعد": {
+    "letters": "ب ع د",
+    "meaning": "be far"
+  },
+  "بقي": {
+    "letters": "ب ق ي",
+    "meaning": "remain"
+  },
+  "بني": {
+    "letters": "ب ن ي",
+    "meaning": "build"
+  },
+  "بين": {
+    "letters": "ب ي ن",
+    "meaning": "make clear"
+  },
+  "تبع": {
+    "letters": "ت ب ع",
+    "meaning": "follow"
+  },
+  "ترجم": {
+    "letters": "ت ر ج م",
+    "meaning": "translate"
+  },
+  "ترك": {
+    "letters": "ت ر ك",
+    "meaning": "leave"
+  },
+  "تمم": {
+    "letters": "ت م م",
+    "meaning": "complete"
+  },
+  "ثمن": {
+    "letters": "ث م ن",
+    "meaning": "price"
+  },
+  "جاء": {
+    "letters": "ج ا ء",
+    "meaning": "come"
+  },
+  "جري": {
+    "letters": "ج ر ي",
+    "meaning": "flow / happen"
+  },
+  "جعل": {
+    "letters": "ج ع ل",
+    "meaning": "make"
+  },
+  "جلس": {
+    "letters": "ج ل س",
+    "meaning": "sit"
+  },
+  "جمع": {
+    "letters": "ج م ع",
+    "meaning": "gather"
+  },
+  "جمل": {
+    "letters": "ج م ل",
+    "meaning": "be beautiful"
+  },
+  "جهل": {
+    "letters": "ج ه ل",
+    "meaning": "be ignorant"
+  },
+  "جوز": {
+    "letters": "ج و ز",
+    "meaning": "permit"
+  },
+  "حب": {
+    "letters": "ح ب",
+    "meaning": "love"
+  },
+  "حبب": {
+    "letters": "ح ب ب",
+    "meaning": "love"
+  },
+  "حتاج": {
+    "letters": "ح ت ا ج",
+    "meaning": "need"
+  },
+  "حجج": {
+    "letters": "ح ج ج",
+    "meaning": "make pilgrimage"
+  },
+  "حدث": {
+    "letters": "ح د ث",
+    "meaning": "happen / speak"
+  },
+  "حرب": {
+    "letters": "ح ر ب",
+    "meaning": "wage war"
+  },
+  "حرم": {
+    "letters": "ح ر م",
+    "meaning": "forbid"
+  },
+  "حسب": {
+    "letters": "ح س ب",
+    "meaning": "count / reckon"
+  },
+  "حسن": {
+    "letters": "ح س ن",
+    "meaning": "be good"
+  },
+  "حصل": {
+    "letters": "ح ص ل",
+    "meaning": "obtain"
+  },
+  "حفظ": {
+    "letters": "ح ف ظ",
+    "meaning": "memorize / protect"
+  },
+  "حكم": {
+    "letters": "ح ك م",
+    "meaning": "rule / judge"
+  },
+  "حل": {
+    "letters": "ح ل",
+    "meaning": "solve / be lawful"
+  },
+  "حمد": {
+    "letters": "ح م د",
+    "meaning": "praise"
+  },
+  "حمل": {
+    "letters": "ح م ل",
+    "meaning": "carry"
+  },
+  "حيا": {
+    "letters": "ح ي ا",
+    "meaning": "live"
+  },
+  "خبر": {
+    "letters": "خ ب ر",
+    "meaning": "inform"
+  },
+  "خدم": {
+    "letters": "خ د م",
+    "meaning": "serve"
+  },
+  "خرج": {
+    "letters": "خ ر ج",
+    "meaning": "exit"
+  },
+  "خسر": {
+    "letters": "خ س ر",
+    "meaning": "lose"
+  },
+  "خصم": {
+    "letters": "خ ص م",
+    "meaning": "oppose"
+  },
+  "خفض": {
+    "letters": "خ ف ض",
+    "meaning": "lower"
+  },
+  "خفي": {
+    "letters": "خ ف ي",
+    "meaning": "be hidden"
+  },
+  "خلع": {
+    "letters": "خ ل ع",
+    "meaning": "remove"
+  },
+  "خلق": {
+    "letters": "خ ل ق",
+    "meaning": "create"
+  },
+  "خوف": {
+    "letters": "خ و ف",
+    "meaning": "fear"
+  },
+  "دام": {
+    "letters": "د ا م",
+    "meaning": "last"
+  },
+  "دخل": {
+    "letters": "د خ ل",
+    "meaning": "enter"
+  },
+  "درس": {
+    "letters": "د ر س",
+    "meaning": "study"
+  },
+  "دفع": {
+    "letters": "د ف ع",
+    "meaning": "pay / push"
+  },
+  "ذكر": {
+    "letters": "ذ ك ر",
+    "meaning": "remember"
+  },
+  "ذهب": {
+    "letters": "ذ ه ب",
+    "meaning": "go"
+  },
+  "راد": {
+    "letters": "ر ا د",
+    "meaning": "want"
+  },
+  "راي": {
+    "letters": "ر ا ي",
+    "meaning": "see"
+  },
+  "ربح": {
+    "letters": "ر ب ح",
+    "meaning": "profit"
+  },
+  "ربط": {
+    "letters": "ر ب ط",
+    "meaning": "tie"
+  },
+  "رجع": {
+    "letters": "ر ج ع",
+    "meaning": "return"
+  },
+  "رسم": {
+    "letters": "ر س م",
+    "meaning": "draw"
+  },
+  "رفع": {
+    "letters": "ر ف ع",
+    "meaning": "lift"
+  },
+  "ريد": {
+    "letters": "ر ي د",
+    "meaning": "want"
+  },
+  "زاد": {
+    "letters": "ز ا د",
+    "meaning": "increase"
+  },
+  "زيد": {
+    "letters": "ز ي د",
+    "meaning": "increase"
+  },
+  "ساعد": {
+    "letters": "س ا ع د",
+    "meaning": "help"
+  },
+  "سافر": {
+    "letters": "س ا ف ر",
+    "meaning": "travel"
+  },
+  "سبب": {
+    "letters": "س ب ب",
+    "meaning": "cause"
+  },
+  "سبق": {
+    "letters": "س ب ق",
+    "meaning": "precede"
+  },
+  "ستر": {
+    "letters": "س ت ر",
+    "meaning": "cover"
+  },
+  "سجل": {
+    "letters": "س ج ل",
+    "meaning": "record"
+  },
+  "سحب": {
+    "letters": "س ح ب",
+    "meaning": "pull"
+  },
+  "سكن": {
+    "letters": "س ك ن",
+    "meaning": "dwell"
+  },
+  "سلم": {
+    "letters": "س ل م",
+    "meaning": "be safe / greet"
+  },
+  "سمح": {
+    "letters": "س م ح",
+    "meaning": "allow"
+  },
+  "سمع": {
+    "letters": "س م ع",
+    "meaning": "hear"
+  },
+  "سنن": {
+    "letters": "س ن ن",
+    "meaning": "enact"
+  },
+  "سهل": {
+    "letters": "س ه ل",
+    "meaning": "be easy"
+  },
+  "سوء": {
+    "letters": "س و ء",
+    "meaning": "be bad"
+  },
+  "شرب": {
+    "letters": "ش ر ب",
+    "meaning": "drink"
+  },
+  "شرح": {
+    "letters": "ش ر ح",
+    "meaning": "explain"
+  },
+  "شرع": {
+    "letters": "ش ر ع",
+    "meaning": "legislate"
+  },
+  "شري": {
+    "letters": "ش ر ي",
+    "meaning": "buy"
+  },
+  "شفي": {
+    "letters": "ش ف ي",
+    "meaning": "heal"
+  },
+  "شكر": {
+    "letters": "ش ك ر",
+    "meaning": "thank"
+  },
+  "شهد": {
+    "letters": "ش ه د",
+    "meaning": "witness"
+  },
+  "صار": {
+    "letters": "ص ا ر",
+    "meaning": "become"
+  },
+  "صدق": {
+    "letters": "ص د ق",
+    "meaning": "be truthful"
+  },
+  "صعب": {
+    "letters": "ص ع ب",
+    "meaning": "be hard"
+  },
+  "صغر": {
+    "letters": "ص غ ر",
+    "meaning": "be small"
+  },
+  "صلا": {
+    "letters": "ص ل ا",
+    "meaning": "pray"
+  },
+  "صلح": {
+    "letters": "ص ل ح",
+    "meaning": "repair"
+  },
+  "صلي": {
+    "letters": "ص ل ي",
+    "meaning": "pray"
+  },
+  "صنع": {
+    "letters": "ص ن ع",
+    "meaning": "make"
+  },
+  "صور": {
+    "letters": "ص و ر",
+    "meaning": "depict"
+  },
+  "صوم": {
+    "letters": "ص و م",
+    "meaning": "fast"
+  },
+  "ضرب": {
+    "letters": "ض ر ب",
+    "meaning": "hit"
+  },
+  "ضعف": {
+    "letters": "ض ع ف",
+    "meaning": "weaken"
+  },
+  "طاع": {
+    "letters": "ط ا ع",
+    "meaning": "obey"
+  },
+  "طبب": {
+    "letters": "ط ب ب",
+    "meaning": "treat"
+  },
+  "طبخ": {
+    "letters": "ط ب خ",
+    "meaning": "cook"
+  },
+  "طبع": {
+    "letters": "ط ب ع",
+    "meaning": "print"
+  },
+  "طلب": {
+    "letters": "ط ل ب",
+    "meaning": "request"
+  },
+  "طور": {
+    "letters": "ط و ر",
+    "meaning": "develop"
+  },
+  "طول": {
+    "letters": "ط و ل",
+    "meaning": "be long"
+  },
+  "ظلم": {
+    "letters": "ظ ل م",
+    "meaning": "wrong"
+  },
+  "ظهر": {
+    "letters": "ظ ه ر",
+    "meaning": "appear"
+  },
+  "عاد": {
+    "letters": "ع ا د",
+    "meaning": "return"
+  },
+  "عبد": {
+    "letters": "ع ب د",
+    "meaning": "worship"
+  },
+  "عجز": {
+    "letters": "ع ج ز",
+    "meaning": "be unable"
+  },
+  "عدل": {
+    "letters": "ع د ل",
+    "meaning": "be just"
+  },
+  "عرف": {
+    "letters": "ع ر ف",
+    "meaning": "know"
+  },
+  "عسر": {
+    "letters": "ع س ر",
+    "meaning": "be difficult"
+  },
+  "عصي": {
+    "letters": "ع ص ي",
+    "meaning": "disobey"
+  },
+  "عقد": {
+    "letters": "ع ق د",
+    "meaning": "contract"
+  },
+  "علم": {
+    "letters": "ع ل م",
+    "meaning": "know / teach"
+  },
+  "علن": {
+    "letters": "ع ل ن",
+    "meaning": "announce"
+  },
+  "عمل": {
+    "letters": "ع م ل",
+    "meaning": "do / work"
+  },
+  "عون": {
+    "letters": "ع و ن",
+    "meaning": "aid"
+  },
+  "عيش": {
+    "letters": "ع ي ش",
+    "meaning": "live"
+  },
+  "غسل": {
+    "letters": "غ س ل",
+    "meaning": "wash"
+  },
+  "غلق": {
+    "letters": "غ ل ق",
+    "meaning": "close"
+  },
+  "غني": {
+    "letters": "غ ن ي",
+    "meaning": "sing / be rich"
+  },
+  "غير": {
+    "letters": "غ ي ر",
+    "meaning": "change"
+  },
+  "فتح": {
+    "letters": "ف ت ح",
+    "meaning": "open"
+  },
+  "فرق": {
+    "letters": "ف ر ق",
+    "meaning": "separate"
+  },
+  "فشل": {
+    "letters": "ف ش ل",
+    "meaning": "fail"
+  },
+  "فعل": {
+    "letters": "ف ع ل",
+    "meaning": "do"
+  },
+  "فقه": {
+    "letters": "ف ق ه",
+    "meaning": "understand (law)"
+  },
+  "فكر": {
+    "letters": "ف ك ر",
+    "meaning": "think"
+  },
+  "فكك": {
+    "letters": "ف ك ك",
+    "meaning": "untie"
+  },
+  "فني": {
+    "letters": "ف ن ي",
+    "meaning": "perish"
+  },
+  "فهم": {
+    "letters": "ف ه م",
+    "meaning": "understand"
+  },
+  "قاد": {
+    "letters": "ق ا د",
+    "meaning": "lead"
+  },
+  "قال": {
+    "letters": "ق ا ل",
+    "meaning": "say"
+  },
+  "قام": {
+    "letters": "ق ا م",
+    "meaning": "rise"
+  },
+  "قبح": {
+    "letters": "ق ب ح",
+    "meaning": "be ugly"
+  },
+  "قتل": {
+    "letters": "ق ت ل",
+    "meaning": "kill"
+  },
+  "قدر": {
+    "letters": "ق د ر",
+    "meaning": "be able"
+  },
+  "قدم": {
+    "letters": "ق د م",
+    "meaning": "offer / come forward"
+  },
+  "قرء": {
+    "letters": "ق ر ء",
+    "meaning": "read"
+  },
+  "قرا": {
+    "letters": "ق ر ا",
+    "meaning": "read"
+  },
+  "قرب": {
+    "letters": "ق ر ب",
+    "meaning": "be near"
+  },
+  "قصر": {
+    "letters": "ق ص ر",
+    "meaning": "be short"
+  },
+  "قضي": {
+    "letters": "ق ض ي",
+    "meaning": "judge / spend"
+  },
+  "قطع": {
+    "letters": "ق ط ع",
+    "meaning": "cut"
+  },
+  "قعد": {
+    "letters": "ق ع د",
+    "meaning": "sit"
+  },
+  "قلل": {
+    "letters": "ق ل ل",
+    "meaning": "decrease"
+  },
+  "قود": {
+    "letters": "ق و د",
+    "meaning": "lead"
+  },
+  "قوي": {
+    "letters": "ق و ي",
+    "meaning": "strengthen"
+  },
+  "كان": {
+    "letters": "ك ا ن",
+    "meaning": "be"
+  },
+  "كبر": {
+    "letters": "ك ب ر",
+    "meaning": "grow"
+  },
+  "كتب": {
+    "letters": "ك ت ب",
+    "meaning": "write"
+  },
+  "كثر": {
+    "letters": "ك ث ر",
+    "meaning": "be many"
+  },
+  "كذب": {
+    "letters": "ك ذ ب",
+    "meaning": "lie"
+  },
+  "كره": {
+    "letters": "ك ر ه",
+    "meaning": "hate"
+  },
+  "كسر": {
+    "letters": "ك س ر",
+    "meaning": "break"
+  },
+  "كشف": {
+    "letters": "ك ش ف",
+    "meaning": "uncover"
+  },
+  "كلف": {
+    "letters": "ك ل ف",
+    "meaning": "cost"
+  },
+  "كلم": {
+    "letters": "ك ل م",
+    "meaning": "speak"
+  },
+  "كمل": {
+    "letters": "ك م ل",
+    "meaning": "complete"
+  },
+  "كون": {
+    "letters": "ك و ن",
+    "meaning": "be"
+  },
+  "لبس": {
+    "letters": "ل ب س",
+    "meaning": "wear"
+  },
+  "لعب": {
+    "letters": "ل ع ب",
+    "meaning": "play"
+  },
+  "مرض": {
+    "letters": "م ر ض",
+    "meaning": "be sick"
+  },
+  "مكن": {
+    "letters": "م ك ن",
+    "meaning": "enable"
+  },
+  "ملك": {
+    "letters": "م ل ك",
+    "meaning": "own"
+  },
+  "منع": {
+    "letters": "م ن ع",
+    "meaning": "prevent"
+  },
+  "موت": {
+    "letters": "م و ت",
+    "meaning": "die"
+  },
+  "نام": {
+    "letters": "ن ا م",
+    "meaning": "sleep"
+  },
+  "نبا": {
+    "letters": "ن ب ا",
+    "meaning": "news"
+  },
+  "نتج": {
+    "letters": "ن ت ج",
+    "meaning": "result"
+  },
+  "نجح": {
+    "letters": "ن ج ح",
+    "meaning": "succeed"
+  },
+  "نسي": {
+    "letters": "ن س ي",
+    "meaning": "forget"
+  },
+  "نشر": {
+    "letters": "ن ش ر",
+    "meaning": "spread"
+  },
+  "نصر": {
+    "letters": "ن ص ر",
+    "meaning": "give victory"
+  },
+  "نظر": {
+    "letters": "ن ظ ر",
+    "meaning": "look"
+  },
+  "نظف": {
+    "letters": "ن ظ ف",
+    "meaning": "clean"
+  },
+  "نما": {
+    "letters": "ن م ا",
+    "meaning": "grow"
+  },
+  "نمي": {
+    "letters": "ن م ي",
+    "meaning": "grow"
+  },
+  "هدم": {
+    "letters": "ه د م",
+    "meaning": "demolish"
+  },
+  "هزم": {
+    "letters": "ه ز م",
+    "meaning": "defeat"
+  },
+  "وجب": {
+    "letters": "و ج ب",
+    "meaning": "be necessary"
+  },
+  "وجد": {
+    "letters": "و ج د",
+    "meaning": "find"
+  },
+  "وصل": {
+    "letters": "و ص ل",
+    "meaning": "arrive"
+  },
+  "وضح": {
+    "letters": "و ض ح",
+    "meaning": "clarify"
+  },
+  "وضع": {
+    "letters": "و ض ع",
+    "meaning": "put"
+  },
+  "وقع": {
+    "letters": "و ق ع",
+    "meaning": "fall / sign"
+  },
+  "وقف": {
+    "letters": "و ق ف",
+    "meaning": "stand"
+  },
+  "ولد": {
+    "letters": "و ل د",
+    "meaning": "be born"
+  },
+  "يسر": {
+    "letters": "ي س ر",
+    "meaning": "be easy"
+  }
+}

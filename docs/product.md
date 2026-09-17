@@ -2,19 +2,19 @@
 
 ## Objective
 
-Levla is a **CEFR-calibrated graded reader** for **Russian** and **Japanese** (A1–B2).
+Levla is a **CEFR-calibrated graded reader** for **Japanese**, **Italian**, **Russian**, and **Arabic** (A1–B2).
 
-It generates and serves short reading passages at a checkable CEFR band, then lets the learner tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text the learner marks it **too easy**, **just right**, or **too hard**. That updates placement (or leaves it), records the lemmas they just saw, and picks the next unread passage.
+It generates and serves short reading passages at a checkable CEFR band, then lets the learner tap any word for lemma, grammar, gloss, and (in Japanese) kanji or (in Arabic) the root and وزن. After each text the learner marks it **too easy**, **just right**, or **too hard**. That updates placement (or leaves it), records the lemmas they just saw, and picks the next unread passage.
 
 The product claim is not “an LLM wrote some Japanese.” It is:
 
 > Grammar and vocabulary are constrained in the prompt, then checked by a morphological analyzer, then used to drive a learner model.
 
-Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Levla treats CEFR as a **checkable constraint**, not a prompt adjective.
+Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Italian drifts into congiuntivo, gerundio, and passato remoto. Arabic drifts into past tense, إنّ, derived verb Forms II–X, and the passive. Levla treats CEFR as a **checkable constraint**, not a prompt adjective.
 
 ## Who it is for
 
-Serious hobbyists and heritage learners of Russian or Japanese who have hit the graded-reader gap: native material is too hard, textbook dialogues are too short and too fake, and LLM “write me A2 Japanese” output is not actually A2.
+Serious hobbyists and heritage learners of Japanese, Italian, Russian, or Arabic who have hit the graded-reader gap: native material is too hard, textbook dialogues are too short and too fake, and LLM “write me A2 Japanese” output is not actually A2.
 
 The app is a **single-user demo**, not a multi-tenant product. There are no accounts, billing, or sync across devices.
 
@@ -24,7 +24,7 @@ Two screens, plus a landing page at `/` that explains the claim and opens into t
 
 ### Shelf (`/library`)
 
-- Switch between Japanese and Russian.
+- Switch between Japanese, Italian, Russian, and Arabic (Italian, Russian, and Arabic are env-flagged).
 - See current placement for that language (default **A2**) and how many lemmas have been seen.
 - Open a **Continue** recommendation, or any other title on the shelf.
 - Each card shows CEFR band, topic, word count, **new vs. known** content-word tokens, and whether the passage has already been read.
@@ -35,10 +35,12 @@ Two screens, plus a landing page at `/` that explains the claim and opens into t
 - Read the passage as clickable words. Tap a word for:
   - surface form, lemma, CEFR band
   - Russian: case, gender, number, tense, aspect, mood
+  - Italian: tense, mood, gender, number, verb form
+  - Arabic: root (جذر), verb form I–X / وزن, tense, mood, voice, person, gender, number, case, state
   - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown (stem + polite/past/te-form/…), kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, parts, and a stroke-order diagram that plays as soon as the gloss opens
   - English gloss
 - Optionally **colour grammar**: particles (は topic, が subject, を object, others), verbs, endings, adjectives. Off by default; persists in `localStorage`.
-- Optionally **furigana** over kanji (Japanese). Off by default.
+- Optionally **furigana** over kanji (Japanese) or restored vowels over Arabic. Off by default.
 - Optionally **fade known** content words the learner has already finished in other texts.
 - Save a lemma from the gloss; a **Words** list on the shelf (not SRS). Stroke-order diagrams are not on that list — on **Review**, they appear after **Show**.
 - Reveal a full **English** translation, or **this sentence** only, in the same English section under the passage. Sentence mode does not open the word gloss.
@@ -52,6 +54,8 @@ On first backend start, Levla writes a hand-authored starter library (and Englis
 | -------- | -- | -- | -- | -- |
 | Japanese | 4  | 4  | 3  | 2  |
 | Russian  | 4  | 4  | 3  | 2  |
+| Italian  | 2  | 2  | 1  | 0  |
+| Arabic   | 2  | 2  | 1  | 0  |
 
 Generated texts are stored alongside these and appear on the same shelf.
 
@@ -73,13 +77,13 @@ Optional side path: **Restock the shelf** → wait 20–40 seconds for constrain
 
 | Plan v1 | Built |
 | ------- | ----- |
-| Russian only | Russian **and** Japanese |
+| Russian only | Japanese, Italian, Russian, and Arabic |
 | Lightweight auth + paywall stub | No accounts; `localStorage` device UUID |
 | 300–800 word Russian passages | Russian 400–700 words; Japanese 22–40 short sentences |
 | Hard reject on failed calibration | Soft fail: store the closer draft, show a warning |
 | Monetization ($5–8/mo) | Not implemented |
 
-Not in this repo: audio, SRS / Anki export, billed accounts, official CEFR or JLPT word lists, C1/C2, or languages other than `ru` and `ja`.
+Not in this repo: billed accounts, official CEFR or JLPT word lists, C1/C2, or languages other than `ru`, `ja`, `it`, and `ar`. Italian, Russian, and Arabic stay behind `SHOW_ITALIAN` / `SHOW_RUSSIAN` / `SHOW_ARABIC` until they are public.
 
 ## Success criteria (from the original plan, still relevant)
 

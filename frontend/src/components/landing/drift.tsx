@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Seal } from "@/components/seal";
 import type { LangCode } from "@/lib/types";
+import { readingFont } from "@/lib/types";
 import { DRIFT } from "./demo-data";
 
 function useOnceInView<T extends HTMLElement>() {
@@ -33,7 +34,7 @@ function useOnceInView<T extends HTMLElement>() {
  */
 export function Drift({ lang }: { lang: LangCode }) {
   const sample = DRIFT[lang];
-  const font = lang === "ja" ? "font-ja" : "font-reading";
+  const font = readingFont(lang);
   const { ref, on } = useOnceInView<HTMLDivElement>();
   return (
     <div ref={ref} className="grid gap-10 lg:grid-cols-2 lg:gap-8">
@@ -43,6 +44,7 @@ export function Drift({ lang }: { lang: LangCode }) {
         <div className="relative mt-6 flex-1">
           <p
             lang={lang}
+            dir={lang === "ar" ? "rtl" : "ltr"}
             className={`h-full rounded-card border border-rule bg-paper-raised px-5 py-6 pr-16 text-[1.15rem] leading-[1.95] text-ink sm:px-6 sm:pr-20 ${font}`}
           >
             {sample.drifted.map((seg, i) =>
@@ -78,7 +80,7 @@ export function Drift({ lang }: { lang: LangCode }) {
         </p>
         <div className="relative mt-6 flex flex-1 flex-col">
           <div className="flex flex-1 flex-col rounded-card border border-ink bg-paper-raised px-5 py-6 pr-16 sm:px-6 sm:pr-20">
-            <p lang={lang} className={`text-[1.15rem] leading-[1.95] text-ink ${font}`}>
+            <p lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} className={`text-[1.15rem] leading-[1.95] text-ink ${font}`}>
               {sample.checked}
             </p>
             <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-t border-rule pt-4 text-[13px]">

@@ -7,7 +7,14 @@ import type { CefrLevel, LangCode } from "@/lib/types";
 type Stage = { at: number; label: string; detail: string };
 
 function stages(level: CefrLevel, language: LangCode): Stage[] {
-  const analyzer = language === "ja" ? "Sudachi" : "pymorphy3";
+  const analyzer =
+    language === "ja"
+      ? "Sudachi"
+      : language === "it"
+        ? "spaCy"
+        : language === "ar"
+          ? "CAMeL"
+          : "pymorphy3";
   return [
     {
       at: 0,
@@ -20,7 +27,11 @@ function stages(level: CefrLevel, language: LangCode): Stage[] {
       detail:
         language === "ja"
           ? `${analyzer} tokenizes the draft and attaches lemma, reading, and grammar role.`
-          : `${analyzer} tags every token with lemma, case, tense, and aspect.`,
+          : language === "it"
+            ? `${analyzer} tags every token with lemma, tense, and mood.`
+            : language === "ar"
+              ? `${analyzer} tags every token with root, form, tense, and case.`
+              : `${analyzer} tags every token with lemma, case, tense, and aspect.`,
     },
     {
       at: 18,

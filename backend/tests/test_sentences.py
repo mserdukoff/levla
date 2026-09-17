@@ -33,3 +33,36 @@ def test_english_split_matches_seed_style():
     assert len(parts) == 3
     assert parts[0].startswith("Today")
     assert parts[1].startswith("The station")
+
+
+def test_italian_sentence_index_advances_on_period():
+    from app.services.sentences import sentence_ids
+
+    toks = analyze_text("Oggi vado alla stazione. La stazione è vicino a casa.", "it")
+    ids = sentence_ids(toks, "it")
+    oggi = next(i for i, t in enumerate(toks) if t.text == "Oggi")
+    casa = next(i for i, t in enumerate(toks) if t.lemma == "casa")
+    assert ids[oggi] == 0
+    assert ids[casa] == 1
+
+
+def test_arabic_sentence_index_advances_on_period():
+    from app.services.sentences import sentence_ids
+
+    toks = analyze_text("هذا بيت. البيت كبير.", "ar")
+    ids = sentence_ids(toks, "ar")
+    first = next(i for i, t in enumerate(toks) if t.text == "هذا")
+    second = next(i for i, t in enumerate(toks) if t.text == "كبير")
+    assert ids[first] == 0
+    assert ids[second] == 1
+
+
+def test_arabic_question_mark_ends_sentence():
+    from app.services.sentences import sentence_ids
+
+    toks = analyze_text("هل هذا بيت؟ البيت كبير.", "ar")
+    ids = sentence_ids(toks, "ar")
+    first = next(i for i, t in enumerate(toks) if t.text == "هل")
+    second = next(i for i, t in enumerate(toks) if t.text == "كبير")
+    assert ids[first] == 0
+    assert ids[second] == 1

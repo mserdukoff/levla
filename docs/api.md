@@ -21,13 +21,13 @@ CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`
 | `GET` | `/health/ready` | | `{ "ok": true, "name": "levla", "db": true }` — 500 if the database is down |
 | `POST` | `/generate` | `{ level, topic, genre?, language }` | **200** cached `PassageResponse`, or **202** `{ job_id, status }` |
 | `GET` | `/generate/{job_id}` | `X-Device-Id` | `GenerateJobResponse` — poll until `completed` or `failed` |
-| `GET` | `/library?language=ja\|ru` | `X-Device-Id` | `LibraryResponse` |
+| `GET` | `/library?language=ja\|ru\|it\|ar` | `X-Device-Id` | `LibraryResponse` |
 | `GET` | `/passages/{id}` | | `PassageResponse` |
 | `GET` | `/passages/{id}/translation` | | `{ passage_id, translation }` |
 | `GET` | `/passages/{id}/stats` | `X-Device-Id` | `PassageStats` |
 | `POST` | `/gloss` | `{ word, passage_id? }` | `GlossResponse` |
 | `POST` | `/feedback` | `{ passage_id, rating }` + `X-Device-Id` | `FeedbackResponse` |
-| `GET` | `/words?language=ja\|ru` | `X-Device-Id` | `StarredWord[]` |
+| `GET` | `/words?language=ja\|ru\|it\|ar` | `X-Device-Id` | `StarredWord[]` |
 | `POST` | `/words` | `{ lemma, gloss?, passage_id?, language? }` + `X-Device-Id` | `StarredWord` |
 | `DELETE` | `/words` | `{ lemma, language }` + `X-Device-Id` | `{ "ok": true }` |
 
@@ -37,8 +37,8 @@ CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`
 
 | Code | When |
 | ---- | ---- |
-| 400 | `language` is not `ru` or `ja` on `/library` |
-| 404 | Unknown passage id (passage, translation, stats, feedback) |
+| 400 | `language` is not `ru`, `ja`, `it`, or `ar` on `/library` |
+| 404 | Unknown passage id; Russian, Italian, or Arabic requested while `SHOW_RUSSIAN` / `SHOW_ITALIAN` / `SHOW_ARABIC` is off |
 | 202 | `/generate` accepted; poll `/generate/{job_id}` |
 | 429 | Too many pending generation jobs for this device/account |
 | 502 | Generation threw after the key was present |
@@ -62,7 +62,7 @@ Error body is FastAPI’s usual `{ "detail": "…" }` (string or validation-erro
 | `level` | `"A1" \| "A2" \| "B1" \| "B2"` | required |
 | `topic` | string | 1–200 chars |
 | `genre` | string or null | optional; UI uses `daily_life`, `travel`, `news`, `folklore`, `work` (max 40). Unknown values are stored but do not add a prompt hint |
-| `language` | `"ru" \| "ja"` | default `ru` |
+| `language` | `"ru" \| "ja" \| "it"` | default `ru` |
 
 This call is slow (LLM + morph + optional rewrite + translation). Timeouts on the OpenRouter client are 45s per completion.
 
@@ -155,7 +155,7 @@ Whitespace (or the next Japanese morpheme, including particles that Sudachi spli
 
 `is_word` is false for punctuation and Japanese 補助記号 / 空白.
 
-Russian `morph.pos` uses pymorphy tags (`NOUN`, `VERB`, `ADJF`, …). Japanese POS is mapped to English labels (`noun`, `verb`, `i-adj`, `particle`, `aux`, …). Japanese `form` is Sudachi inflection (e.g. `連体形`, `仮定形`). Japanese `pos_detail` is the Sudachi POS-1 slot (`binding`, `case`, `conjunctive`, `final`, `bound`, …). `conj_type` is a simplified conjugation class (`godan`, `ichidan`, `sahen`, `kahen`, `i-adj`, `aux`).
+Russian `morph.pos` uses pymorphy tags (`NOUN`, `VERB`, `ADJF`, …). Japanese POS is mapped to English labels (`noun`, `verb`, `i-adj`, `particle`, `aux`, …). Japanese `form` is Sudachi inflection (e.g. `連体形`, `仮定形`). Japanese `pos_detail` is the Sudachi POS-1 slot (`binding`, `case`, `conjunctive`, `final`, `bound`, …). `conj_type` is a simplified conjugation class (`godan`, `ichidan`, `sahen`, `kahen`, `i-adj`, `aux`). Italian and Arabic POS stay close to UD. Arabic `morph` also carries `voice`, `person`, `state`, and Form I–X on `form`; `conj_type` is the وزن pattern; `reading` is the diacritized surface.
 
 `role` is the reader colour class, filled on every passage read: `topic` (は), `subject` (が), `object` (を), `particle`, `verb`, `aux`, `adj`, `adverb`. Nouns and pronouns stay `null` (ink).
 
@@ -164,6 +164,8 @@ Russian `morph.pos` uses pymorphy tags (`NOUN`, `VERB`, `ADJF`, …). Japanese P
 `level` is the lexicon band for the lemma, or `null` if unknown.
 
 Japanese `kanji` parts are filled from the local KANJIDIC2 lexicon on every passage read (so older stored tokens pick up new fields). `on` is katakana; `kun` keeps KANJIDIC okurigana dots (`た.べる`). `jlpt` is the modern N-level (5 = N5). `grade` is 1–6 (kyōiku), 8 (remaining jōyō / junior high), or 9–10 (jinmeiyō). `freq` is the newspaper rank among the 2,500 most common characters. `radical` / `radical_name` are the Kangxi classifier; `parts` are KRADFILE components.
+
+Arabic `root` is the gloss-card analog of kanji: `{ "letters": "ك ت ب", "pattern": "yaCCuC", "form": "I", "form_name": "فَعَلَ", "meaning": "write" }`. Refreshed on every passage read from `data/roots/ar.json`. Nouns keep وزن as `pattern` with `form` null. `POST /gloss` returns the same `root` object.
 
 ### Calibration
 

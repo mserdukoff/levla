@@ -8,7 +8,11 @@ RUN apt-get update \
     && useradd --create-home --uid 1000 levla
 
 COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt \
+    && python -m spacy download it_core_news_md || true \
+    && mkdir -p /app/camel_data \
+    && CAMELTOOLS_DATA=/app/camel_data camel_data -i morphology-db-msa-r13 || true \
+    && CAMELTOOLS_DATA=/app/camel_data camel_data -i disambig-mle-calima-msa-r13 || true
 
 COPY backend /app/backend
 COPY data /app/data
@@ -21,6 +25,7 @@ WORKDIR /app/backend
 ENV PYTHONPATH=/app/backend
 ENV PYTHONUNBUFFERED=1
 ENV APP_ENV=production
+ENV CAMELTOOLS_DATA=/app/camel_data
 
 USER levla
 EXPOSE 8000

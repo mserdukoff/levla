@@ -19,6 +19,8 @@ from app.services.gloss import resolve_gloss
 from app.services.identity import Identity, apply_owner_filter, valid_device_id
 from app.services.validator import CONTENT_POS as RU_CONTENT
 from app.services.validator_ja import CONTENT_POS as JA_CONTENT
+from app.services.validator_it import CONTENT_POS as IT_CONTENT
+from app.services.validator_ar import CONTENT_POS as AR_CONTENT
 
 LEVELS = ("A1", "A2", "B1", "B2")
 DEFAULT_LEVEL = "A2"
@@ -49,7 +51,14 @@ __all__ = [
 
 
 def content_tokens(tokens: list[Token], language: str) -> list[Token]:
-    allowed = JA_CONTENT if language == "ja" else RU_CONTENT
+    if language == "ja":
+        allowed = JA_CONTENT
+    elif language == "it":
+        allowed = IT_CONTENT
+    elif language == "ar":
+        allowed = AR_CONTENT
+    else:
+        allowed = RU_CONTENT
     out: list[Token] = []
     for tok in tokens:
         if not tok.is_word or not tok.lemma or not tok.morph:

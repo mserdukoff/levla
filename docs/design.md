@@ -20,9 +20,9 @@ Kept on purpose: the palette, the two typefaces, ink-on-paper inversion as the o
 | --- | --- |
 | Name | **Levla** |
 | Document title | `Levla — graded readers` (`%s · Levla` on inner pages) |
-| One-liner (metadata) | CEFR-calibrated Russian and Japanese passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss. |
+| One-liner (metadata) | CEFR-calibrated Japanese, Italian, Russian, and Arabic passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss. |
 | Landing headline | Graded readers where A2 is actually A2. |
-| Kicker | `Russian · Japanese · A1–B2` |
+| Kicker | `Japanese · Italian · Russian · Arabic · A1–B2` |
 | Library kicker | `{Language} · Library` |
 
 Copy is short, second-person, and specific. No gamification ("streak", "XP"), no creature mascot, no exclamation marks in chrome. Numbers are set tabular (`tnum`). The only brand object is the **exam seal** (`seal.tsx`): one double-ring stamp for every language, terracotta ink, inscription from `SEAL_COPY`. It never appears in the gloss. Adding a language is a copy row (`script`, pass word, fail word), not a new drawing. Missing languages fall back to PASS / FAIL.
@@ -53,6 +53,7 @@ Google fonts via `next/font` in `layout.tsx`.
 | Role | Face | Notes |
 | ---- | ---- | ----- |
 | UI / Japanese | **Outfit** (`--font-outfit`) | Latin only; Japanese glyphs come from the system Gothic stack (`.font-ja`) |
+| Arabic | **Noto Naskh Arabic** (`--font-naskh`) | `.font-ar`; passages, titles, and the seal use `dir="rtl"` |
 | Serif | **Literata** (`--font-literata`) | Variable, `latin` + `cyrillic`, with the **`opsz` axis enabled**. `font-optical-sizing: auto` lets one file set 11 px band labels and 64 px display |
 | Morph line | `font-mono` | Grammar tags in the gloss card |
 

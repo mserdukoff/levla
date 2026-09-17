@@ -16,6 +16,40 @@ ALL_JA_CONSTRUCTIONS = [
     "keigo",
 ]
 
+ALL_IT_CONSTRUCTIONS = [
+    "passato_prossimo",
+    "imperfetto",
+    "futuro",
+    "condizionale",
+    "congiuntivo",
+    "gerundio",
+    "participio",
+    "passato_remoto",
+    "relative_che",
+    "clitic",
+    "clitic_cluster",
+]
+
+ALL_AR_CONSTRUCTIONS = [
+    "perfect",
+    "future",
+    "dual",
+    "inna",
+    "relative",
+    "kana_compound",
+    "jussive",
+    "subjunctive",
+    "passive",
+    "form_ii",
+    "form_iii",
+    "form_iv",
+    "form_v",
+    "form_vi",
+    "form_vii",
+    "form_viii",
+    "form_x",
+]
+
 CONSTRUCTION_LABELS = {
     "te_form": "て-form",
     "plain_past": "plain past た",
@@ -27,6 +61,34 @@ CONSTRUCTION_LABELS = {
     "passive": "passive",
     "relative": "relative clauses",
     "keigo": "keigo",
+    "passato_prossimo": "passato prossimo",
+    "imperfetto": "imperfetto",
+    "futuro": "futuro",
+    "condizionale": "condizionale",
+    "congiuntivo": "congiuntivo",
+    "gerundio": "gerundio",
+    "participio": "participio",
+    "passato_remoto": "passato remoto",
+    "relative_che": "relative che",
+    "clitic": "object clitics",
+    "clitic_cluster": "clitic clusters",
+    "perfect": "past (الماضي)",
+    "future": "future سـ/سوف",
+    "dual": "dual",
+    "inna": "إنّ / أنّ",
+    "relative": "relative الذي",
+    "kana_compound": "كان + verb",
+    "jussive": "jussive لم",
+    "subjunctive": "subjunctive أنْ",
+    "passive": "passive",
+    "form_ii": "Form II",
+    "form_iii": "Form III",
+    "form_iv": "Form IV",
+    "form_v": "Form V",
+    "form_vi": "Form VI",
+    "form_vii": "Form VII",
+    "form_viii": "Form VIII",
+    "form_x": "Form X",
 }
 
 RU_CASE_LABELS = {
@@ -50,6 +112,12 @@ def forbidden_used_from_flags(flags: list[str]) -> list[str]:
         key = None
         if flag.startswith("ja:"):
             key = flag[3:].split(" ", 1)[0]
+        elif flag.startswith("it:"):
+            key = flag[3:].split(" ", 1)[0]
+        elif flag.startswith("ar:"):
+            key = flag[3:].split(" ", 1)[0]
+        elif flag.startswith("mood:"):
+            key = "mood:" + flag[5:].split(" ", 1)[0]
         elif flag.startswith("case:"):
             key = "case:" + flag[5:].split(" ", 1)[0]
         elif flag.startswith("tense:"):
@@ -83,6 +151,22 @@ def attach_passport(
         labels = [construction_label(c) for c in allowed]
         if not labels:
             labels = ["です/ます polite style", "core particles は が を に の"]
+        calibration.allowed_constructions = labels
+        calibration.banned_constructions = [construction_label(c) for c in banned]
+    elif language == "it":
+        banned = list(rules.get("forbidden_constructions") or [])
+        allowed = [c for c in ALL_IT_CONSTRUCTIONS if c not in banned]
+        labels = [construction_label(c) for c in allowed]
+        if not labels:
+            labels = ["present indicative", "simple sentences"]
+        calibration.allowed_constructions = labels
+        calibration.banned_constructions = [construction_label(c) for c in banned]
+    elif language == "ar":
+        banned = list(rules.get("forbidden_constructions") or [])
+        allowed = [c for c in ALL_AR_CONSTRUCTIONS if c not in banned]
+        labels = [construction_label(c) for c in allowed]
+        if not labels:
+            labels = ["present Form I", "nominal sentences"]
         calibration.allowed_constructions = labels
         calibration.banned_constructions = [construction_label(c) for c in banned]
     else:

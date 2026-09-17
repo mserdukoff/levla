@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { furiganaReading, isContentWord, type LangCode, type Token } from "@/lib/types";
+import { furiganaReading, isContentWord, readingFont, type LangCode, type Token } from "@/lib/types";
 
 export const ROLE_TEXT: Record<string, string> = {
   topic: "text-g-topic",
@@ -24,7 +24,7 @@ const JA_LEGEND: { swatch?: string; label: string; role: string }[] = [
   { label: "adjective", role: "adj" },
 ];
 
-const RU_LEGEND: { label: string; role: string }[] = [
+const LATIN_LEGEND: { label: string; role: string }[] = [
   { label: "verb", role: "verb" },
   { label: "adjective", role: "adj" },
   { label: "preposition", role: "particle" },
@@ -32,7 +32,7 @@ const RU_LEGEND: { label: string; role: string }[] = [
 ];
 
 export function GrammarLegend({ language, className = "" }: { language: LangCode; className?: string }) {
-  const items = language === "ja" ? JA_LEGEND : RU_LEGEND;
+  const items = language === "ja" ? JA_LEGEND : LATIN_LEGEND;
   return (
     <p
       className={`flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[11px] uppercase tracking-[0.12em] text-ink/40 ${className}`}
@@ -130,18 +130,20 @@ export function PassageArticle({
   className?: string;
 }) {
   const ja = language === "ja";
+  const ar = language === "ar";
   const selectedToken = selected != null ? tokens[selected] : null;
   const selectedConjId = selectedToken?.conj_id != null ? selectedToken.conj_id : null;
-  const rubyOn = furigana && ja;
+  const rubyOn = furigana && (ja || ar);
   const [hoverSid, setHoverSid] = useState<number | null>(null);
   const ids = sentenceIds != null && sentenceIds.length === tokens.length ? sentenceIds : null;
   const bySentence = sentenceMode && ids != null;
 
   return (
     <article
-      lang={ja ? "ja" : "ru"}
+      lang={language}
+      dir={ar ? "rtl" : "ltr"}
       className={`shrink-0 text-ink ${rubyOn ? "leading-[2.35]" : "leading-[1.85]"} ${
-        ja ? "font-ja" : "font-reading"
+        readingFont(language)
       } ${className}`}
       onMouseLeave={() => setHoverSid(null)}
     >

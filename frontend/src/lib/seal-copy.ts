@@ -6,7 +6,7 @@
  * If the native word is too long, keep the Latin fallback.
  */
 
-export type SealScript = "cjk" | "cyrillic" | "latin";
+export type SealScript = "cjk" | "cyrillic" | "latin" | "arabic";
 
 export type SealCopy = {
   script: SealScript;
@@ -22,8 +22,10 @@ export const SEAL_FALLBACK: SealCopy = {
 };
 
 export const SEAL_COPY: Record<string, SealCopy> = {
-  ja: { script: "cjk", pass: "合格", fail: "不合格" },
-  ru: { script: "cyrillic", pass: "ЗАЧЁТ", fail: "НЕЗАЧЁТ" },
+    ja: { script: "cjk", pass: "合格", fail: "不合格" },
+    ru: { script: "cyrillic", pass: "ЗАЧЁТ", fail: "НЕЗАЧЁТ" },
+    it: { script: "latin", pass: "IDONEO", fail: "BOCCIATO" },
+    ar: { script: "arabic", pass: "نجح", fail: "رسب", rtl: true },
 };
 
 export function sealCopyFor(language: string): SealCopy {

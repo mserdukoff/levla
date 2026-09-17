@@ -1,14 +1,15 @@
 import type { LangCode, Token } from "./types";
 
 const JA_END = /[。！？]/;
-const RU_END = /[.!?…]/;
+const AR_END = /[.!?…؟]/;
+const LATIN_END = /[.!?…]/;
 
 export function tokenSentenceIndex(tokens: Token[], language: LangCode): number[] {
   const ids: number[] = [];
   let sid = 0;
   for (const tok of tokens) {
     ids.push(sid);
-    const end = language === "ja" ? JA_END : RU_END;
+    const end = language === "ja" ? JA_END : language === "ar" ? AR_END : LATIN_END;
     if (!tok.is_word && end.test(tok.text)) {
       sid += 1;
     }

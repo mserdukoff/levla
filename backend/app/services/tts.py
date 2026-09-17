@@ -36,6 +36,14 @@ def synthesize_passage(row: PassageRow) -> tuple[str, list[dict]] | None:
         return None
 
 
+TTS_VOICE = {
+    "ja": (None, "ja-JP"),  # voice from settings.azure_speech_voice
+    "ru": ("ru-RU-SvetlanaNeural", "ru-RU"),
+    "it": ("it-IT-ElsaNeural", "it-IT"),
+    "ar": ("ar-SA-ZariyahNeural", "ar-SA"),
+}
+
+
 def _estimate_cues(sentences: list[str], language: str) -> list[dict]:
     # ~12 Japanese mora / second ≈ 180ms per character as a local stand-in.
     per_char = 180 if language == "ja" else 70
@@ -61,12 +69,8 @@ def _silent_mp3() -> bytes:
 def _azure_ssml(sentences: list[str], language: str) -> tuple[bytes, list[dict]]:
     import httpx
 
-    voice = (
-        settings.azure_speech_voice
-        if language == "ja"
-        else "ru-RU-SvetlanaNeural"
-    )
-    locale = "ja-JP" if language == "ja" else "ru-RU"
+    voice_name, locale = TTS_VOICE.get(language, TTS_VOICE["ru"])
+    voice = settings.azure_speech_voice if language == "ja" else voice_name
     parts = []
     for i, sent in enumerate(sentences):
         escaped = (

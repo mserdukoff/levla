@@ -21,6 +21,18 @@ def is_proper_noun(morph: MorphInfo | None) -> bool:
     return bool(morph and morph.pos_detail == "proper-noun")
 
 
+def _lexicon_get(lexicon: dict[str, str], lemma: str, language: str) -> str | None:
+    if lemma in lexicon:
+        return lexicon[lemma]
+    if language in {"ru", "it"}:
+        return lexicon.get(lemma.lower())
+    if language == "ar":
+        from app.services.roots import normalize_lemma
+
+        return lexicon.get(normalize_lemma(lemma))
+    return None
+
+
 def attach_glosses(
     tokens: list[Token],
     use_llm: bool = True,
@@ -31,9 +43,7 @@ def attach_glosses(
     for tok in tokens:
         if not tok.is_word or not tok.lemma:
             continue
-        gloss = lexicon.get(tok.lemma)
-        if gloss is None and language == "ru":
-            gloss = lexicon.get(tok.lemma.lower())
+        gloss = _lexicon_get(lexicon, tok.lemma, language)
         if gloss:
             tok.gloss = gloss
         else:
@@ -43,9 +53,7 @@ def attach_glosses(
     if filled:
         for tok in tokens:
             if tok.is_word and tok.lemma and not tok.gloss:
-                tok.gloss = filled.get(tok.lemma)
-                if tok.gloss is None and language == "ru":
-                    tok.gloss = filled.get(tok.lemma.lower())
+                tok.gloss = filled.get(tok.lemma) or _lexicon_get(filled, tok.lemma, language)
 
     for tok in tokens:
         if tok.is_word and not tok.gloss and is_proper_noun(tok.morph):
@@ -54,12 +62,7 @@ def attach_glosses(
 
 
 def lookup_gloss(lemma: str, language: str = "ru") -> str | None:
-    lexicon = gloss_lexicon(language)
-    if lemma in lexicon:
-        return lexicon[lemma]
-    if language == "ru":
-        return lexicon.get(lemma.lower())
-    return None
+    return _lexicon_get(gloss_lexicon(language), lemma, language)
 
 
 def resolve_gloss(lemma: str, language: str = "ru", morph: MorphInfo | None = None) -> str | None:

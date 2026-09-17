@@ -69,6 +69,20 @@ from app.services.trial import record_event, trial_metrics
 
 router = APIRouter(prefix="/api")
 
+SUPPORTED_LANGUAGES = {"ru", "ja", "it", "ar"}
+
+
+def require_language(language: str) -> str:
+    if language not in SUPPORTED_LANGUAGES:
+        raise HTTPException(status_code=400, detail="language must be ru, ja, it, or ar")
+    if language == "ru" and not settings.show_russian:
+        raise HTTPException(status_code=404, detail="Russian is not on the public shelf.")
+    if language == "it" and not settings.show_italian:
+        raise HTTPException(status_code=404, detail="Italian is not on the public shelf.")
+    if language == "ar" and not settings.show_arabic:
+        raise HTTPException(status_code=404, detail="Arabic is not on the public shelf.")
+    return language
+
 
 def get_db():
     db = SessionLocal()
@@ -110,6 +124,8 @@ def me(request: Request, db: Session = Depends(get_db), identity: Identity = Dep
         display_name=user.display_name if user else None,
         guest=user is None,
         show_russian=settings.show_russian,
+        show_italian=settings.show_italian,
+        show_arabic=settings.show_arabic,
         generate_remaining=remaining if settings.require_auth else None,
         require_auth=settings.require_auth,
     )
@@ -223,6 +239,7 @@ def post_generate(
             status_code=401,
             detail="Sign in to generate a custom passage. The catalog is free to read.",
         )
+    require_language(body.language)
     topic = body.topic.strip()
     cached = find_cached_passage(db, body.level, topic, body.genre, body.language)
     if cached is not None:
@@ -272,10 +289,7 @@ def get_library(
     db: Session = Depends(get_db),
     identity: Identity = Depends(get_identity),
 ):
-    if language not in {"ru", "ja"}:
-        raise HTTPException(status_code=400, detail="language must be ru or ja")
-    if language == "ru" and not settings.show_russian:
-        raise HTTPException(status_code=404, detail="Russian is not on the public shelf.")
+    require_language(language)
     return list_library(db, language, identity)
 
 
@@ -354,6 +368,7 @@ def post_gloss(body: GlossRequest, db: Session = Depends(get_db)):
                         gloss=tok.gloss,
                         level=tok.level,
                         kanji=tok.kanji,
+                        root=tok.root,
                         role=tok.role,
                         conj=tok.conj,
                     )
@@ -372,14 +387,25 @@ def post_gloss(body: GlossRequest, db: Session = Depends(get_db)):
     from app.services.grammar import attach_grammar
 
     live = Token(text=word, lemma=morph.lemma, morph=morph, is_word=True, kanji=kanji)
+    if lang == "ar":
+        from app.services.morph_ar import analyze_text_ar
+
+        analyzed = analyze_text_ar(word, "ar")
+        word_tok = next((t for t in analyzed if t.is_word), None)
+        if word_tok:
+            live.root = word_tok.root
+            live.morph = word_tok.morph or morph
+            live.lemma = word_tok.lemma or morph.lemma
+            morph = live.morph
     attach_grammar([live], lang)
     return GlossResponse(
         word=word,
-        lemma=morph.lemma,
+        lemma=live.lemma or morph.lemma,
         morph=morph,
-        gloss=resolve_gloss(morph.lemma, lang, morph=morph),
+        gloss=resolve_gloss(live.lemma or morph.lemma, lang, morph=morph),
         level=None,
         kanji=kanji,
+        root=live.root,
         role=live.role,
         conj=live.conj,
     )
@@ -403,8 +429,7 @@ def get_words(
     db: Session = Depends(get_db),
     identity: Identity = Depends(get_identity),
 ):
-    if language not in {"ru", "ja"}:
-        raise HTTPException(status_code=400, detail="language must be ru or ja")
+    require_language(language)
     if not identity.can_persist:
         return []
     return list_stars(db, identity, language)
@@ -436,8 +461,7 @@ def post_word(
                 gloss_from_passage = tok.gloss
             if reading and gloss_from_passage:
                 break
-    if language not in {"ru", "ja"}:
-        raise HTTPException(status_code=400, detail="language must be ru or ja")
+    require_language(language)
     if not lemma:
         raise HTTPException(status_code=400, detail="lemma is required")
     # Trust the client's gloss when it sent one, but never save a word with

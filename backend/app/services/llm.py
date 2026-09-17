@@ -33,6 +33,18 @@ LANG_META = {
         "length": "Length: 22 to 40 short sentences (a real reading session, not a paragraph stub).",
         "gloss": "Give a short English gloss (1–5 words) for each Japanese lemma (dictionary form).",
     },
+    "it": {
+        "name": "Italian",
+        "script_note": "Use standard Italian orthography. Mark accents where they belong (è, perché, città, più). Do not mix in English words.",
+        "length": "Length: 350 to 600 Italian words (count words, not characters).",
+        "gloss": "Give a short English gloss (1–5 words) for each Italian lemma (dictionary form).",
+    },
+    "ar": {
+        "name": "Arabic",
+        "script_note": "Write Modern Standard Arabic (فصحى), unvowelled. Do not use dialect (عامية). Do not mix in English or Latin letters. Mark hamza where it belongs (إلى، إن، أكل). Do not insert tashkeel.",
+        "length": "Length: 280 to 500 Arabic words (count words, not characters).",
+        "gloss": "Give a short English gloss (1–5 words) for each Arabic lemma (dictionary form, undiacritized).",
+    },
 }
 
 
@@ -159,8 +171,8 @@ Respond ONLY with valid JSON:
 def gloss_lemmas(lemmas: list[str], language: str = "ru") -> dict[str, str]:
     """One-shot English glosses for unknown lemmas. Empty dict on failure."""
     unique = sorted({l for l in lemmas if l})
-    if language == "ru":
-        unique = sorted({l.lower() for l in unique})
+    if language in {"ru", "it", "ar"}:
+        unique = sorted({l.lower() if language != "ar" else l for l in unique})
     if not unique:
         return {}
     if not settings.openrouter_api_key:
@@ -183,7 +195,11 @@ def gloss_lemmas(lemmas: list[str], language: str = "ru") -> dict[str, str]:
         out: dict[str, str] = {}
         for k, v in data.items():
             if isinstance(v, str) and v.strip():
-                key = str(k).lower() if language == "ru" else str(k)
+                key = str(k).lower() if language in {"ru", "it"} else str(k)
+                if language == "ar":
+                    from app.services.roots import normalize_lemma
+
+                    key = normalize_lemma(key)
                 out[key] = v.strip()
         return out
     except Exception:

@@ -48,7 +48,12 @@ export function Seal({
     setMotionOk(!prefersReducedMotion());
   }, []);
 
-  const fontFamily = copy.script === "cjk" ? "var(--gothic)" : "var(--serif)";
+  const fontFamily =
+    copy.script === "cjk"
+      ? "var(--gothic)"
+      : copy.script === "arabic"
+        ? "var(--naskh)"
+        : "var(--serif)";
   const filterId = `seal-bleed-${uid}`;
   const press = animate && motionOk;
 

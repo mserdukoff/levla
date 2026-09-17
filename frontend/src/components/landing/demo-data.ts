@@ -1,4 +1,4 @@
-import type { CefrLevel, ConjPiece, KanjiPart, LangCode, MorphInfo, Token } from "@/lib/types";
+import type { CefrLevel, ConjPiece, KanjiPart, LangCode, MorphInfo, RootPart, Token } from "@/lib/types";
 
 /*
   Hand-authored sample passages for the landing page, in the same Token shape
@@ -37,13 +37,60 @@ const KANJI: Record<string, Omit<KanjiPart, "reading">> = {
   食: { char: "食", on: ["ショク", "ジキ"], kun: ["く.う", "く.らう", "た.べる", "は.む"], meaning: "eat; food", strokes: 9, jlpt: 5, grade: 2, freq: 328, radical: "食", radical_name: "eat", parts: ["人", "良"], nanori: ["ぐい"] },
   天: { char: "天", on: ["テン"], kun: ["あまつ", "あめ", "あま-"], meaning: "heavens; sky; imperial", strokes: 4, jlpt: 4, grade: 1, freq: 512, radical: "大", radical_name: "big", parts: ["一", "大"], nanori: ["あき", "たか"] },
   持: { char: "持", on: ["ジ"], kun: ["も.つ", "-も.ち", "も.てる"], meaning: "hold; have", strokes: 9, jlpt: 4, grade: 3, freq: 76, radical: "扌", radical_name: "hand", parts: ["土", "寸", "扌"], nanori: ["もち"] },
+  私: { char: "私", on: ["シ"], kun: ["わたし", "わたくし"], meaning: "private; I; me", strokes: 7, jlpt: 4, grade: 6, freq: 242, radical: "禾", radical_name: "grain", parts: ["禾", "厶"], nanori: [] },
+  学: { char: "学", on: ["ガク"], kun: ["まな.ぶ"], meaning: "study; learning; science", strokes: 8, jlpt: 5, grade: 1, freq: 63, radical: "子", radical_name: "child", parts: ["子", "⺌", "冖"], nanori: ["たか", "のり"] },
+  生: { char: "生", on: ["セイ", "ショウ"], kun: ["い.きる", "う.まれる", "なま"], meaning: "life; genuine; birth", strokes: 5, jlpt: 5, grade: 1, freq: 29, radical: "生", radical_name: "life", parts: [], nanori: [] },
+  今: { char: "今", on: ["コン", "キン"], kun: ["いま"], meaning: "now", strokes: 4, jlpt: 5, grade: 2, freq: 49, radical: "人", radical_name: "person", parts: ["𠆢", "一"], nanori: ["な"] },
+  日: { char: "日", on: ["ニチ", "ジツ"], kun: ["ひ", "-び", "-か"], meaning: "day; sun; Japan", strokes: 4, jlpt: 5, grade: 1, freq: 1, radical: "日", radical_name: "sun", parts: [], nanori: [] },
+  休: { char: "休", on: ["キュウ"], kun: ["やす.む"], meaning: "rest; day off; retire; sleep", strokes: 6, jlpt: 5, grade: 1, freq: 642, radical: "人", radical_name: "person", parts: ["⺅", "木"], nanori: [] },
+  水: { char: "水", on: ["スイ"], kun: ["みず"], meaning: "water", strokes: 4, jlpt: 5, grade: 1, freq: 223, radical: "水", radical_name: "water", parts: [], nanori: [] },
+  飲: { char: "飲", on: ["イン"], kun: ["の.む"], meaning: "drink; smoke; take", strokes: 12, jlpt: 4, grade: 3, freq: 969, radical: "食", radical_name: "eat", parts: ["欠", "食"], nanori: [] },
+  美: { char: "美", on: ["ビ", "ミ"], kun: ["うつく.しい"], meaning: "beauty; beautiful", strokes: 9, jlpt: 3, grade: 3, freq: 462, radical: "羊", radical_name: "sheep", parts: ["王", "大", "并", "羊"], nanori: [] },
+  味: { char: "味", on: ["ミ"], kun: ["あじ", "あじ.わう"], meaning: "flavor; taste", strokes: 8, jlpt: 4, grade: 3, freq: 442, radical: "口", radical_name: "mouth", parts: ["口", "未"], nanori: [] },
+  母: { char: "母", on: ["ボ"], kun: ["はは", "も"], meaning: "mother", strokes: 5, jlpt: 5, grade: 2, freq: 570, radical: "毋", radical_name: "do not", parts: ["毋"], nanori: [] },
+  家: { char: "家", on: ["カ", "ケ"], kun: ["いえ", "や", "うち"], meaning: "house; home; family", strokes: 10, jlpt: 4, grade: 2, freq: 133, radical: "宀", radical_name: "roof", parts: ["宀", "豕"], nanori: [] },
+  茶: { char: "茶", on: ["チャ", "サ"], kun: [], meaning: "tea", strokes: 9, jlpt: 4, grade: 2, freq: 1116, radical: "艸", radical_name: "grass", parts: ["𠆢", "⺾", "木"], nanori: [] },
+  本: { char: "本", on: ["ホン"], kun: ["もと"], meaning: "book; present; main; origin", strokes: 5, jlpt: 5, grade: 1, freq: 10, radical: "木", radical_name: "tree", parts: ["一", "木"], nanori: [] },
+  読: { char: "読", on: ["ドク", "トク", "トウ"], kun: ["よ.む"], meaning: "read", strokes: 14, jlpt: 5, grade: 2, freq: 618, radical: "言", radical_name: "speech", parts: ["言", "売"], nanori: ["よみ"] },
+  新: { char: "新", on: ["シン"], kun: ["あたら.しい", "あら.た"], meaning: "new", strokes: 13, jlpt: 4, grade: 2, freq: 51, radical: "斤", radical_name: "axe", parts: ["斤", "亲"], nanori: [] },
+  金: { char: "金", on: ["キン", "コン"], kun: ["かね", "かな-"], meaning: "gold; money", strokes: 8, jlpt: 5, grade: 1, freq: 53, radical: "金", radical_name: "gold", parts: [], nanori: [] },
+  曜: { char: "曜", on: ["ヨウ"], kun: [], meaning: "weekday", strokes: 18, jlpt: 4, grade: 2, freq: 940, radical: "日", radical_name: "sun", parts: ["ヨ", "日", "隹"], nanori: [] },
+  緒: { char: "緒", on: ["ショ", "チョ"], kun: ["お"], meaning: "thong; beginning; together", strokes: 14, jlpt: 3, grade: 8, freq: 952, radical: "糸", radical_name: "silk", parts: ["糸", "者"], nanori: [] },
+  市: { char: "市", on: ["シ"], kun: ["いち"], meaning: "market; city; town", strokes: 5, jlpt: 3, grade: 2, freq: 42, radical: "巾", radical_name: "turban", parts: ["巾", "亠"], nanori: ["い", "ち"] },
+  場: { char: "場", on: ["ジョウ", "チョウ"], kun: ["ば"], meaning: "location; place", strokes: 12, jlpt: 4, grade: 2, freq: 52, radical: "土", radical_name: "earth", parts: ["土", "日", "勿"], nanori: [] },
+  早: { char: "早", on: ["ソウ", "サッ"], kun: ["はや.い", "はや"], meaning: "early; fast", strokes: 6, jlpt: 4, grade: 1, freq: 402, radical: "日", radical_name: "sun", parts: ["十", "日"], nanori: [] },
+  起: { char: "起", on: ["キ"], kun: ["お.きる", "お.こる"], meaning: "rouse; wake up; get up", strokes: 10, jlpt: 4, grade: 3, freq: 374, radical: "走", radical_name: "run", parts: ["走", "已"], nanori: [] },
+  帰: { char: "帰", on: ["キ"], kun: ["かえ.る", "かえ.す"], meaning: "homecoming; return", strokes: 10, jlpt: 4, grade: 2, freq: 504, radical: "巾", radical_name: "turban", parts: ["ヨ", "刂", "巾", "冖"], nanori: [] },
+  電: { char: "電", on: ["デン"], kun: [], meaning: "electricity", strokes: 13, jlpt: 5, grade: 2, freq: 268, radical: "雨", radical_name: "rain", parts: ["雨", "田", "乙"], nanori: [] },
+  車: { char: "車", on: ["シャ"], kun: ["くるま"], meaning: "car", strokes: 7, jlpt: 5, grade: 1, freq: 333, radical: "車", radical_name: "cart", parts: [], nanori: [] },
+  中: { char: "中", on: ["チュウ"], kun: ["なか", "うち"], meaning: "in; inside; middle", strokes: 4, jlpt: 5, grade: 1, freq: 11, radical: "丨", radical_name: "line", parts: ["｜", "口"], nanori: [] },
+  隣: { char: "隣", on: ["リン"], kun: ["となり"], meaning: "neighboring", strokes: 16, jlpt: 1, grade: 8, freq: 1083, radical: "阜", radical_name: "mound", parts: ["舛", "米", "⻖"], nanori: [] },
+  窓: { char: "窓", on: ["ソウ"], kun: ["まど"], meaning: "window; pane", strokes: 11, jlpt: 3, grade: 6, freq: 1186, radical: "穴", radical_name: "cave", parts: ["穴", "心", "厶"], nanori: [] },
+  見: { char: "見", on: ["ケン"], kun: ["み.る", "み.える"], meaning: "see; hopes; chances; idea", strokes: 7, jlpt: 5, grade: 1, freq: 22, radical: "見", radical_name: "see", parts: ["目", "儿"], nanori: [] },
+  着: { char: "着", on: ["チャク"], kun: ["き.る", "つ.く"], meaning: "don; arrive; wear", strokes: 12, jlpt: 4, grade: 3, freq: 376, radical: "目", radical_name: "eye", parts: ["羊", "目"], nanori: [] },
+  友: { char: "友", on: ["ユウ"], kun: ["とも"], meaning: "friend", strokes: 4, jlpt: 5, grade: 2, freq: 622, radical: "又", radical_name: "again", parts: ["ノ", "一", "又"], nanori: [] },
+  達: { char: "達", on: ["タツ"], kun: ["-たち"], meaning: "accomplished; reach; arrive", strokes: 12, jlpt: 3, grade: 4, freq: 500, radical: "辵", radical_name: "walk", parts: ["王", "辶", "羊"], nanori: [] },
+  会: { char: "会", on: ["カイ", "エ"], kun: ["あ.う"], meaning: "meeting; meet; party; association", strokes: 6, jlpt: 4, grade: 2, freq: 4, radical: "人", radical_name: "person", parts: ["二", "𠆢", "厶"], nanori: ["あい"] },
+  京: { char: "京", on: ["キョウ", "ケイ"], kun: ["みやこ"], meaning: "capital", strokes: 8, jlpt: 4, grade: 2, freq: 74, radical: "亠", radical_name: "lid", parts: ["口", "小", "亠"], nanori: [] },
+  都: { char: "都", on: ["ト", "ツ"], kun: ["みやこ"], meaning: "metropolis; capital", strokes: 11, jlpt: 3, grade: 3, freq: 123, radical: "邑", radical_name: "city", parts: ["日", "⻏", "⺹"], nanori: [] },
+  働: { char: "働", on: ["ドウ"], kun: ["はたら.く"], meaning: "work", strokes: 13, jlpt: 3, grade: 4, freq: 417, radical: "人", radical_name: "person", parts: ["⺅", "動"], nanori: [] },
+  雨: { char: "雨", on: ["ウ"], kun: ["あめ", "あま-"], meaning: "rain", strokes: 8, jlpt: 5, grade: 1, freq: 950, radical: "雨", radical_name: "rain", parts: [], nanori: [] },
+  待: { char: "待", on: ["タイ"], kun: ["ま.つ"], meaning: "wait; depend on", strokes: 9, jlpt: 4, grade: 3, freq: 391, radical: "彳", radical_name: "step", parts: ["寸", "土", "彳"], nanori: [] },
+  面: { char: "面", on: ["メン"], kun: ["おも", "おもて"], meaning: "mask; face; features; surface", strokes: 9, jlpt: 3, grade: 3, freq: 186, radical: "面", radical_name: "face", parts: [], nanori: [] },
+  白: { char: "白", on: ["ハク"], kun: ["しろ", "しろ.い"], meaning: "white", strokes: 5, jlpt: 5, grade: 1, freq: 483, radical: "白", radical_name: "white", parts: [], nanori: [] },
+  社: { char: "社", on: ["シャ"], kun: ["やしろ"], meaning: "company; firm; office", strokes: 7, jlpt: 4, grade: 2, freq: 21, radical: "示", radical_name: "spirit", parts: ["土", "礻"], nanori: [] },
+  忙: { char: "忙", on: ["ボウ"], kun: ["いそが.しい"], meaning: "busy; occupied; restless", strokes: 6, jlpt: 3, grade: 8, freq: 1475, radical: "心", radical_name: "heart", parts: ["亡", "忄"], nanori: [] },
+  一: { char: "一", on: ["イチ", "イツ"], kun: ["ひと.つ", "ひと-"], meaning: "one", strokes: 1, jlpt: 5, grade: 1, freq: 2, radical: "一", radical_name: "one", parts: [], nanori: [] },
+  二: { char: "二", on: ["ニ", "ジ"], kun: ["ふた", "ふた.つ"], meaning: "two", strokes: 2, jlpt: 5, grade: 1, freq: 9, radical: "二", radical_name: "two", parts: [], nanori: [] },
+  言: { char: "言", on: ["ゲン", "ゴン"], kun: ["い.う", "こと"], meaning: "say; word", strokes: 7, jlpt: 4, grade: 2, freq: 83, radical: "言", radical_name: "speech", parts: [], nanori: [] },
+  多: { char: "多", on: ["タ"], kun: ["おお.い"], meaning: "many; frequent; much", strokes: 6, jlpt: 4, grade: 2, freq: 139, radical: "夕", radical_name: "evening", parts: ["夕"], nanori: [] },
 };
 
 function kanji(spec: [string, string | null][]): KanjiPart[] {
   return spec.map(([char, reading]) => ({ ...KANJI[char], reading }));
 }
 
-function punct(text: string, ws = ""): Token {
+export function punct(text: string, ws = ""): Token {
   return { text, ws, is_word: false, lemma: null, morph: null, gloss: null, level: null };
 }
 
@@ -61,7 +108,7 @@ type JaSpec = {
   kanji?: [string, string | null][];
 };
 
-function ja(text: string, s: JaSpec): Token {
+export function ja(text: string, s: JaSpec): Token {
   const lemma = s.lemma ?? text;
   return {
     text,
@@ -99,7 +146,7 @@ type RuSpec = {
   ws?: string;
 };
 
-function ru(text: string, s: RuSpec): Token {
+export function ru(text: string, s: RuSpec): Token {
   const lemma = s.lemma ?? text.toLowerCase();
   return {
     text,
@@ -122,10 +169,113 @@ function ru(text: string, s: RuSpec): Token {
   };
 }
 
-const POLITE_PAST = (stem: string): ConjPiece[] => [
+type ItSpec = {
+  lemma?: string;
+  pos: string;
+  gender?: string;
+  number?: string;
+  tense?: string;
+  mood?: string;
+  form?: string;
+  level?: CefrLevel | null;
+  gloss?: string;
+  role?: string;
+  ws?: string;
+};
+
+export function it(text: string, s: ItSpec): Token {
+  const lemma = s.lemma ?? text.toLowerCase();
+  return {
+    text,
+    ws: s.ws ?? " ",
+    is_word: true,
+    lemma,
+    morph: {
+      ...EMPTY_MORPH,
+      lemma,
+      pos: s.pos,
+      gender: s.gender ?? null,
+      number: s.number ?? null,
+      tense: s.tense ?? null,
+      mood: s.mood ?? null,
+      form: s.form ?? null,
+    },
+    gloss: s.gloss ?? null,
+    level: s.level === undefined ? "A1" : s.level,
+    role: s.role ?? null,
+  };
+}
+
+type ArSpec = {
+  lemma?: string;
+  pos: string;
+  case?: string;
+  gender?: string;
+  number?: string;
+  tense?: string;
+  mood?: string;
+  voice?: string;
+  person?: string;
+  state?: string;
+  form?: string;
+  pattern?: string;
+  reading?: string;
+  level?: CefrLevel | null;
+  gloss?: string;
+  role?: string;
+  ws?: string;
+  root?: RootPart;
+  conj?: ConjPiece[];
+  enclitic?: string;
+};
+
+export function ar(text: string, s: ArSpec): Token {
+  const lemma = s.lemma ?? text;
+  return {
+    text,
+    ws: s.ws ?? " ",
+    is_word: true,
+    lemma,
+    morph: {
+      ...EMPTY_MORPH,
+      lemma,
+      pos: s.pos,
+      case: s.case ?? null,
+      gender: s.gender ?? null,
+      number: s.number ?? null,
+      tense: s.tense ?? null,
+      mood: s.mood ?? null,
+      voice: s.voice ?? null,
+      person: s.person ?? null,
+      state: s.state ?? null,
+      form: s.form ?? null,
+      conj_type: s.pattern ?? null,
+      reading: s.reading ?? null,
+      enclitic: s.enclitic ?? null,
+    },
+    gloss: s.gloss ?? null,
+    level: s.level === undefined ? "A1" : s.level,
+    role: s.role ?? null,
+    root: s.root,
+    conj: s.conj,
+  };
+}
+
+export const POLITE_PAST = (stem: string): ConjPiece[] => [
   { text: stem, label: "stem" },
   { text: "まし", label: "polite" },
   { text: "た", label: "past" },
+];
+
+export const POLITE_PRES = (stem: string): ConjPiece[] => [
+  { text: stem, label: "stem" },
+  { text: "ます", label: "polite" },
+];
+
+export const TE_IRU = (te: string): ConjPiece[] => [
+  { text: te, label: "te-form" },
+  { text: "い", label: "progressive" },
+  { text: "ます", label: "polite" },
 ];
 
 export type DemoPassage = {
@@ -228,6 +378,119 @@ const RU_TOKENS: Token[] = [
   punct("."),
 ];
 
+const IT_TOKENS: Token[] = [
+  it("Ogni", { lemma: "ogni", pos: "DET", gloss: "each / every", level: "A2" }),
+  it("mattina", { pos: "NOUN", gender: "fem", number: "sg", gloss: "morning" }),
+  it("Anna", { pos: "PROPN", gloss: "Anna", level: null }),
+  it("va", { lemma: "andare", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "sg", gloss: "to go", role: "verb" }),
+  it("al", { lemma: "a", pos: "ADP", gloss: "to / at", role: "particle" }),
+  it("mercato", { pos: "NOUN", gender: "masc", number: "sg", level: "A1", gloss: "market", ws: "" }),
+  punct(".", " "),
+  it("Là", { lemma: "là", pos: "ADV", gloss: "there", role: "adverb" }),
+  it("vendono", { lemma: "vendere", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "pl", level: "A2", gloss: "to sell", role: "verb" }),
+  it("pane", { pos: "NOUN", gender: "masc", number: "sg", gloss: "bread" }),
+  it("fresco", { pos: "ADJ", gender: "masc", number: "sg", level: "A2", gloss: "fresh", role: "adj" }),
+  it("e", { pos: "CCONJ", gloss: "and", role: "particle" }),
+  it("formaggio", { pos: "NOUN", gender: "masc", number: "sg", gloss: "cheese", ws: "" }),
+  punct(".", " "),
+  it("Anna", { pos: "PROPN", gloss: "Anna", level: null }),
+  it("compra", { lemma: "comprare", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "sg", gloss: "to buy", role: "verb" }),
+  it("mele", { lemma: "mela", pos: "NOUN", gender: "fem", number: "pl", gloss: "apple" }),
+  it("e", { pos: "CCONJ", gloss: "and", role: "particle" }),
+  it("dice", { lemma: "dire", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "sg", gloss: "to say", role: "verb" }),
+  it("al", { lemma: "a", pos: "ADP", gloss: "to / at", role: "particle" }),
+  it("venditore", { pos: "NOUN", gender: "masc", number: "sg", level: "A2", gloss: "seller", ws: "" }),
+  punct(":", " "),
+  punct("«"),
+  it("Buongiorno", { pos: "INTJ", gloss: "good morning", ws: "" }),
+  punct("!"),
+  punct("»", " "),
+  it("Poi", { pos: "ADV", gloss: "then", role: "adverb" }),
+  it("va", { lemma: "andare", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "sg", gloss: "to go", role: "verb" }),
+  it("a", { pos: "ADP", gloss: "to / at", role: "particle" }),
+  it("casa", { pos: "NOUN", gender: "fem", number: "sg", gloss: "house / home" }),
+  it("e", { pos: "CCONJ", gloss: "and", role: "particle" }),
+  it("beve", { lemma: "bere", pos: "VERB", tense: "pres", mood: "indc", form: "fin", number: "sg", gloss: "to drink", role: "verb" }),
+  it("tè", { pos: "NOUN", gender: "masc", number: "sg", gloss: "tea", ws: "" }),
+  punct("."),
+];
+
+export const KTB: RootPart = {
+  letters: "ك ت ب",
+  pattern: "فَعَلَ",
+  form: "I",
+  form_name: "فَعَلَ",
+  meaning: "write",
+};
+export const DHB: RootPart = {
+  letters: "ذ ه ب",
+  pattern: "فَعَلَ",
+  form: "I",
+  form_name: "فَعَلَ",
+  meaning: "go",
+};
+export const SHR: RootPart = {
+  letters: "ش ر ي",
+  pattern: "افْتَعَلَ",
+  form: "VIII",
+  form_name: "اِفْتَعَلَ",
+  meaning: "buy",
+};
+export const QR: RootPart = {
+  letters: "ق ر أ",
+  pattern: "فَعَلَ",
+  form: "I",
+  form_name: "فَعَلَ",
+  meaning: "read",
+};
+
+const AR_TOKENS: Token[] = [
+  ar("كل", { lemma: "كل", pos: "DET", gloss: "every", level: "A1", ws: " " }),
+  ar("صباح", { pos: "NOUN", case: "gen", gender: "masc", number: "sg", state: "indef", gloss: "morning", reading: "صَبَاحٍ" }),
+  ar("أذهب", { lemma: "ذهب", pos: "VERB", tense: "pres", mood: "indc", voice: "act", person: "1", number: "sg", form: "I", pattern: "yaCCaC", gloss: "to go", role: "verb", reading: "أَذْهَبُ", root: DHB }),
+  ar("إلى", { pos: "ADP", gloss: "to", role: "particle" }),
+  ar("السوق", { lemma: "سوق", pos: "NOUN", case: "gen", gender: "masc", number: "sg", state: "def", gloss: "market", reading: "السُّوقِ", ws: "" }),
+  punct(".", " "),
+  ar("هناك", { pos: "ADV", gloss: "there", role: "adverb" }),
+  ar("أشتري", { lemma: "اشترى", pos: "VERB", tense: "pres", mood: "indc", voice: "act", person: "1", number: "sg", form: "VIII", pattern: "{ifotaEal", gloss: "to buy", role: "verb", reading: "أَشْتَرِي", root: SHR, level: "A2" }),
+  ar("خبزا", { lemma: "خبز", pos: "NOUN", case: "acc", gender: "masc", number: "sg", state: "indef", gloss: "bread", reading: "خُبْزًا" }),
+  ar("و", { pos: "CCONJ", gloss: "and", role: "particle" }),
+  ar("ماء", { pos: "NOUN", case: "acc", gender: "masc", number: "sg", state: "indef", gloss: "water", ws: "" }),
+  punct(".", " "),
+  ar("أحمد", { pos: "PROPN", gloss: "Ahmad", level: null }),
+  ar("يشتري", { lemma: "اشترى", pos: "VERB", tense: "pres", mood: "indc", voice: "act", person: "3", number: "sg", gender: "masc", form: "VIII", gloss: "to buy", role: "verb", reading: "يَشْتَرِي", root: SHR, level: "A2" }),
+  ar("تفاحا", { lemma: "تفاح", pos: "NOUN", case: "acc", gender: "masc", number: "sg", state: "indef", gloss: "apple" }),
+  ar("و", { pos: "CCONJ", gloss: "and", role: "particle" }),
+  ar("يقول", { lemma: "قال", pos: "VERB", tense: "pres", mood: "indc", voice: "act", person: "3", number: "sg", form: "I", gloss: "to say", role: "verb", reading: "يَقُولُ" }),
+  ar("للبائع", { lemma: "بائع", pos: "NOUN", case: "gen", gender: "masc", number: "sg", state: "def", gloss: "seller", level: "A2", ws: "" }),
+  punct(":", " "),
+  punct("«"),
+  ar("صباح", { pos: "NOUN", case: "nom", gender: "masc", number: "sg", state: "const", gloss: "morning" }),
+  ar("الخير", { lemma: "خير", pos: "NOUN", case: "gen", gender: "masc", number: "sg", state: "def", gloss: "goodness", ws: "" }),
+  punct("!"),
+  punct("»", " "),
+  ar("ثم", { pos: "ADV", gloss: "then", role: "adverb" }),
+  ar("أقرأ", { lemma: "قرأ", pos: "VERB", tense: "pres", mood: "indc", voice: "act", person: "1", number: "sg", form: "I", gloss: "to read", role: "verb", reading: "أَقْرَأُ", root: QR }),
+  ar("كتابي", {
+    lemma: "كتاب",
+    pos: "NOUN",
+    case: "acc",
+    gender: "masc",
+    number: "sg",
+    state: "const",
+    gloss: "book",
+    reading: "كِتَابِي",
+    root: KTB,
+    enclitic: "1s_poss",
+    conj: [
+      { text: "كتاب", label: "stem" },
+      { text: "ي", label: "my" },
+    ],
+    ws: "",
+  }),
+  punct("."),
+];
+
 export const DEMO: Record<LangCode, DemoPassage> = {
   ja: {
     language: "ja",
@@ -246,6 +509,24 @@ export const DEMO: Record<LangCode, DemoPassage> = {
     title: "Утро на рынке",
     tokens: RU_TOKENS,
     initial: RU_TOKENS.findIndex((t) => t.text === "продавцу"),
+  },
+  it: {
+    language: "it",
+    level: "A2",
+    topic: "A morning at the market",
+    genre: "Daily life",
+    title: "Mattina al mercato",
+    tokens: IT_TOKENS,
+    initial: IT_TOKENS.findIndex((t) => t.text === "venditore"),
+  },
+  ar: {
+    language: "ar",
+    level: "A2",
+    topic: "A morning at the market",
+    genre: "Daily life",
+    title: "صباح في السوق",
+    tokens: AR_TOKENS,
+    initial: AR_TOKENS.findIndex((t) => t.text === "كتابي"),
   },
 };
 
@@ -306,6 +587,52 @@ export const DRIFT: Record<LangCode, DriftSample> = {
     checkedReport: [
       { k: "New words", v: "4%, all within reach" },
       { k: "Grammar kept out", v: "no cases or verb forms you haven't met yet" },
+      { k: "What slipped through", v: "nothing" },
+    ],
+    checkedSummary: "Reads exactly like it says it does",
+  },
+  it: {
+    prompt: "“Write something easy for a beginner learning Italian.”",
+    drifted: [
+      { text: "Ogni mattina Anna, " },
+      { text: "camminando", flag: "too advanced" },
+      { text: " verso il mercato, compra pane fresco. " },
+      { text: "Benché", flag: "too advanced" },
+      { text: " abbia poco tempo, parla con il vicino " },
+      { text: "che", flag: "too advanced" },
+      { text: " lavora nel negozio. Se " },
+      { text: "avesse", flag: "too advanced" },
+      { text: " più tempo, farebbe il pane a casa." },
+    ],
+    driftedSummary: "Too advanced in 4 places, one sentence in",
+    checked:
+      "Ogni mattina Anna va al mercato. Là compra pane fresco e formaggio. Poi va a casa e dice al vicino: «Buongiorno!». Il vicino lavora nel negozio. Anna ama il pane del negozio, ma ha poco tempo.",
+    checkedReport: [
+      { k: "New words", v: "4%, all within reach" },
+      { k: "Grammar kept out", v: "no gerunds, subjunctives, or relative che" },
+      { k: "What slipped through", v: "nothing" },
+    ],
+    checkedSummary: "Reads exactly like it says it does",
+  },
+  ar: {
+    prompt: "“Write something easy for a beginner learning Arabic.”",
+    drifted: [
+      { text: "كل صباح يذهب أحمد إلى السوق " },
+      { text: "الذي", flag: "too advanced" },
+      { text: " يقع قرب البيت، " },
+      { text: "وقد اشترى", flag: "too advanced" },
+      { text: " خبزا. " },
+      { text: "إنّ", flag: "too advanced" },
+      { text: " البائع رجل طيب. إذا " },
+      { text: "لم", flag: "too advanced" },
+      { text: " يكن لديه وقت، يعود إلى البيت." },
+    ],
+    driftedSummary: "Too advanced in 4 places, one sentence in",
+    checked:
+      "كل صباح أذهب إلى السوق. هناك أشتري خبزا وماء. أحمد يشتري تفاحا ويقول للبائع: «صباح الخير!». ثم أذهب إلى البيت وأشرب شاي.",
+    checkedReport: [
+      { k: "New words", v: "4%, all within reach" },
+      { k: "Grammar kept out", v: "no إنّ, relative الذي, or لم + jussive" },
       { k: "What slipped through", v: "nothing" },
     ],
     checkedSummary: "Reads exactly like it says it does",

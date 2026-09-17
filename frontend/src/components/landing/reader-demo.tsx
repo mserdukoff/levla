@@ -5,7 +5,7 @@ import { BandStrip } from "@/components/band";
 import { GlossCard } from "@/components/gloss-card";
 import { GrammarLegend, PassageArticle } from "@/components/passage-article";
 import { Segmented } from "@/components/segmented";
-import { LANGUAGES, type LangCode } from "@/lib/types";
+import { LANGUAGES, readingFont, type LangCode } from "@/lib/types";
 import { DEMO } from "./demo-data";
 
 function DemoToggle({
@@ -51,6 +51,7 @@ export function ReaderDemo({
 
   const token = selected != null ? demo.tokens[selected] : null;
   const ja = lang === "ja";
+  const ar = lang === "ar";
 
   return (
     <div className="flex flex-col overflow-hidden rounded-card border border-rule bg-paper-raised">
@@ -70,7 +71,7 @@ export function ReaderDemo({
 
       <div className="px-5 pb-7 pt-6 sm:px-7 sm:pt-7">
         <p className="t-eyebrow">{demo.topic}</p>
-        <h2 className={`mt-2 text-[1.55rem] leading-snug text-ink ${ja ? "font-ja" : "font-reading"}`}>
+        <h2 dir={ar ? "rtl" : undefined} className={`mt-2 text-[1.55rem] leading-snug text-ink ${readingFont(lang)}`}>
           {demo.title}
         </h2>
         <div className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-2 border-y border-rule py-2.5">
@@ -80,6 +81,11 @@ export function ReaderDemo({
           {ja ? (
             <DemoToggle on={furigana} onClick={() => setFurigana((v) => !v)}>
               Furigana
+            </DemoToggle>
+          ) : null}
+          {ar ? (
+            <DemoToggle on={furigana} onClick={() => setFurigana((v) => !v)}>
+              Vowels
             </DemoToggle>
           ) : null}
           <span className="ml-auto text-[13px] text-ink/40">Tap any word</span>
@@ -128,7 +134,7 @@ export function ReaderDemo({
         ) : (
           <p className="text-sm text-ink/45">
             Tap a word to see what it means, how it's used
-            {ja ? ", and every kanji inside it" : ""}.
+            {ja ? ", and every kanji inside it" : ar ? ", and the root it comes from" : ""}.
           </p>
         )}
       </div>

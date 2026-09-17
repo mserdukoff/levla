@@ -7,26 +7,26 @@ from pathlib import Path
 from app.core.config import settings
 
 LEVEL_ORDER = {"A1": 0, "A2": 1, "B1": 2, "B2": 3, "C1": 4, "C2": 5}
-SUPPORTED = ("ru", "ja")
+SUPPORTED = ("ru", "ja", "it", "ar")
 
 
 def _lang(language: str) -> str:
     return language if language in SUPPORTED else "ru"
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def grammar_rules(language: str = "ru") -> dict:
     path = settings.data_dir / "grammar" / f"{_lang(language)}_cefr.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def vocab_bands(language: str = "ru") -> dict[str, str]:
     path = settings.data_dir / "vocab" / f"{_lang(language)}_cefr.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=8)
 def gloss_lexicon(language: str = "ru") -> dict[str, str]:
     path = settings.data_dir / "gloss" / f"{_lang(language)}_en.json"
     return json.loads(path.read_text(encoding="utf-8"))

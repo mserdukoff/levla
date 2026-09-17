@@ -4,7 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 CefrLevel = Literal["A1", "A2", "B1", "B2"]
-LangCode = Literal["ru", "ja"]
+LangCode = Literal["ru", "ja", "it", "ar"]
 FeedbackRating = Literal["too_easy", "too_hard", "just_right"]
 GENRES = ("daily_life", "travel", "news", "folklore", "work")
 
@@ -103,6 +103,16 @@ class KanjiPart(BaseModel):
     nanori: list[str] = []
 
 
+class RootPart(BaseModel):
+    """Arabic root + وزن, the gloss-card analog of a kanji breakdown."""
+
+    letters: str
+    pattern: str | None = None
+    form: str | None = None
+    form_name: str | None = None
+    meaning: str = ""
+
+
 class MorphInfo(BaseModel):
     lemma: str
     pos: str | None = None
@@ -116,6 +126,10 @@ class MorphInfo(BaseModel):
     form: str | None = None
     pos_detail: str | None = None
     conj_type: str | None = None
+    voice: str | None = None
+    person: str | None = None
+    state: str | None = None
+    enclitic: str | None = None
 
 
 class ConjPiece(BaseModel):
@@ -132,6 +146,7 @@ class Token(BaseModel):
     gloss: str | None = None
     level: str | None = None
     kanji: list[KanjiPart] = []
+    root: RootPart | None = None
     role: str | None = None
     conj: list[ConjPiece] = []
     conj_id: int | None = None
@@ -213,6 +228,7 @@ class GlossResponse(BaseModel):
     gloss: str | None
     level: str | None
     kanji: list[KanjiPart] = []
+    root: RootPart | None = None
     role: str | None = None
     conj: list[ConjPiece] = []
 
@@ -239,6 +255,8 @@ class MeResponse(BaseModel):
     display_name: str | None = None
     guest: bool = True
     show_russian: bool = False
+    show_italian: bool = False
+    show_arabic: bool = False
     generate_remaining: int | None = None
     require_auth: bool = False
 

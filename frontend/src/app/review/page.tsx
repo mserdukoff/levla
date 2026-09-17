@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { StrokeOrderButton } from "@/components/stroke-order";
 import { fetchReview, submitReview } from "@/lib/api";
 import { loadLanguage } from "@/lib/device";
-import { kanjiChars, type LangCode, type ReviewCard } from "@/lib/types";
+import { kanjiChars, readingFont, type LangCode, type ReviewCard } from "@/lib/types";
 
 const RATINGS = ["again", "hard", "good", "easy"] as const;
 type Rating = (typeof RATINGS)[number];
@@ -31,7 +31,7 @@ function ReviewRow({
   return (
     <li className={`flex flex-col gap-3 py-6 transition-opacity ${done ? "opacity-45" : ""}`}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <p className={`${font} text-2xl leading-tight text-ink`}>{card.lemma}</p>
+        <p dir={language === "ar" ? "rtl" : undefined} className={`${font} text-2xl leading-tight text-ink`}>{card.lemma}</p>
         {card.reading ? <p className="font-ja text-[15px] text-ink/50">{card.reading}</p> : null}
         {done ? (
           <span className="ml-auto text-[13px] capitalize text-ink/40">Rated {rated}</span>
@@ -84,7 +84,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const language = loadLanguage();
-  const font = language === "ja" ? "font-ja" : "font-reading";
+  const font = readingFont(language);
 
   useEffect(() => {
     setLoading(true);

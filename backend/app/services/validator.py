@@ -67,6 +67,14 @@ def validate_tokens(tokens: list[Token], level: str, language: str = "ru") -> Va
         from app.services.validator_ja import validate_tokens_ja
 
         return validate_tokens_ja(tokens, level)
+    if language == "it":
+        from app.services.validator_it import validate_tokens_it
+
+        return validate_tokens_it(tokens, level)
+    if language == "ar":
+        from app.services.validator_ar import validate_tokens_ar
+
+        return validate_tokens_ar(tokens, level)
 
     ruleset = grammar_rules(language)
     rules = ruleset[level]

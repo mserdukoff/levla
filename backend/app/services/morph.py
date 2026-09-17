@@ -88,6 +88,14 @@ def analyze_word(word: str, language: str = "ru") -> MorphInfo:
         from app.services.morph_ja import analyze_word_ja
 
         return analyze_word_ja(word)
+    if language == "it":
+        from app.services.morph_it import analyze_word_it
+
+        return analyze_word_it(word)
+    if language == "ar":
+        from app.services.morph_ar import analyze_word_ar
+
+        return analyze_word_ar(word)
     return analyze_word_ru(word)
 
 
@@ -96,6 +104,14 @@ def analyze_text(text: str, language: str = "ru") -> list[Token]:
         from app.services.morph_ja import analyze_text_ja
 
         tokens = analyze_text_ja(text, language)
+    elif language == "it":
+        from app.services.morph_it import analyze_text_it
+
+        tokens = analyze_text_it(text, language)
+    elif language == "ar":
+        from app.services.morph_ar import analyze_text_ar
+
+        tokens = analyze_text_ar(text, language)
     else:
         tokens = analyze_text_ru(text, language)
     from app.services.grammar import attach_grammar

@@ -1,4 +1,7 @@
+import pytest
+
 from app.services.morph import analyze_text
+from app.services.morph_ar import camel_available
 
 
 def ja(text: str):
@@ -130,3 +133,44 @@ def test_russian_roles():
     assert v.role == "particle"
     knigu = next(t for t in toks if t.lemma == "книга")
     assert knigu.role is None
+
+
+def test_italian_roles():
+    toks = analyze_text("Anna legge un libro a casa.", "it")
+    legge = next(t for t in toks if t.lemma == "leggere")
+    assert legge.role == "verb"
+    a = next(t for t in toks if t.text.lower() == "a")
+    assert a.role == "particle"
+    libro = next(t for t in toks if t.lemma == "libro")
+    assert libro.role is None
+
+
+@pytest.mark.skipif(not camel_available(), reason="CAMeL Tools morphological DB not installed")
+def test_arabic_roles():
+    toks = analyze_text("أذهب إلى البيت.", "ar")
+    verb = next(t for t in toks if t.morph and t.morph.pos == "VERB")
+    assert verb.role == "verb"
+    prep = next(t for t in toks if t.text in {"إلى", "الى"})
+    assert prep.role == "particle"
+
+
+def test_arabic_possessive_breakdown_from_enclitic():
+    from app.models.schemas import MorphInfo, Token
+    from app.services.grammar import attach_grammar
+
+    tok = Token(
+        text="كتابي",
+        lemma="كتاب",
+        morph=MorphInfo(lemma="كتاب", pos="NOUN", enclitic="1s_poss", state="const"),
+        is_word=True,
+    )
+    attach_grammar([tok], "ar")
+    assert [(p.text, p.label) for p in tok.conj] == [("كتاب", "stem"), ("ي", "my")]
+
+
+@pytest.mark.skipif(not camel_available(), reason="CAMeL Tools morphological DB not installed")
+def test_arabic_possessive_live():
+    toks = analyze_text("هذا كتابي.", "ar")
+    mine = next(t for t in toks if t.text == "كتابي")
+    assert mine.morph and mine.morph.enclitic == "1s_poss"
+    assert [(p.text, p.label) for p in mine.conj] == [("كتاب", "stem"), ("ي", "my")]

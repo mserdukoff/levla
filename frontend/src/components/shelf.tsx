@@ -6,10 +6,14 @@ import { BandStrip } from "@/components/band";
 import { GenerateForm } from "@/components/generate-form";
 import { Segmented } from "@/components/segmented";
 import { Seal } from "@/components/seal";
+import { DemoBanner } from "@/components/demo-banner";
 import { fetchLibrary, fetchMe, fetchReview, logout, requestMagicLink, unstarWord } from "@/lib/api";
+import { isDemo } from "@/lib/demo";
 import { getDeviceId, loadLanguage, saveLanguage } from "@/lib/device";
 import {
   LANGUAGES,
+  isRtl,
+  readingFont,
   type LangCode,
   type LibraryItem,
   type LibraryResponse,
@@ -17,7 +21,12 @@ import {
   type StarredWord,
 } from "@/lib/types";
 
-const LANG_NAME: Record<LangCode, string> = { ja: "Japanese", ru: "Russian" };
+const LANG_NAME: Record<LangCode, string> = {
+  ja: "Japanese",
+  ru: "Russian",
+  it: "Italian",
+  ar: "Arabic",
+};
 
 function lemmaLine(item: LibraryItem): string | null {
   const total = item.new_lemmas + item.recycled_lemmas;
@@ -50,7 +59,8 @@ function WordsList({
   onRemove: (lemma: string) => void;
 }) {
   if (words.length === 0) return null;
-  const font = language === "ja" ? "font-ja" : "font-reading";
+  const font = readingFont(language);
+  const rtl = isRtl(language);
   return (
     <section className="flex flex-col gap-3">
       <SectionLabel>Words</SectionLabel>
@@ -59,12 +69,13 @@ function WordsList({
           <li key={word.lemma} className="flex items-start justify-between gap-4 py-3">
             <div className="min-w-0">
               <p className="flex flex-wrap items-baseline gap-x-2.5">
-                <span className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
+                <span dir={rtl ? "rtl" : undefined} className={`text-[1.0625rem] text-ink ${font}`}>{word.lemma}</span>
                 {word.gloss ? <span className="text-sm text-ink/55">{word.gloss}</span> : null}
               </p>
               {word.passage_id && word.title ? (
                 <Link
                   href={`/passage/${word.passage_id}`}
+                  dir={rtl ? "rtl" : undefined}
                   className={`mt-0.5 block text-[13px] text-ink/40 transition-colors hover:text-ink ${font}`}
                 >
                   {word.title}
@@ -81,29 +92,31 @@ function WordsList({
           </li>
         ))}
       </ul>
-      <p className="t-quiet">
-        Export{" "}
-        <a
-          href="/api/words/export.csv"
-          className="underline decoration-ink/20 underline-offset-4 hover:text-ink"
-        >
-          CSV
-        </a>
-        {" · "}
-        <a
-          href="/api/words/export.apkg"
-          className="underline decoration-ink/20 underline-offset-4 hover:text-ink"
-        >
-          Anki pack
-        </a>
-      </p>
+      {isDemo() ? null : (
+        <p className="t-quiet">
+          Export{" "}
+          <a
+            href="/api/words/export.csv"
+            className="underline decoration-ink/20 underline-offset-4 hover:text-ink"
+          >
+            CSV
+          </a>
+          {" · "}
+          <a
+            href="/api/words/export.apkg"
+            className="underline decoration-ink/20 underline-offset-4 hover:text-ink"
+          >
+            Anki pack
+          </a>
+        </p>
+      )}
     </section>
   );
 }
 
 /** The recommended passage: the one ink-on-paper inversion on the shelf. */
 function ContinueCard({ item }: { item: LibraryItem }) {
-  const font = item.language === "ja" ? "font-ja" : "font-reading";
+  const font = readingFont(item.language);
   return (
     <Link
       href={`/passage/${item.id}`}
@@ -122,7 +135,7 @@ function ContinueCard({ item }: { item: LibraryItem }) {
           <BandStrip level={item.level} inverted />
         </div>
       </div>
-      <h3 className={`mt-5 text-[1.6rem] leading-[1.2] sm:text-[1.9rem] ${font}`}>{item.title}</h3>
+      <h3 dir={item.language === "ar" ? "rtl" : undefined} className={`mt-5 text-[1.6rem] leading-[1.2] sm:text-[1.9rem] ${font}`}>{item.title}</h3>
       <div className="tnum mt-7 flex items-baseline justify-between gap-3 text-[13px]">
         <span className="text-paper/50">{metaLine(item)}</span>
         <span className="text-paper/80 transition-colors group-hover:text-paper">Read →</span>
@@ -133,14 +146,14 @@ function ContinueCard({ item }: { item: LibraryItem }) {
 
 /** Every other passage: a hairline row, not a card. */
 function ShelfRow({ item }: { item: LibraryItem }) {
-  const font = item.language === "ja" ? "font-ja" : "font-reading";
+  const font = readingFont(item.language);
   return (
     <li>
       <Link
         href={`/passage/${item.id}`}
         className="group grid grid-cols-[1fr_auto] items-baseline gap-x-4 px-3 py-3.5 transition-colors hover:bg-paper-raised"
       >
-        <h3 className={`text-[1.125rem] leading-snug text-ink ${font}`}>{item.title}</h3>
+        <h3 dir={item.language === "ar" ? "rtl" : undefined} className={`text-[1.125rem] leading-snug text-ink ${font}`}>{item.title}</h3>
         <span className="tnum flex items-center gap-2 font-display text-[11px] tracking-[0.12em] text-ink/45">
           {!item.passed ? (
             <Seal
@@ -233,22 +246,33 @@ export function Shelf() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [due, setDue] = useState(0);
   const showRussian = me?.show_russian === true;
+  const showItalian = me?.show_italian === true;
+  const showArabic = me?.show_arabic === true;
 
   useEffect(() => {
+    if (!me) return;
     const saved = loadLanguage();
-    if (saved === "ja") setLanguage("ja");
-  }, []);
-
-  useEffect(() => {
-    if (showRussian) {
-      if (loadLanguage() === "ru") setLanguage("ru");
+    if (saved === "ru" && showRussian) {
+      setLanguage("ru");
       return;
     }
-    if (language === "ru") {
+    if (saved === "it" && showItalian) {
+      setLanguage("it");
+      return;
+    }
+    if (saved === "ar" && showArabic) {
+      setLanguage("ar");
+      return;
+    }
+    if (
+      (language === "ru" && !showRussian) ||
+      (language === "it" && !showItalian) ||
+      (language === "ar" && !showArabic)
+    ) {
       setLanguage("ja");
       saveLanguage("ja");
     }
-  }, [showRussian, language]);
+  }, [me, showRussian, showItalian, showArabic, language]);
 
   const refreshMe = useCallback(() => {
     void fetchMe()
@@ -262,7 +286,12 @@ export function Shelf() {
 
   const load = useCallback(
     async (lang: LangCode, signal?: AbortSignal) => {
-      const requested = !showRussian && lang === "ru" ? "ja" : lang;
+      const requested =
+        (!showRussian && lang === "ru") ||
+        (!showItalian && lang === "it") ||
+        (!showArabic && lang === "ar")
+          ? "ja"
+          : lang;
       setLoading(true);
       setError(null);
       try {
@@ -276,7 +305,7 @@ export function Shelf() {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [showRussian],
+    [showRussian, showItalian, showArabic],
   );
 
   useEffect(() => {
@@ -306,7 +335,13 @@ export function Shelf() {
 
   const nextItem = library?.items.find((item) => item.id === library.next_id) ?? null;
   const rest = (library?.items ?? []).filter((item) => item.id !== library?.next_id);
-  const langs = showRussian ? LANGUAGES : LANGUAGES.filter((l) => l.id === "ja");
+  const langs = LANGUAGES.filter(
+    (l) =>
+      l.id === "ja" ||
+      (l.id === "ru" && showRussian) ||
+      (l.id === "it" && showItalian) ||
+      (l.id === "ar" && showArabic),
+  );
   const langName = LANG_NAME[language];
 
   function openRestock() {
@@ -342,6 +377,8 @@ export function Shelf() {
           />
         ) : null}
       </header>
+
+      <DemoBanner />
 
       <section>
         <p className="t-kicker">{langName} · Library</p>
@@ -408,8 +445,18 @@ export function Shelf() {
       ) : null}
 
       <section id="restock" className="scroll-mt-8 flex flex-col gap-3">
-        <SectionLabel>Restock</SectionLabel>
-        {restockOpen ? (
+        <SectionLabel>{isDemo() ? "This demo" : "Restock"}</SectionLabel>
+        {isDemo() ? (
+          <div className="flex flex-col gap-3">
+            <p className="max-w-[26rem] text-[15px] leading-relaxed text-ink/60">
+              This shelf is a fixed starter set. Rate a passage to move your placement in this
+              browser. Custom generation needs the full app.
+            </p>
+            <Link href="/review" className="t-quiet self-start">
+              Review saved words
+            </Link>
+          </div>
+        ) : restockOpen ? (
           <>
             <p className="max-w-[26rem] text-[15px] leading-relaxed text-ink/60">
               A new {langName} passage, written to a band and checked before it lands on the

@@ -1,3 +1,5 @@
+import type { LangCode } from "./types";
+
 const DEVICE_KEY = "levla.device_id";
 const LANG_KEY = "levla.language";
 
@@ -11,13 +13,13 @@ export function getDeviceId(): string {
   return id;
 }
 
-export function loadLanguage(): "ru" | "ja" {
+export function loadLanguage(): LangCode {
   if (typeof window === "undefined") return "ja";
   const value = window.localStorage.getItem(LANG_KEY);
-  return value === "ru" || value === "ja" ? value : "ja";
+  return value === "ru" || value === "ja" || value === "it" || value === "ar" ? value : "ja";
 }
 
-export function saveLanguage(language: "ru" | "ja"): void {
+export function saveLanguage(language: LangCode): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(LANG_KEY, language);
 }

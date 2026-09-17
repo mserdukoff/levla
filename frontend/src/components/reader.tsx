@@ -17,8 +17,9 @@ import {
 } from "@/lib/device";
 import { sentenceEnglish, tokenSentenceIndex } from "@/lib/sentences";
 import type { FeedbackRating, Passage, PassageStats } from "@/lib/types";
+import { readingFont } from "@/lib/types";
 
-const LANG_NAME = { ja: "Japanese", ru: "Russian" } as const;
+const LANG_NAME = { ja: "Japanese", ru: "Russian", it: "Italian", ar: "Arabic" } as const;
 
 function Toggle({
   on,
@@ -159,7 +160,8 @@ export function Reader({ passage }: { passage: Passage }) {
   );
 
   const ja = passage.language === "ja";
-  const font = ja ? "font-ja" : "font-reading";
+  const ar = passage.language === "ar";
+  const font = readingFont(passage.language);
   const selectedToken = selected != null ? passage.tokens[selected] : null;
 
   useEffect(() => {
@@ -348,12 +350,13 @@ export function Reader({ passage }: { passage: Passage }) {
         </div>
       </header>
 
-      <div className="relative mt-12 pr-[6.5rem] sm:mt-14 sm:pr-[7.5rem]">
+      <div className={`relative mt-12 sm:mt-14 ${ar ? "pl-[6.5rem] sm:pl-[7.5rem]" : "pr-[6.5rem] sm:pr-[7.5rem]"}`}>
         <p className="t-eyebrow">
           {passage.topic}
           {newPct != null ? ` · ${newPct}% new` : ""}
         </p>
         <h1
+          dir={ar ? "rtl" : undefined}
           className={`mt-3 text-[2.1rem] leading-[1.15] tracking-[-0.01em] text-ink sm:text-[2.6rem] ${font}`}
         >
           {passage.title}
@@ -386,6 +389,11 @@ export function Reader({ passage }: { passage: Passage }) {
             {ja ? (
               <Toggle on={furigana} onClick={onToggleFurigana}>
                 Furigana
+              </Toggle>
+            ) : null}
+            {ar ? (
+              <Toggle on={furigana} onClick={onToggleFurigana}>
+                Vowels
               </Toggle>
             ) : null}
             <Toggle on={fadeKnown} onClick={onToggleFade}>

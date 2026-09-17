@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     azure_speech_voice: str = "ja-JP-NanamiNeural"
     audio_dir: str = ""
     show_russian: bool = False
+    show_italian: bool = False
+    show_arabic: bool = False
     require_auth: bool = False
     generate_monthly_cap: int = 10
     auth_cookie_name: str = "levla_token"

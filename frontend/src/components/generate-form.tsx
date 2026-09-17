@@ -104,7 +104,11 @@ export function GenerateForm({
           placeholder={
             language === "ja"
               ? "A morning at the market, a train to Kyoto…"
-              : "A morning at the market, a train to Kazan…"
+              : language === "it"
+                ? "A morning at the market, a train to Florence…"
+                : language === "ar"
+                  ? "A morning at the market, a train to Cairo…"
+                  : "A morning at the market, a train to Kazan…"
           }
           maxLength={200}
           className="field-line"

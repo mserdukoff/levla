@@ -1,8 +1,8 @@
 # Levla
 
-CEFR-calibrated graded readers for **Russian** and **Japanese**.
+CEFR-calibrated graded readers for **Japanese**, **Italian**, **Russian**, and **Arabic**.
 
-Levla generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji. After each text you mark it **too easy**, **just right**, or **too hard**. That updates your placement (or leaves it), records the lemmas you just saw, and picks the next unread passage.
+Levla generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji or (in Arabic) the root and وزن. After each text you mark it **too easy**, **just right**, or **too hard**. That updates your placement (or leaves it), records the lemmas you just saw, and picks the next unread passage.
 
 The product claim is not “an LLM wrote some Japanese.” It is: **grammar and vocabulary are constrained in the prompt, then checked by a morphological analyzer, then used to drive a learner model.**
 
@@ -23,6 +23,7 @@ Full product, architecture, design, API, NLP, and learner-model specs live in [`
 - [API](#api)
 - [Frontend](#frontend)
 - [Run locally](#run-locally)
+- [Static demo on Vercel](#static-demo-on-vercel)
 - [Run with Docker](#run-with-docker)
 - [Tests](#tests)
 - [Rebuilding lexicons](#rebuilding-lexicons)
@@ -34,15 +35,15 @@ Full product, architecture, design, API, NLP, and learner-model specs live in [`
 
 ## Why it exists
 
-Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Levla treats CEFR as a **checkable constraint**:
+Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Italian drifts into congiuntivo, gerundio, and passato remoto. Arabic drifts into past tense, إنّ, derived verb Forms II–X, and the passive. Levla treats CEFR as a **checkable constraint**:
 
 1. The prompt includes per-level grammar rules and an in-band lemma sample.
-2. The draft is tokenized with a real analyzer (pymorphy3 for Russian, Sudachi for Japanese).
+2. The draft is tokenized with a real analyzer (Sudachi for Japanese, spaCy for Italian, pymorphy3 for Russian, CAMeL Tools for Arabic).
 3. A validator scores over-level lemmas and forbidden constructions.
 4. A failing draft is rewritten with those flags. The closer attempt is kept.
 5. The reader still shows a warning if the text is a soft fail.
 
-The reading UI is built around that analysis: every word already has lemma, POS, gloss, CEFR band, grammar role, verb-suffix pieces, and kanji parts attached before it hits the page.
+The reading UI is built around that analysis: every word already has lemma, POS, gloss, CEFR band, grammar role, verb-suffix pieces, and kanji or Arabic root parts attached before it hits the page.
 
 ---
 
@@ -54,7 +55,7 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 
 **Shelf (`/library`)**
 
-- Switch between Japanese and Russian.
+- Switch between Japanese, Italian, Russian, and Arabic (Italian, Russian, and Arabic are behind env flags).
 - See your current placement for that language and how many lemmas you have seen.
 - Open a **Continue** recommendation, or any other title on the shelf.
 - Each card shows CEFR band, topic, word count, **new vs. known** content words, and whether you have already read it.
@@ -65,10 +66,12 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 - Read the passage as clickable words. Tap a word for:
   - surface form, lemma, CEFR band
   - Russian: case, gender, number, tense, aspect, mood
+  - Italian: tense, mood, gender, number, verb form
+  - Arabic: root (جذر), verb form I–X / وزن, tense, mood, voice, person, gender, number, case, state; optional tashkeel as ruby
   - Japanese: reading (hiragana), particle/verb role, verb-suffix breakdown, kanji breakdown with on/kun, meanings, strokes, JLPT, grade, frequency, radical, parts, and a stroke-order diagram that plays as soon as the gloss opens.
   - English gloss
 - Optionally colour grammar (particles, verbs, endings, adjectives). Off by default.
-- Optionally furigana over kanji (Japanese), and fade already-seen content words.
+- Optionally furigana over kanji (Japanese) or restored vowels over Arabic, and fade already-seen content words.
 - Save a lemma from the gloss; it appears on a **Words** list on the shelf. On **Review**, Japanese stroke-order diagrams appear after **Show**.
 - Reveal a full **English** translation, or **this sentence** only.
 - Mark the text **too easy**, **just right**, or **too hard**. Too easy / too hard move placement one CEFR step. Just right keeps it. All three ingest lemmas and give you **Read next**.
@@ -81,6 +84,8 @@ On first backend start, Levla writes a hand-authored starter library (and Englis
 | -------- | -- | -- | -- | -- |
 | Japanese | 4  | 4  | 3  | 2  |
 | Russian  | 4  | 4  | 3  | 2  |
+| Italian  | 2  | 2  | 1  | 0  |
+| Arabic   | 2  | 2  | 1  | 0  |
 
 Generated texts are stored alongside these and appear on the same shelf.
 
@@ -117,8 +122,8 @@ topic + CEFR + genre + language
 
 - Model defaults to `openai/gpt-4o-mini` via OpenRouter. Override with `LLM_MODEL`.
 - Prompt includes:
-  - language-specific length (Russian: 400–700 words; Japanese: 22–40 short sentences)
-  - `prompt_constraints` from `data/grammar/{ru,ja}_cefr.json`
+  - language-specific length (Russian: 400–700 words; Italian: 350–600 words; Arabic: 280–500 words; Japanese: 22–40 short sentences)
+  - `prompt_constraints` from `data/grammar/{ru,ja,it,ar}_cefr.json`
   - a random sample of ~48 lemmas at or below the target band
   - genre hint, if any
 - Response must be JSON `{ "title", "text" }`.
@@ -127,11 +132,13 @@ topic + CEFR + genre + language
 **Analysis**
 
 - Russian: [razdel](https://github.com/natasha/razdel) tokenizes; [pymorphy3](https://github.com/no-plagiarism/pymorphy3) lemmatizes and tags case / gender / number / tense / aspect / mood.
+- Italian: [spaCy](https://spacy.io/) `it_core_news_md` tokenizes and tags lemma / POS / tense / mood / gender / number / verb form.
+- Arabic: [CAMeL Tools](https://github.com/CAMeL-Lab/camel_tools) analyzes MSA. Lemmas are undiacritized. Verbs carry Form I–X / وزن; nouns carry case and state. The root (جذر) is attached the same way Japanese attaches kanji.
 - Japanese: [Sudachi](https://github.com/WorksApplications/Sudachi) in split mode C. POS is mapped to English labels (`noun`, `verb`, `i-adj`, `particle`, …). Readings are converted to hiragana. Kanji in the surface form are aligned to slices of that reading.
 
 **Glosses**
 
-Lexicon lookup (`data/gloss/{ru,ja}_en.json`). Unknown lemmas in generated text get a one-shot LLM batch gloss. Click-to-gloss on a live passage prefers the token already stored on that passage.
+Lexicon lookup (`data/gloss/{ru,ja,it,ar}_en.json`). Unknown lemmas in generated text get a one-shot LLM batch gloss. Click-to-gloss on a live passage prefers the token already stored on that passage.
 
 **Kanji** (`backend/app/services/kanji.py`)
 
@@ -143,7 +150,7 @@ Jisho.org has no kanji API (its public endpoint is word search only). The lexico
 
 ## CEFR rules
 
-Rules live in JSON, not in prompt folklore. Validators in `backend/app/services/validator.py` and `validator_ja.py` compute rates and emit flags the LLM can be asked to fix.
+Rules live in JSON, not in prompt folklore. Validators in `backend/app/services/validator.py`, `validator_ja.py`, and `validator_it.py` compute rates and emit flags the LLM can be asked to fix.
 
 ### Russian (`data/grammar/ru_cefr.json`)
 
@@ -181,6 +188,53 @@ Constructions are detected from Sudachi tokens (particles, auxiliaries, inflecti
 | **B1** | ている, potential, causative, simple relatives, ば/たら/なら. No passive-as-voice, no keigo. |
 | **B2** | Passive and modest keigo allowed. Vocab aimed at B2 / N3–N2. |
 
+### Italian (`data/grammar/it_cefr.json`)
+
+Constructions are detected from spaCy tokens (aux + participle, tense, mood, verb form), not from the LLM’s opinion:
+
+| Flag | Roughly |
+| ---- | ------- |
+| `passato_prossimo` | *essere/avere* + participle |
+| `imperfetto` | `Tense=Imp` |
+| `futuro` | `Tense=Fut` |
+| `condizionale` | `Mood=Cnd` |
+| `congiuntivo` | `Mood=Sub` |
+| `gerundio` | `VerbForm=Ger` |
+| `participio` | participle not in a compound tense |
+| `passato_remoto` | finite past |
+| `relative_che` | *che* after a noun |
+| `clitic` / `clitic_cluster` | object clitics / *glielo*, *me lo* |
+
+| Level | Allowed (simplified) |
+| ----- | -------------------- |
+| **A1** | Present indicative only. No compounds, gerunds, subjunctives, relatives, or clitics. |
+| **A2** | Passato prossimo, futuro, simple clitics, *perché / quando / se*. No imperfetto, condizionale, congiuntivo. |
+| **B1** | Imperfetto, condizionale, gerundio, relative *che*. No congiuntivo, no passato remoto. |
+| **B2** | Congiuntivo allowed. Passato remoto still banned. Vocab capped at B2. |
+
+### Arabic (`data/grammar/ar_cefr.json`)
+
+Constructions are detected from CAMeL tokens (tense, mood, voice, verb Form I–X, particles), not from the LLM’s opinion:
+
+| Flag | Roughly |
+| ---- | ------- |
+| `perfect` | past / perfective |
+| `future` | سـ / سوف |
+| `dual` | number dual |
+| `inna` | إنّ / أنّ and sisters |
+| `relative` | الذي / التي / … |
+| `kana_compound` | كان + verb |
+| `jussive` / `subjunctive` | لم / لن and أنْ |
+| `passive` | voice pass |
+| `form_ii` … `form_x` / `derived_form` | verb وزن beyond Form I |
+
+| Level | Allowed (simplified) |
+| ----- | -------------------- |
+| **A1** | Present Form I and nominal sentences. No past, future, dual, إنّ, الذي, كان+verb, لم/لن, passive, Forms II–X. |
+| **A2** | Past and future سـ/سوف, Form II/IV, لأن / إذا / عندما. |
+| **B1** | إنّ, الذي, dual, jussive/subjunctive, Forms II/IV/V/VII/VIII/X. Still no passive, VI, IX. |
+| **B2** | Passive and remaining forms allowed. |
+
 A draft **passes** only if over-level lemma rate, construction hits, and (for Russian) case/tense/POS/subordinate rates all sit under the caps in the JSON. Lemma flags are truncated to 12 so the correction prompt stays readable.
 
 ---
@@ -204,6 +258,8 @@ Per `(device_id, language)` Levla keeps:
 **New vs. known.** Content POS only:
 
 - Russian: noun, adjective, verb, adverb, predicative, numeral
+- Italian: noun, verb, adjective, adverb, proper noun
+- Arabic: noun, verb, adjective, adverb, proper noun
 - Japanese: noun, verb, i-adj, na-adj, adverb
 
 Counts are **token occurrences**, not unique lemmas. The shelf uses this so a recycled word that appears three times counts as three “known.”
@@ -254,10 +310,15 @@ levla/
 │   │       ├── llm.py              # OpenRouter: passage, gloss, translate
 │   │       ├── morph.py            # language dispatcher
 │   │       ├── morph_ja.py         # Sudachi
-│   │       ├── validator.py        # Russian CEFR + ja dispatch
+│   │       ├── morph_it.py         # spaCy Italian
+│   │       ├── morph_ar.py         # CAMeL Tools MSA
+│   │       ├── validator.py        # Russian CEFR + ja/it/ar dispatch
 │   │       ├── validator_ja.py     # Japanese constructions
+│   │       ├── validator_it.py     # Italian constructions
+│   │       ├── validator_ar.py     # Arabic constructions
 │   │       ├── gloss.py            # lexicon + LLM fill
 │   │       ├── kanji.py            # reading alignment + KANJIDIC2 details
+│   │       ├── roots.py            # Arabic جذر + وزن
 │   │       ├── grammar.py          # colour roles + Japanese verb suffixes
 │   │       ├── learner.py          # placement, lemmas, next-id
 │   │       ├── library.py          # shelf payload
@@ -275,13 +336,16 @@ levla/
 │   ├── next.config.ts
 │   └── Dockerfile
 ├── data/
-│   ├── grammar/{ru,ja}_cefr.json
-│   ├── vocab/{ru,ja}_cefr.json
-│   ├── gloss/{ru,ja}_en.json
+│   ├── grammar/{ru,ja,it,ar}_cefr.json
+│   ├── vocab/{ru,ja,it,ar}_cefr.json
+│   ├── gloss/{ru,ja,it,ar}_en.json
+│   ├── roots/ar.json
 │   └── kanji/ja.json
 ├── scripts/
 │   ├── build_lexicon.py            # Russian vocab + gloss
 │   ├── build_ja_lexicon.py         # Japanese vocab + gloss
+│   ├── build_it_lexicon.py         # Italian vocab + gloss
+│   ├── build_ar_lexicon.py         # Arabic vocab + gloss + roots
 │   └── build_kanji.py              # KANJIDIC2 + KRADFILE + JLPT → ja.json
 └── docker-compose.yml
 ```
@@ -294,11 +358,18 @@ levla/
 | ---- | -------------- | ------- |
 | `data/vocab/ru_cefr.json` | ~5,400 lemmas | Lemma → A1–B2. Pedagogical core plus frequency banding from a 50k word list. |
 | `data/vocab/ja_cefr.json` | ~500 lemmas | Pedagogical Japanese core, dictionary form. |
+| `data/vocab/it_cefr.json` | ~1,000 lemmas | Pedagogical Italian core, dictionary form. |
+| `data/vocab/ar_cefr.json` | ~775 lemmas | Pedagogical MSA core, undiacritized dictionary form. |
 | `data/gloss/ru_en.json` | ~1,360 | Short English glosses (pedagogical overlay; not every frequency lemma has a gloss). |
 | `data/gloss/ja_en.json` | ~500 | Short English glosses, keyed to Sudachi dictionary form. |
+| `data/gloss/it_en.json` | ~1,000 | Short English glosses, keyed to lowercased lemma. |
+| `data/gloss/ar_en.json` | ~775 | Short English glosses, keyed to undiacritized lemma. |
 | `data/grammar/ru_cefr.json` | 4 levels | Allowed cases/tenses, forbidden POS/conjunctions, rate caps, prompt text. |
 | `data/grammar/ja_cefr.json` | 4 levels | Forbidden constructions/lemmas, rate caps, prompt text. |
+| `data/grammar/it_cefr.json` | 4 levels | Forbidden constructions, tenses/moods, rate caps, prompt text. |
+| `data/grammar/ar_cefr.json` | 4 levels | Forbidden constructions, tenses/moods, verb forms, rate caps, prompt text. |
 | `data/kanji/ja.json` | ~13,100 | Character → on, kun, meanings, strokes, JLPT, grade, freq, radical, parts. |
+| `data/roots/ar.json` | ~197 | Arabic root → spaced letters + English gloss. |
 
 Russian vocab bands are TORFL-inspired pedagogical assignments plus frequency ranks (top ~500 → A1, ~1500 A2, ~3000 B1, rest of the kept list B2). They are **not** a licensed official word list. Japanese vocab is a curated N5–N3-ish core, not JLPT official lists. Kanji JLPT tags on the gloss card come from [kanjiapi.dev](https://kanjiapi.dev/) (Jonathan Waller’s lists); readings, meanings, strokes, grade, frequency, and radicals come from [KANJIDIC2](https://www.edrdg.org/wiki/KANJIDIC_Project.html) and [KRADFILE](https://www.edrdg.org/krad/kradinf.html), used under the [EDRDG licence](https://www.edrdg.org/edrdg/licence.html). Stroke-order diagrams are [KanjiVG](https://kanjivg.tagaini.net/), © Ulrich Apel, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/).
 
@@ -336,7 +407,7 @@ Base path: `/api`. OpenAPI is at `http://localhost:8000/docs` when the backend i
 }
 ```
 
-`level` is `A1` | `A2` | `B1` | `B2`. `language` is `ru` | `ja` (default `ru` on the API; the UI defaults to Japanese). `genre` is optional: `daily_life`, `travel`, `news`, `folklore`, `work`.
+`level` is `A1` | `A2` | `B1` | `B2`. `language` is `ru` | `ja` | `it` | `ar` (default `ru` on the API; the UI defaults to Japanese). `genre` is optional: `daily_life`, `travel`, `news`, `folklore`, `work`.
 
 **Token** (what the reader clicks)
 
@@ -375,7 +446,7 @@ Whitespace between Japanese morphemes is preserved on `ws` so the original ortho
 | `src/lib/device.ts` | Device UUID + language in `localStorage` |
 | `src/lib/types.ts` | Shared TS types, CEFR/genre/language labels, morph formatting |
 
-UI is a paper/ink/terracotta palette (`src/app/globals.css`). Display and Russian reading use Literata (Cyrillic subset). Japanese uses Outfit plus system Gothic (`Hiragino`, `Yu Gothic`, `Noto Sans JP`).
+UI is a paper/ink/terracotta palette (`src/app/globals.css`). Display and Russian reading use Literata (Cyrillic subset). Japanese uses Outfit plus system Gothic (`Hiragino`, `Yu Gothic`, `Noto Sans JP`). Arabic uses Noto Naskh Arabic (`.font-ar`) and `dir="rtl"`.
 
 Generation is slow on purpose (20–40 seconds is the expected wait): write, analyze, maybe rewrite, translate.
 
@@ -416,6 +487,25 @@ If the rewrite target is wrong you will see shelf errors; the Next server must b
 
 ---
 
+## Static demo on Vercel
+
+The full app needs FastAPI, analyzers, and SQLite. For a public demo, the Next.js frontend can run **without** that backend: a hand-authored catalog (A1 / A2 / B1 in all four languages), tap-to-gloss, ratings, and saved words in `localStorage`. Custom generation is off.
+
+1. Import the GitHub repo in [Vercel](https://vercel.com/new).
+2. Set **Root Directory** to `frontend`.
+3. Deploy. Vercel builds set `NEXT_PUBLIC_DEMO=1` automatically (see `frontend/next.config.ts`).
+
+Locally:
+
+```bash
+cd frontend
+NEXT_PUBLIC_DEMO=1 npm run dev
+```
+
+The Docker / AWS frontend image is unchanged: it still talks to FastAPI unless you set `NEXT_PUBLIC_DEMO=1` at build time.
+
+---
+
 ## Run with Docker
 
 ```bash
@@ -446,10 +536,13 @@ pytest
 | ---- | ------ |
 | `tests/test_validator.py` | Russian lemmas/cases; A1 rejects past, accusative, *если*; A2 allows acc, rejects instrumental |
 | `tests/test_validator_ja.py` | です/ます A1; て-form A1 vs A2; ている A2 vs B1; keigo B1 vs B2; core gloss |
+| `tests/test_validator_it.py` | Present A1; passato prossimo A1 vs A2; congiuntivo B1 vs B2; core gloss |
+| `tests/test_validator_ar.py` | Present A1; past A1 vs A2; Form II A1; إنّ A2 vs B1; passive B1 vs B2 |
+| `tests/test_roots.py` | BW root → Arabic; Form I–X mapping; morph_from_analysis tense/case |
 | `tests/test_kanji.py` | Reading alignment: 市場, 学生, 食べる, 本; dictionary fields on 本 / 語 |
-| `tests/test_grammar.py` | は/が/を roles; 食べました / 食べる / て-いる / 行かない chains; Russian verb vs preposition |
+| `tests/test_grammar.py` | は/が/を roles; 食べました / 食べる / て-いる / 行かない chains; Russian, Italian, and Arabic verb vs preposition |
 | `tests/test_learner.py` | Placement bump, just-right no bump, new/known counts, next-id skip of already-read, star/unstar |
-| `tests/test_sentences.py` | Japanese sentence index on 。; English split on `. ` |
+| `tests/test_sentences.py` | Japanese sentence index on 。; Italian and Arabic sentence index on `.`; Arabic `؟`; English split on `. ` |
 | `tests/test_translation.py` | Every seed title has a non-empty English translation; persist path stores it |
 
 Tests do **not** call OpenRouter. Gloss attach in tests uses `use_llm=False`.
@@ -466,6 +559,12 @@ python3 scripts/build_ja_lexicon.py
 
 # Kanji: KANJIDIC2 + KRADFILE + JLPT lists → data/kanji/ja.json
 python3 scripts/build_kanji.py
+
+# Italian: writes data/vocab/it_cefr.json and data/gloss/it_en.json
+python3 scripts/build_it_lexicon.py
+
+# Arabic: writes data/vocab/ar_cefr.json, data/gloss/ar_en.json, data/roots/ar.json
+python3 scripts/build_ar_lexicon.py
 
 # Russian: needs pymorphy3 and optionally data/raw/ru_50k.txt
 python3 scripts/build_lexicon.py
@@ -493,12 +592,16 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 | `SKIP_SEED` | `false` | Skip library/catalog seed (extra ECS tasks after first boot) |
 | `GENERATE_WORKERS` | `2` | Background threads per process that run generation jobs. Set `0` on API tasks if a dedicated worker service handles generation |
 | `GENERATE_MAX_PENDING` | `3` | Max queued/running jobs per device or signed-in user |
+| `SHOW_RUSSIAN` | `false` | Put Russian on the public shelf |
+| `SHOW_ITALIAN` | `false` | Put Italian on the public shelf |
+| `SHOW_ARABIC` | `false` | Put Arabic on the public shelf |
 
 **Frontend**
 
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
 | `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Backend origin for SSR passage fetch and the `/api` proxy. Read at runtime |
+| `NEXT_PUBLIC_DEMO` | empty (`1` on Vercel) | Static catalog + `localStorage` learner. No Python backend. Set at **build** time |
 
 ---
 
@@ -507,11 +610,12 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 - **Soft fail.** A passage that still violates the ruleset is stored and readable, with a warning. Calibration is a gate with a retry, not a hard reject.
 - **No accounts.** Clearing site data resets placement and seen lemmas. There is no sync across devices.
 - **Lexicon coverage.** Japanese vocab is a few hundred lemmas; unknown content words count as over-level (names and some loanwords are skipped). Russian frequency lemmas without a pedagogical gloss may have no English until an LLM fill runs.
-- **Analyzer errors.** pymorphy3 and Sudachi can pick the wrong lemma or POS; the validator will then flag or miss constructions.
+- **Analyzer errors.** pymorphy3, spaCy, Sudachi, and CAMeL Tools can pick the wrong lemma or POS; the validator will then flag or miss constructions.
 - **Japanese construction detection** is heuristic (て+いる, 連体形+noun, a keigo lemma list). It will both over- and under-flag.
+- **Arabic Form I–X mapping** is heuristic on CAMeL وزن patterns. A mis-tagged Form II verb can fail an A1 seed.
 - **Generation cost and latency.** Two completion calls plus gloss plus translation is normal on a fail-then-rewrite path. No streaming.
 - **SQLite.** Fine for a single-user or small demo. Compose and AWS use Postgres.
-- **Languages.** Only `ru` and `ja`. Adding a language means grammar JSON, vocab/gloss, a morph module, a validator, seed texts, and UI labels.
+- **Languages.** `ja` is public. `it`, `ru`, and `ar` are behind `SHOW_ITALIAN`, `SHOW_RUSSIAN`, and `SHOW_ARABIC`. Adding a language means grammar JSON, vocab/gloss, a morph module, a validator, seed texts, and UI labels.
 
 Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JLPT lists.
 

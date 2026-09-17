@@ -5,7 +5,7 @@
   "display": "standalone",
   "background_color": "#f3eee4",
   "theme_color": "#1b1712",
-  "description": "CEFR-calibrated Russian and Japanese graded readers",
+  "description": "CEFR-calibrated Japanese, Arabic, Italian, and Russian graded readers",
   "icons": [
     {
       "src": "/icon.svg",

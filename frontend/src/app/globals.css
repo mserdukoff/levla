@@ -30,6 +30,8 @@
   --sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --gothic: var(--font-outfit), "Hiragino Sans", "Hiragino Kaku Gothic ProN",
     "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
+  --naskh: var(--font-naskh), "Noto Naskh Arabic", "Arabic Typesetting",
+    "Traditional Arabic", serif;
 }
 
 @theme inline {
@@ -51,6 +53,7 @@
   --font-display: var(--serif);
   --font-reading: var(--serif);
   --font-ja: var(--gothic);
+  --font-ar: var(--naskh);
   /* one card radius, one pill. Nothing in between. */
   --radius-card: 6px;
 }
@@ -80,6 +83,10 @@ body {
 
 .font-ja {
   font-family: var(--gothic);
+}
+
+.font-ar {
+  font-family: var(--naskh);
 }
 
 /* ---------- type roles ---------- */
