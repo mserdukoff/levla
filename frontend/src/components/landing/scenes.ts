@@ -7,7 +7,6 @@ type Scene = {
   face: string;
   /** Vertical centre of each carved band in /art/cliff-{lang}, as a share of the image height. */
   strata: Stratum[];
-  chip: { word: string; reading: string; meaning: string; position: string };
   lede: string;
   vistaCaption: string;
   explore: string;
@@ -23,12 +22,6 @@ export const SCENES: Record<LangCode, Scene> = {
   ja: {
     face: "37%",
     strata: strata(["26%", "39%", "51.5%", "70%"]),
-    chip: {
-      word: "おはよう",
-      reading: "ohayō · greeting",
-      meaning: "good morning",
-      position: "right-[-2%] top-[1%]",
-    },
     lede: "Graded readers in Japanese, from the first greeting to stories and the classics underneath. Tap any word for the reading, the grammar, and every kanji inside it.",
     vistaCaption: "Kyoto, from a temple veranda.",
     explore:
@@ -37,12 +30,6 @@ export const SCENES: Record<LangCode, Scene> = {
   ar: {
     face: "39%",
     strata: strata(["29%", "44%", "58%", "74%"]),
-    chip: {
-      word: "مرحبا",
-      reading: "marḥaban · greeting",
-      meaning: "hello",
-      position: "right-[-2%] top-[64%]",
-    },
     lede: "Graded readers in Arabic, from everyday phrases to the roots and patterns that hold the language together. Tap any word for the root, the vowels, and the grammar.",
     vistaCaption: "An old city, from under the arcade.",
     explore:
@@ -51,12 +38,6 @@ export const SCENES: Record<LangCode, Scene> = {
   it: {
     face: "37%",
     strata: strata(["27%", "38.5%", "50%", "64%"]),
-    chip: {
-      word: "ciao",
-      reading: "interjection",
-      meaning: "hi; bye",
-      position: "right-[-2%] top-[0%]",
-    },
     lede: "Graded readers in Italian, from ciao at the café to the Latin under every word. Tap any word for the meaning, the tense, and the form.",
     vistaCaption: "Florence, from a loggia above the city.",
     explore:
@@ -65,12 +46,6 @@ export const SCENES: Record<LangCode, Scene> = {
   ru: {
     face: "39%",
     strata: strata(["29%", "40%", "53.5%", "66.5%"]),
-    chip: {
-      word: "привет",
-      reading: "privét · greeting",
-      meaning: "hi",
-      position: "right-[-3%] top-[0%]",
-    },
     lede: "Graded readers in Russian, from привет to the cases, aspects, and stories that give it depth. Tap any word for the case, the aspect, and the mood.",
     vistaCaption: "Saint Petersburg, across the Neva.",
     explore:

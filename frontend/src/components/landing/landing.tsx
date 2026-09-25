@@ -113,37 +113,6 @@ function Eyebrow({ children, accent = false }: { children: React.ReactNode; acce
   return <p className={`t-eyebrow ${accent ? "text-terracotta!" : ""}`}>{children}</p>;
 }
 
-function WordChip({
-  word,
-  lang,
-  reading,
-  meaning,
-  className,
-}: {
-  word: string;
-  lang: LangCode;
-  reading: string;
-  meaning: string;
-  className: string;
-}) {
-  return (
-    <div className={`sheet-float absolute w-[11.5rem] px-4 pb-3 pt-3.5 ${className}`}>
-      <p
-        lang={lang}
-        dir={lang === "ar" ? "rtl" : undefined}
-        className={`text-[1.45rem] leading-none text-ink ${readingFont(lang)}`}
-      >
-        {word}
-      </p>
-      <p className="mt-2 text-[11px] tracking-[0.02em] text-ink/50">{reading}</p>
-      <p className="mt-0.5 font-display text-[15px] text-ink">{meaning}</p>
-      <a href="#tap" className="t-quiet mt-2.5 block border-t border-rule/80 pt-2 text-[11.5px]!">
-        View full entry →
-      </a>
-    </div>
-  );
-}
-
 function RatingMark({ id, on }: { id: Rating; on: boolean }) {
   const ring =
     id === "easy"
@@ -464,27 +433,6 @@ export function Landing({ variant = "classic" }: { variant?: LandingVariant }) {
                     </div>
                   );
                 })}
-              </div>
-              <div className="hidden sm:block">
-                {anim ? (
-                  <Float key={`chip-${lang}`} className="pointer-events-none absolute inset-0 [&_a]:pointer-events-auto" delay={1.2}>
-                    <WordChip
-                      word={scene.chip.word}
-                      lang={lang}
-                      reading={scene.chip.reading}
-                      meaning={scene.chip.meaning}
-                      className={scene.chip.position}
-                    />
-                  </Float>
-                ) : (
-                  <WordChip
-                    word={scene.chip.word}
-                    lang={lang}
-                    reading={scene.chip.reading}
-                    meaning={scene.chip.meaning}
-                    className={scene.chip.position}
-                  />
-                )}
               </div>
               <figcaption className="sr-only">
                 A cliff of carved {language} words, from everyday greetings at the top to older
