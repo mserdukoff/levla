@@ -36,7 +36,7 @@ KRADFILE_URL = (
     "https://raw.githubusercontent.com/jmettraux/kensaku/master/data/kradfile-u"
 )
 JLPT_URL = "https://kanjiapi.dev/v1/kanji/jlpt-{n}"
-UA = "Levla/1.0 (kanji lexicon build; local graded reader)"
+UA = "Lociros/1.0 (kanji lexicon build; local graded reader)"
 
 # Kangxi radicals 1–214, preferred CJK forms (same numbering as KANJIDIC).
 KANGXI = [

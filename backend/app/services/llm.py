@@ -58,7 +58,7 @@ def _client() -> OpenAI:
         api_key=settings.openrouter_api_key,
         default_headers={
             "HTTP-Referer": settings.public_base_url,
-            "X-Title": "Levla",
+            "X-Title": "Lociros",
         },
     )
 
@@ -95,6 +95,8 @@ def generate_passage_text(
     correction_flags: list[str] | None = None,
     language: str = "ru",
     known_lemmas: list[str] | None = None,
+    reuse_lemmas: list[str] | None = None,
+    news_brief: str | None = None,
 ) -> tuple[str, str, str | None]:
     """Return (title, text, english translation). Raises if the LLM is not configured."""
     meta = LANG_META.get(language, LANG_META["ru"])
@@ -113,6 +115,43 @@ def generate_passage_text(
             f"(target new-lemma rate around 10–20%):\n{shown}\n"
         )
 
+    reuse_line = ""
+    if reuse_lemmas:
+        shown = ", ".join(reuse_lemmas[:8])
+        reuse_line = (
+            "\nThe learner looked these lemmas up. Use a handful of them in the "
+            f"passage when they still fit the {level} rules:\n{shown}\n"
+        )
+
+    news_line = ""
+    length_line = meta["length"]
+    shown_topic = topic
+    session_line = "Write enough for a real reading session."
+    if news_brief:
+        shown_topic = f"today's news, written for CEFR {level}"
+        session_line = (
+            f"The reader is at CEFR {level}. Stay at that level. "
+            "A shorter passage is better than a harder word."
+        )
+        length_line = {
+            "A1": "Length: 6 to 10 short sentences. Who, where, and what happened.",
+            "A2": "Length: 8 to 14 short sentences. Who, where, and what happened. Keep the names and the date.",
+            "B1": "Length: 12 to 18 sentences. Keep the names, the places, and the date.",
+            "B2": "Length: 14 to 22 sentences. Keep the names, the places, and the date.",
+        }.get(level, "Length: 8 to 14 short sentences. Keep the names and the date.")
+        news_line = (
+            f"\nThis is today's news for one learner at CEFR {level}. "
+            "Rewrite the source into that level and no higher. "
+            "Use only the grammar allowed above. "
+            "Say each fact with words from the in-band sample. "
+            "If a fact needs a harder word or a harder pattern, leave that fact out. "
+            "Do not copy words from the source language into the title or the text. "
+            "Do not invent events, names, places, or dates. "
+            "If a Date line is in the source, that is the only date you may use. "
+            "Keep the people, the places, and that date.\n"
+            f"Source:\n{news_brief}\n"
+        )
+
     correction = ""
     if correction_flags:
         listed = "; ".join(correction_flags[:20])
@@ -126,15 +165,15 @@ def generate_passage_text(
     prompt = f"""You are a {lang_name} language educator writing a graded reader.
 
 Write a coherent {lang_name} passage for CEFR {level} learners.
-Topic: {topic}
-{genre_line}{meta["length"]} Write enough for a real reading session.
+Topic: {shown_topic}
+{genre_line}{length_line} {session_line}
 
 GRAMMAR CONSTRAINTS FOR {level}:
 {rules["prompt_constraints"]}
 
 Prefer lemmas from this in-band sample (you may use other {level}-appropriate words too):
 {sample}
-{known_line}
+{known_line}{reuse_line}{news_line}
 RULES:
 1. The title and "text" field are ONLY {lang_name}.
 2. The passage must be a complete, readable story or article with a beginning and end.

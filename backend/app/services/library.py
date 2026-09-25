@@ -13,9 +13,11 @@ from app.services.learner import (
     list_stars,
     pick_next_id,
     read_ids,
+    recent_taps,
     seen_lemmas,
     tokens_from_row,
 )
+from app.services.news import news_notice, saved_news_ids
 
 
 def list_library(
@@ -36,18 +38,26 @@ def list_library(
     )
     rows = [r for r in rows if calibration_passed(r)]
     placement = DEFAULT_LEVEL
+    placed = True
     seen: set[str] = set()
     already_read: set[str] = set()
+    tapped: set[str] = set()
     words = []
     if identity and identity.can_persist:
         learner = get_learner(db, identity, language)
-        if learner is not None:
-            placement = learner.level
         seen = seen_lemmas(db, identity, language)
         already_read = read_ids(db, identity)
+        tapped = set(recent_taps(db, identity, language))
         words = list_stars(db, identity, language)
+        if learner is None:
+            placed = False
+        else:
+            placement = learner.level
+            placed = bool(getattr(learner, "placed", 0)) or bool(already_read)
 
-    next_id = pick_next_id(db, language, placement, already_read)
+    next_id = pick_next_id(
+        db, language, placement, already_read, tapped=tapped
+    )
     items: list[LibraryItem] = []
     for row in rows:
         tokens = tokens_from_row(row)
@@ -73,6 +83,9 @@ def list_library(
                 chapter_index=getattr(row, "chapter_index", None),
                 has_audio=bool(getattr(row, "audio_url", None)),
                 new_lemma_pct=pct,
+                source_name=getattr(row, "source_name", None),
+                source_url=getattr(row, "source_url", None),
+                source_date=getattr(row, "source_date", None),
             )
         )
     items.sort(
@@ -84,11 +97,24 @@ def list_library(
             -it.created_at.timestamp() if it.created_at else 0,
         )
     )
+    saved_news: set[str] = set()
+    notice = None
+    if identity and identity.can_persist and placed:
+        saved_news = saved_news_ids(db, identity, language)
+        notice = news_notice(db, language, placement, already_read, saved_news)
+    featured_id = notice.passage_id if notice is not None else None
+    items = [
+        item
+        for item in items
+        if item.genre != "news" or (item.id in saved_news and item.id != featured_id)
+    ]
     return LibraryResponse(
         language=language,  # type: ignore[arg-type]
         placement=placement,  # type: ignore[arg-type]
+        placed=placed,
         next_id=next_id,
         seen_lemmas=len(seen),
         items=items,
         words=words,
+        news_notice=notice,
     )

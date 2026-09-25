@@ -1,6 +1,6 @@
 # NLP and CEFR calibration
 
-Levla’s differentiator is that CEFR is a **ruleset plus an analyzer**, not a prompt slogan.
+Lociros’s differentiator is that CEFR is a **ruleset plus an analyzer**, not a prompt slogan.
 
 ```
 topic + CEFR + genre + language
@@ -69,7 +69,7 @@ Dispatcher: `morph.py` → `analyze_text` / `analyze_word`.
 - A token is a word iff it contains Cyrillic (`[А-Яа-яЁё]`).
 - **pymorphy3** supplies lemma (lowercased) and tags. Mapped to:
 
-| pymorphy | Levla |
+| pymorphy | Lociros |
 | -------- | ----- |
 | case `nomn/gent/datv/accs/ablt/loct/voct` (+ gen2, acc2, loc2) | `nom / gen / dat / acc / ins / prep` (vocative → nom) |
 | tense `pres/past/futr` | `pres / past / fut` |
@@ -86,7 +86,7 @@ POS is left as pymorphy (`NOUN`, `VERB`, `INFN`, `ADJF`, `PRTF`, `GRND`, …). C
 - A token is a word iff it contains a Latin letter.
 - UD morph features map onto `MorphInfo`:
 
-| spaCy UD | Levla |
+| spaCy UD | Lociros |
 | -------- | ----- |
 | tense `Pres/Past/Fut/Imp` | `pres / past / fut / impf` |
 | mood `Ind/Imp/Sub/Cnd` | `indc / impr / subj / cond` |
@@ -102,7 +102,7 @@ POS is left as UD (`NOUN`, `VERB`, `ADJ`, `AUX`, `ADP`, …). Proper nouns set `
 - A token is a word iff it contains an Arabic letter. Lemmas are undiacritized and alef-normalized (`أإآٱ` → `ا`, `ى` → `ي`).
 - CAMeL features map onto `MorphInfo`:
 
-| CAMeL | Levla |
+| CAMeL | Lociros |
 | ----- | ----- |
 | asp `p/i/c` | tense `past / pres`; aspect `perf / impf`; mood `impr` when asp is `c` |
 | mod `i/s/j` | mood `indc / subj / juss` |
@@ -131,7 +131,7 @@ POS is mapped toward UD (`NOUN`, `VERB`, `ADJ`, `ADP`, `PART`, …). Proper noun
 
 `data/kanji/ja.json` (~13k characters): on, kun, meanings, strokes, JLPT N-level, school grade, newspaper frequency, Kangxi radical, KRADFILE parts. Built by `scripts/build_kanji.py` from KANJIDIC2 (the same EDRDG data Jisho uses). Jisho’s public API is word search only and has no kanji endpoint.
 
-For each kanji in the surface, Levla tries to consume a **prefix of the remaining word reading** using on/kun candidates, including:
+For each kanji in the surface, Lociros tries to consume a **prefix of the remaining word reading** using on/kun candidates, including:
 
 - dakuten (か→が)
 - handakuten (は→ぱ)

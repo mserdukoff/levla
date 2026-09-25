@@ -1,7 +1,8 @@
+import { useSyncExternalStore } from "react";
 import type { LangCode } from "./types";
 
-const DEVICE_KEY = "levla.device_id";
-const LANG_KEY = "levla.language";
+const DEVICE_KEY = "lociros.device_id";
+const LANG_KEY = "lociros.language";
 
 export function getDeviceId(): string {
   if (typeof window === "undefined") return "ssr-device";
@@ -24,7 +25,17 @@ export function saveLanguage(language: LangCode): void {
   window.localStorage.setItem(LANG_KEY, language);
 }
 
-const GRAMMAR_KEY = "levla.grammar";
+function subscribeStorage(onChange: () => void): () => void {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+/** The saved language, rendered as "ja" during hydration so server and client markup match. */
+export function useStoredLanguage(): LangCode {
+  return useSyncExternalStore(subscribeStorage, loadLanguage, () => "ja");
+}
+
+const GRAMMAR_KEY = "lociros.grammar";
 
 export function loadGrammarColors(): boolean {
   if (typeof window === "undefined") return false;
@@ -36,7 +47,7 @@ export function saveGrammarColors(on: boolean): void {
   window.localStorage.setItem(GRAMMAR_KEY, on ? "1" : "0");
 }
 
-const FURIGANA_KEY = "levla.furigana";
+const FURIGANA_KEY = "lociros.furigana";
 
 export function loadFurigana(): boolean {
   if (typeof window === "undefined") return false;
@@ -48,7 +59,7 @@ export function saveFurigana(on: boolean): void {
   window.localStorage.setItem(FURIGANA_KEY, on ? "1" : "0");
 }
 
-const FADE_KEY = "levla.fade";
+const FADE_KEY = "lociros.fade";
 
 export function loadFadeKnown(): boolean {
   if (typeof window === "undefined") return true;

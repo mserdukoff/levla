@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from sqlalchemy.orm import Session
 
 from app.models.db import PassageRow, SessionLocal, SHELF_PUBLIC
@@ -474,6 +476,13 @@ def seed_library(db: Session | None = None) -> int:
                     row.translation = translation
                 if getattr(row, "shelf_status", None) != SHELF_PUBLIC:
                     row.shelf_status = SHELF_PUBLIC
+                from app.services.comprehension import questions_from_english, stale_comprehension
+
+                english = translation or getattr(row, "translation", None)
+                if english and stale_comprehension(getattr(row, "comprehension_json", None)):
+                    built = questions_from_english(english, item.get("topic") or "")
+                    if built:
+                        row.comprehension_json = json.dumps(built, ensure_ascii=False)
                 db.commit()
                 continue
             if row is not None:
@@ -489,6 +498,13 @@ def seed_library(db: Session | None = None) -> int:
                 text=item["text"],
                 translation=translation,
             )
+            if translation:
+                from app.services.comprehension import questions_from_english
+
+                built = questions_from_english(translation, item.get("topic") or "")
+                if built:
+                    saved.comprehension_json = json.dumps(built, ensure_ascii=False)
+                    db.commit()
             existing_rows[key] = saved
             added += 1
     finally:

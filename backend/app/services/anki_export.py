@@ -41,18 +41,18 @@ def apkg_bytes(db: Session, identity: Identity, language: str) -> bytes:
                     "context": row["context"],
                 }
             )
-        zf.writestr("levla.csv", csv_buf.getvalue())
+        zf.writestr("lociros.csv", csv_buf.getvalue())
         notes = [
             {
                 "fields": [r["lemma"], r["reading"], r["gloss"], r["context"]],
-                "tags": ["levla", language],
+                "tags": ["lociros", language],
             }
             for r in rows
         ]
         zf.writestr(
             "notes.json",
             json.dumps(
-                {"name": "Levla", "flds": ["Lemma", "Reading", "Gloss", "Context"], "notes": notes},
+                {"name": "Lociros", "flds": ["Lemma", "Reading", "Gloss", "Context"], "notes": notes},
                 ensure_ascii=False,
                 indent=2,
             ),

@@ -7,12 +7,15 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import jwt
+from uuid import UUID
+
 from fastapi import HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.db import MagicLinkRow, UserRow
+from app.models.db import MagicLinkRow, SessionLocal, UserRow
 from app.services.identity import merge_guest_into_user, valid_device_id
+from app.services.supabase_jwt import auth_id_from_claims, decode_supabase_claims
 
 logger = logging.getLogger(__name__)
 
@@ -63,14 +66,74 @@ def clear_auth_cookie(response: Response) -> None:
     response.delete_cookie(settings.auth_cookie_name, **_cookie_kwargs())
 
 
+def _token_from_request(request: Request) -> str | None:
+    auth = request.headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        token = auth[7:].strip()
+        if token:
+            return token
+    cookie = request.cookies.get(settings.auth_cookie_name)
+    return cookie or None
+
+
+def get_or_create_from_auth(
+    db: Session,
+    auth_id: UUID,
+    email: str | None,
+    display_name: str | None,
+) -> UserRow:
+    row = db.query(UserRow).filter(UserRow.auth_id == auth_id).one_or_none()
+    normalized = email.strip().lower() if email else None
+    changed = False
+    if row is None and normalized:
+        row = db.query(UserRow).filter(UserRow.email == normalized).one_or_none()
+        if row is not None and row.auth_id is None:
+            row.auth_id = auth_id
+            changed = True
+    if row is None:
+        row = UserRow(
+            auth_id=auth_id,
+            email=normalized,
+            display_name=display_name or (normalized.split("@")[0] if normalized else None),
+        )
+        db.add(row)
+        changed = True
+    else:
+        if normalized and not row.email:
+            row.email = normalized
+            changed = True
+        if display_name and not row.display_name:
+            row.display_name = display_name
+            changed = True
+    if changed:
+        db.commit()
+        db.refresh(row)
+    return row
+
+
 def user_id_from_request(request: Request) -> int | None:
-    token = request.cookies.get(settings.auth_cookie_name)
-    if not token:
-        auth = request.headers.get("Authorization") or ""
-        if auth.lower().startswith("bearer "):
-            token = auth[7:].strip()
+    token = _token_from_request(request)
     if not token:
         return None
+    claims = decode_supabase_claims(token)
+    if claims:
+        auth_id = auth_id_from_claims(claims)
+        if auth_id is None:
+            return None
+        email = claims.get("email") if isinstance(claims.get("email"), str) else None
+        display = None
+        meta = claims.get("user_metadata")
+        if isinstance(meta, dict):
+            for key in ("full_name", "name"):
+                value = meta.get(key)
+                if isinstance(value, str) and value.strip():
+                    display = value.strip()
+                    break
+        db = SessionLocal()
+        try:
+            return get_or_create_from_auth(db, auth_id, email, display).id
+        finally:
+            db.close()
     return decode_token(token)
 
 

@@ -1,0 +1,14 @@
+---
+description: Product name is Lociros; hosting
+alwaysApply: true
+---
+
+# Product name
+
+This app is **Lociros**. Use that name in UI copy, docs, comments, logs, and conversation.
+
+`levla` is the git/repo/folder name only. Do not call the product Levla or Grammario unless referring to those historical names.
+
+# Hosting
+
+Production is Vercel (Next.js) + Supabase (Postgres). FastAPI is a long-running Docker process. A Lightsail 4 GB instance is the AWS option that fits; do not add RDS, S3, ECS, or an ALB unless explicitly requested. Do not run FastAPI on Vercel.

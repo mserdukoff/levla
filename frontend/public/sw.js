@@ -1,9 +1,7 @@
-const CACHE = "levla-offline-v2";
+const CACHE = "lociros-offline-v2";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(["/", "/library", "/review", "/manifest.json"])),
-  );
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/manifest.json"])));
   self.skipWaiting();
 });
 
@@ -20,9 +18,17 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.pathname.startsWith("/api/")) {
+  if (url.pathname.startsWith("/api/") || req.mode === "navigate" || req.destination === "document") {
     event.respondWith(
-      fetch(req).catch(() => caches.match(req)).then((res) => res || fetch(req)),
+      fetch(req)
+        .then((res) => {
+          if (req.mode === "navigate" || req.destination === "document") {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then((cached) => cached || Promise.reject())),
     );
     return;
   }

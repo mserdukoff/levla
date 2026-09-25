@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Art } from "@/components/landing/art";
 import { StrokeOrderButton } from "@/components/stroke-order";
 import { fetchReview, submitReview } from "@/lib/api";
 import { loadLanguage } from "@/lib/device";
@@ -145,9 +146,12 @@ export default function ReviewPage() {
         <span className="tnum text-[11px] uppercase tracking-[0.16em] text-ink/45">{status}</span>
       </header>
 
-      <section className="mt-12">
-        <p className="t-kicker">Saved words</p>
-        <h1 className="t-heading mt-4 text-[2rem] text-ink sm:text-[2.5rem]">Review</h1>
+      <section className="mt-12 flex items-end justify-between gap-6">
+        <div>
+          <p className="t-eyebrow">Saved words</p>
+          <h1 className="t-heading mt-4 text-[2rem] text-ink sm:text-[2.5rem]">Review</h1>
+        </div>
+        <Art src="card-catalog" className="-mb-4 -mt-10 hidden w-[13rem] sm:block" />
       </section>
 
       {error ? <p className="mt-8 text-sm text-terracotta">{error}</p> : null}

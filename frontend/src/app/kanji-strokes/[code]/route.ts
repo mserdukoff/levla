@@ -4,7 +4,7 @@ import { parseKanjiVg } from "@/lib/kanjivg";
 export const revalidate = 86400;
 
 const CODE = /^[0-9a-f]{5}$/;
-const UA = "Levla/1.0 (kanji stroke-order; https://github.com/KanjiVG/kanjivg)";
+const UA = "Lociros/1.0 (kanji stroke-order; https://github.com/KanjiVG/kanjivg)";
 
 const SOURCES = (code: string) => [
   `https://cdn.jsdelivr.net/gh/KanjiVG/kanjivg@master/kanji/${code}.svg`,

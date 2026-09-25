@@ -3,11 +3,15 @@ import {
   demoFeedback,
   demoLibrary,
   demoPassageStats,
+  demoRecordTap,
   demoReview,
+  demoSaveNews,
   demoStarWord,
+  demoSubmitPlacement,
   demoSubmitReview,
   demoUnstarWord,
 } from "./demo-store";
+import { PLACEMENT } from "./placement";
 import type {
   CefrLevel,
   FeedbackRating,
@@ -33,6 +37,7 @@ export async function fetchMe(): Promise<MeResponse> {
     show_arabic: true,
     generate_remaining: null,
     require_auth: false,
+    admin: false,
   };
 }
 
@@ -84,6 +89,14 @@ export async function starWord(body: {
   return demoStarWord(body);
 }
 
+export async function saveNews(body: {
+  passage_id: string;
+  language: LangCode;
+  saved: boolean;
+}): Promise<{ saved: boolean }> {
+  return { saved: demoSaveNews(body.passage_id, body.language, body.saved) };
+}
+
 export async function unstarWord(lemma: string, language: LangCode): Promise<void> {
   demoUnstarWord(lemma, language);
 }
@@ -96,8 +109,30 @@ export async function submitReview(cardId: number, rating: "again" | "hard" | "g
   return demoSubmitReview(cardId, rating);
 }
 
-export async function submitComprehension(_passageId: string, _answers: number[]) {
-  return { ok: true, correct: 0, total: 0 };
+export async function submitComprehension(passageId: string, answers: number[]) {
+  const passage = getDemoPassage(passageId);
+  const questions = passage?.comprehension ?? [];
+  const correct = answers.filter((answer, index) => questions[index] && answer === questions[index].answer_index).length;
+  return { ok: true, correct, total: questions.length };
+}
+
+export async function fetchPlacement(language: LangCode) {
+  const spec = PLACEMENT[language];
+  return {
+    language,
+    title: spec.title,
+    text: spec.tokens.map((tok) => tok.text + (tok.ws ?? "")).join(""),
+    tokens: spec.tokens,
+    questions: spec.questions,
+  };
+}
+
+export async function submitPlacement(language: LangCode, answers: number[]) {
+  return demoSubmitPlacement(language, answers);
+}
+
+export function recordTap(lemma: string, language: LangCode) {
+  demoRecordTap(language, lemma);
 }
 
 export async function recordEvent(_kind: string, _passageId?: string) {}

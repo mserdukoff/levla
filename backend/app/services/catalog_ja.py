@@ -813,35 +813,19 @@ def _series() -> list[dict]:
 
 
 def default_comprehension(item: dict) -> list[dict]:
-    level = item["level"]
-    title = item["title"]
+    from app.services.comprehension import questions_from_english
+
+    built = questions_from_english(item.get("translation") or "", item.get("topic") or "")
+    if built:
+        return built
+    topic = item.get("topic") or item["title"]
     return [
         {
             "id": "q1",
-            "prompt": f"This text is labeled {level}. What is the title?",
-            "choices": [title, "A train timetable", "A recipe"],
+            "prompt": "What is this passage about?",
+            "choices": [topic, "a train timetable", "a recipe"],
             "answer_index": 0,
-        },
-        {
-            "id": "q2",
-            "prompt": "Where does most of the scene likely happen?",
-            "choices": [
-                item["topic"],
-                "outer space",
-                "a courtroom speech",
-            ],
-            "answer_index": 0,
-        },
-        {
-            "id": "q3",
-            "prompt": "What should you do if the grammar feels too hard?",
-            "choices": [
-                "Rate the passage too hard so the next text steps down",
-                "Ignore the level badge",
-                "Generate an unconstrained chat reply",
-            ],
-            "answer_index": 0,
-        },
+        }
     ]
 
 
@@ -876,8 +860,12 @@ def seed_catalog(db: Session | None = None) -> int:
                     row.series_id = item["series_id"]
                     row.chapter_index = item.get("chapter_index")
                     changed = True
-                if not getattr(row, "comprehension_json", None):
-                    row.comprehension_json = json.dumps(default_comprehension(item))
+                from app.services.comprehension import stale_comprehension
+
+                if stale_comprehension(getattr(row, "comprehension_json", None)):
+                    row.comprehension_json = json.dumps(
+                        default_comprehension(item), ensure_ascii=False
+                    )
                     changed = True
                 new_en = item.get("translation")
                 if (

@@ -6,7 +6,7 @@
 | ----- | ------ |
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4 |
 | Backend | FastAPI (sync), SQLAlchemy 2, Pydantic v2 |
-| Database | SQLite locally; Postgres 16 in Compose and on AWS |
+| Database | SQLite locally; Postgres 16 in Compose; Supabase Postgres in production |
 | Russian NLP | [razdel](https://github.com/natasha/razdel) tokenize + [pymorphy3](https://github.com/no-plagiarism/pymorphy3) lemma/tag |
 | Italian NLP | [spaCy](https://spacy.io/) `it_core_news_md` |
 | Arabic NLP | [CAMeL Tools](https://github.com/CAMeL-Lab/camel_tools) MSA morphology + MLE disambiguator |
@@ -14,7 +14,7 @@
 | LLM | OpenRouter (`openai/gpt-4o-mini` by default) via the OpenAI Python SDK |
 | Runtime | Python 3.12+, Node 20+ (frontend Docker image uses Node 22) |
 | Packaging | `docker-compose.yml`: frontend `:3000`, backend `:8000`, Postgres, volume `levla-audio` |
-| Production | ECS Fargate + ALB + RDS + S3 — see [aws.md](./aws.md) |
+| Production | Vercel (Next.js) + Supabase (Postgres) + FastAPI on a Docker host — see [deploy.md](./deploy.md) |
 
 The FastAPI app is **synchronous**. NLP analyzers and SQLite are simpler without an async session. Generation is a blocking request that can take 20–40 seconds; there is no job queue or streaming.
 
@@ -35,10 +35,10 @@ The FastAPI app is **synchronous**. NLP analyzers and SQLite are simpler without
                                                             OpenRouter (optional)
 ```
 
-- The browser talks to `/api/...` on the Next origin. `frontend/src/app/api/[...path]/route.ts` proxies those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`) at runtime. On Vercel, `NEXT_PUBLIC_DEMO=1` skips the proxy: the shelf and reader use a static catalog and `localStorage`.
+- The browser talks to `/api/...` on the Next origin. `frontend/src/app/api/[...path]/route.ts` proxies those paths to `NLP_BACKEND_URL` (default `http://127.0.0.1:8000`) at runtime. Set `NEXT_PUBLIC_DEMO=1` to skip the proxy: the shelf and reader use a static catalog and `localStorage`.
 - Stroke-order diagrams are a frontend-only route, `GET /kanji-strokes/{hex}`, which fetches a [KanjiVG](https://kanjivg.tagaini.net/) SVG and returns parsed path data. It does not go through the FastAPI proxy.
 - Passage pages are **dynamic** (`force-dynamic`, `cache: "no-store"`). The Next server fetches `${NLP_BACKEND_URL}/api/passages/:id` at request time so the first paint already has tokens.
-- CORS on FastAPI allows localhost by default and always includes `PUBLIC_BASE_URL`.
+- CORS on FastAPI allows localhost by default and always includes `PUBLIC_BASE_URL`. Optional `CORS_ORIGIN_REGEX` covers Vercel preview URLs.
 - Seed library + tap-to-gloss work **without** an OpenRouter key. Generation, LLM gloss fill, and translation require `OPENROUTER_API_KEY`.
 
 ## Repository layout
@@ -118,16 +118,17 @@ SQLite is created on startup. `init_db()`:
 | `learner_lemmas` | Content-word lemmas seen after finishing a text |
 | `learner_stars` | Lemmas saved from the gloss |
 | `learner_reads` | Passages already read, unique on `(device_id, passage_id)` |
+| `users` | App profile. `auth_id` uniquely references `auth.users.id` |
 
 `passages.id` is a UUID string. Tokens and calibration are stored as JSON text, not normalized rows — the reader always loads a complete analyzed passage.
 
-Default local URL: `sqlite:///./backend/levla.db`. Compose sets `postgresql://levla:levla@postgres:5432/levla`. AWS uses RDS with `DB_SSLMODE=require`.
+Default local URL: `sqlite:///./backend/levla.db`. Compose sets `postgresql://levla:levla@postgres:5432/levla`. Production uses the Supabase **session pooler** (`sslmode=require`).
 
 ## Request flow
 
 ### Shelf load
 
-1. Client reads `levla.language` (default `ja`) and `levla.device_id` from `localStorage`.
+1. Client reads `lociros.language` (default `ja`) and `lociros.device_id` from `localStorage`.
 2. `GET /api/library?language=ja|ru` with `X-Device-Id`.
 3. Backend loads placement, seen lemmas, read IDs; scores new vs. known tokens per passage; picks `next_id`.
 4. Client splits items into **Continue** (the `next_id` card) and **The shelf**.
@@ -180,13 +181,14 @@ Client-only modules (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`) use `"use c
 | -------- | ------- | ------- |
 | `OPENROUTER_API_KEY` | empty | Required for `/generate`, LLM gloss fill, and translation |
 | `LLM_MODEL` | `openai/gpt-4o-mini` | OpenRouter model id |
-| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. `postgres://` is rewritten to `postgresql+psycopg2://` |
-| `DB_SSLMODE` | empty | Set `require` for RDS |
+| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. `postgres://` is rewritten to `postgresql+psycopg2://`. Supabase hosts get `sslmode=require` if unset |
+| `DB_SSLMODE` | empty | Set `require` for hosted Postgres; inferred for Supabase URLs |
 | `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated. `PUBLIC_BASE_URL` is always included |
+| `CORS_ORIGIN_REGEX` | empty | Optional regex, e.g. `https://.*\.vercel\.app` |
 | `APP_ENV` | `development` | `production` requires a real `JWT_SECRET` and sets `Secure` cookies |
 | `JWT_SECRET` | `dev-change-me` | Signs auth cookies |
 | `PUBLIC_BASE_URL` | `http://localhost:3000` | Public origin (OAuth, CORS, OpenRouter referer) |
-| `S3_AUDIO_BUCKET` | empty | Shared MP3 storage for multi-task deploys |
+| `SUPABASE_URL` | empty | `https://PROJECT.supabase.co`. Inferred from a direct `db.*.supabase.co` database host |
 
 Data files default to `{repo}/data`. Override with `DATA_DIR`.
 
@@ -195,8 +197,11 @@ Data files default to `{repo}/data`. Override with `DATA_DIR`.
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
 | `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Backend origin for `/api` proxy and SSR passage fetch (runtime) |
+| `NEXT_PUBLIC_SUPABASE_URL` | empty | Supabase project URL for Auth |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | empty | Publishable key (never the secret). `NEXT_PUBLIC_SUPABASE_ANON_KEY` also works |
+| `NEXT_PUBLIC_DEMO` | empty | Static catalog + `localStorage`. Set to `1` at build time to skip FastAPI |
 
-The frontend Docker image defaults `NLP_BACKEND_URL=http://backend:8000`. Compose and ECS can override it without rebuilding.
+The frontend Docker image defaults `NLP_BACKEND_URL=http://backend:8000`. Compose can override it without rebuilding. On Vercel, set `NLP_BACKEND_URL` to the public FastAPI origin.
 
 ## Docker
 
@@ -208,11 +213,11 @@ docker compose up --build
 - Backend: http://localhost:8000 (`/health`, `/api/health/ready`, `/docs`)
 - `backend/.env` must exist
 - Postgres: volume `levla-pg`
-- Audio: volume `levla-audio` (or S3 when `S3_AUDIO_BUCKET` is set)
+- Audio: volume `levla-audio`
 
 Backend image copies `backend/` **and** `data/` so lexicons are available at `/app/data`. Frontend image is a standalone Next.js build (`deps` → `builder` → `runner`).
 
-AWS (ECS Fargate, ALB path routing, RDS, S3) is documented in [aws.md](./aws.md). Task definition templates live in `infra/aws/`.
+Production (Vercel + Supabase + a Docker API host) is documented in [deploy.md](./deploy.md).
 
 ## Tests
 
@@ -255,8 +260,8 @@ Grammar and vocab JSON are loaded with `lru_cache`. Restart the backend after ed
 
 ## Limitations that follow from the architecture
 
-- **SQLite** is fine for a single-user demo. Compose and AWS use Postgres.
-- **Generation is async.** `POST /generate` enqueues a job; worker threads process it. Scale with `GENERATE_WORKERS` per task and/or a dedicated `worker` ECS service. ALB idle timeout must still be 120s for translation and other long calls.
-- **No accounts.** Clearing site data resets placement and seen lemmas. There is no sync across devices. `feedback` rows are not device-scoped.
+- **SQLite** is fine for a single-user demo. Compose uses local Postgres. Production uses Supabase.
+- **Generation is async.** `POST /generate` enqueues a job; worker threads process it. Scale with `GENERATE_WORKERS` per process and/or a dedicated worker container.
+- **Accounts are optional.** Guest progress is a device UUID. After Supabase sign-in, FastAPI merges that device into `public.users`. `feedback` rows are not device-scoped.
 - **Soft fail.** A passage that still violates the ruleset is stored and readable, with a warning. Calibration is a gate with a retry, not a hard reject.
 - **Analyzer errors** become CEFR errors: the wrong lemma or POS will flag or miss constructions.

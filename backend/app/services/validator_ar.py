@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.models.schemas import Token
 from app.services.data import grammar_rules, level_rank, vocab_bands
-from app.services.validator import ValidationResult
+from app.services.validator import ValidationResult, vocab_exempt
 
 CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV", "PROPN"}
 
@@ -177,7 +177,7 @@ def validate_tokens_ar(tokens: list[Token], level: str) -> ValidationResult:
             content_n += 1
             band = bands.get(lemma) or bands.get(m.lemma)
             if band is None or level_rank(band) > cap:
-                if m.pos == "PROPN" or m.pos_detail == "proper-noun":
+                if vocab_exempt(tok) or m.pos == "PROPN" or m.pos_detail == "proper-noun":
                     continue
                 if tok.text[:1].isupper() and not _is_sentence_initial(tokens, i):
                     continue

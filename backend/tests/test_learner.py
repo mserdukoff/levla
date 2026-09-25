@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -117,6 +119,33 @@ def test_just_right_ingests_without_moving_level():
     read = next(item for item in library.items if item.id == first.id)
     assert read.read
     assert library.seen_lemmas > 0
+
+
+def test_pick_next_prefers_a_tapped_lemma_at_the_same_level():
+    db = _session()
+    with_book = save_authored_passage(
+        db,
+        language="ja",
+        level="A2",
+        topic="book",
+        genre="daily_life",
+        title="本",
+        text="これは本です。本は新しいです。",
+    )
+    without = save_authored_passage(
+        db,
+        language="ja",
+        level="A2",
+        topic="home",
+        genre="daily_life",
+        title="家",
+        text="母は家にいます。水を飲みます。",
+    )
+    with_book.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    without.created_at = datetime(2026, 9, 1, tzinfo=timezone.utc)
+    db.commit()
+    nxt = pick_next_id(db, "ja", "A2", set(), tapped={"本"})
+    assert nxt == with_book.id
 
 
 def test_star_and_unstar_lemma():

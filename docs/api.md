@@ -2,26 +2,35 @@
 
 Base path: `/api`. FastAPI OpenAPI: `http://localhost:8000/docs` when the backend is running.
 
-The Next.js origin proxies `/api/*` to the backend at runtime. Passage SSR bypasses the proxy and calls `NLP_BACKEND_URL` directly. On AWS, the load balancer can send `/api/*` to FastAPI instead.
+The Next.js origin proxies `/api/*` to the backend at runtime. Passage SSR bypasses the proxy and calls `NLP_BACKEND_URL` directly. In production, Vercel holds that proxy; FastAPI is a separate public origin.
 
 ## Headers
 
 | Header | Used by | Notes |
 | ------ | ------- | ----- |
-| `X-Device-Id` | `GET /library`, `GET /passages/{id}/stats`, `POST /feedback`, `GET/POST/DELETE /words`, `POST /generate` (sent by the client; generate does not read it) | Must match `^[A-Za-z0-9_-]{8,64}$`. Invalid or missing → treated as anonymous (default placement A2, no lemma/read history). The browser stores a UUID in `localStorage` as `levla.device_id`. |
+| `X-Device-Id` | `GET /library`, `GET /passages/{id}/stats`, `POST /feedback`, `GET/POST/DELETE /words`, `POST /generate` (sent by the client; generate does not read it) | Must match `^[A-Za-z0-9_-]{8,64}$`. Invalid or missing → treated as anonymous (default placement A2, no lemma/read history). The browser stores a UUID in `localStorage` as `lociros.device_id`. |
+| `Authorization: Bearer` | signed-in requests | Supabase Auth access token. The Next.js `/api` proxy attaches it from the session cookie. FastAPI verifies it against the project's JWKS. |
 | `Content-Type: application/json` | POST bodies | |
 
-CORS: `CORS_ORIGINS` (default localhost:3000). Methods and headers are open (`*`).
+CORS: `CORS_ORIGINS` (default localhost:3000). `PUBLIC_BASE_URL` is always included. Optional `CORS_ORIGIN_REGEX` for Vercel preview hosts. Methods and headers are open (`*`).
 
 ## Endpoints
 
 | Method | Path | Body / query | Success |
 | ------ | ---- | ------------ | ------- |
-| `GET` | `/health` | | `{ "ok": true, "name": "levla" }` |
-| `GET` | `/health/ready` | | `{ "ok": true, "name": "levla", "db": true }` — 500 if the database is down |
+| `GET` | `/health` | | `{ "ok": true, "name": "lociros" }` |
+| `GET` | `/health/ready` | | `{ "ok": true, "name": "lociros", "db": true }` — 500 if the database is down |
+| `GET` | `/me` | Bearer token | `MeResponse` (`authenticated`, `email`, `require_auth`, …) |
+| `DELETE` | `/me` | Bearer token | Deletes the account and learner rows |
+| `POST` | `/auth/session` | Bearer token + `X-Device-Id` | Merges guest device progress into the signed-in user |
+| `POST` | `/auth/logout` | | Clears the legacy FastAPI cookie. Supabase sign-out happens in the browser |
 | `POST` | `/generate` | `{ level, topic, genre?, language }` | **200** cached `PassageResponse`, or **202** `{ job_id, status }` |
 | `GET` | `/generate/{job_id}` | `X-Device-Id` | `GenerateJobResponse` — poll until `completed` or `failed` |
-| `GET` | `/library?language=ja\|ru\|it\|ar` | `X-Device-Id` | `LibraryResponse` |
+| `GET` | `/library?language=ja\|ru\|it\|ar` | `X-Device-Id` | `LibraryResponse` (`placed`, `news_notice`, item `source_name` / `source_date`) |
+| `GET` | `/placement?language=ja\|ru\|it\|ar` | | Placement passage and questions, without the answer key |
+| `POST` | `/placement` | `{ language, answers }` + `X-Device-Id` | `{ level, correct, total, placed }` |
+| `POST` | `/taps` | `{ lemma, language, passage_id? }` + `X-Device-Id` | `{ "ok": true }` |
+| `POST` | `/comprehension` | `{ passage_id, answers }` + `X-Device-Id` | `{ correct, total }` |
 | `GET` | `/passages/{id}` | | `PassageResponse` |
 | `GET` | `/passages/{id}/translation` | | `{ passage_id, translation }` |
 | `GET` | `/passages/{id}/stats` | `X-Device-Id` | `PassageStats` |

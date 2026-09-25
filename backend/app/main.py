@@ -40,19 +40,26 @@ async def lifespan(_app: FastAPI):
     init_db()
     start_workers()
     logger.info(
-        "Levla backend ready env=%s db=%s workers=%s",
+        "Lociros backend ready env=%s db=%s workers=%s",
         settings.app_env,
-        "sqlite" if settings.sqlalchemy_url().startswith("sqlite") else "postgres",
+        (
+            "sqlite"
+            if settings.sqlalchemy_url().startswith("sqlite")
+            else "supabase"
+            if settings.is_supabase
+            else "postgres"
+        ),
         settings.generate_workers,
     )
     yield
     stop_workers()
 
 
-app = FastAPI(title="Levla", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Lociros", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
+    allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,7 +74,7 @@ async def attach_user(request: Request, call_next):
 
 @app.get("/health")
 def root_health():
-    return {"ok": True, "name": "levla"}
+    return {"ok": True, "name": "lociros"}
 
 
 app.include_router(router)

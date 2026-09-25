@@ -1,6 +1,7 @@
 import logging
 import time
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy import (
     DateTime,
@@ -10,14 +11,21 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Uuid,
     create_engine,
     inspect,
     text,
 )
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
+from sqlalchemy.pool import NullPool
 
-from app.core.config import BACKEND_DIR, settings
+from app.core.config import (
+    BACKEND_DIR,
+    is_supabase_url,
+    is_transaction_pooler,
+    settings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +60,9 @@ class PassageRow(Base):
     chapter_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     comprehension_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     topic_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    source_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    source_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -79,6 +90,7 @@ class UserRow(Base):
     email: Mapped[str | None] = mapped_column(String(320), unique=True, nullable=True)
     google_sub: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    auth_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -108,7 +120,43 @@ class LearnerRow(Base):
     level: Mapped[str] = mapped_column(String(8), default="A2")
     consecutive_up: Mapped[int] = mapped_column(Integer, default=0)
     consecutive_down: Mapped[int] = mapped_column(Integer, default=0)
+    placed: Mapped[int] = mapped_column(Integer, default=0)
     updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
+class LearnerTapRow(Base):
+    """Lemmas opened in the gloss. Separate from lemmas finished in a passage."""
+
+    __tablename__ = "learner_taps"
+    __table_args__ = (UniqueConstraint("device_id", "language", "lemma"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    language: Mapped[str] = mapped_column(String(8))
+    lemma: Mapped[str] = mapped_column(String(120))
+    seen_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+
+
+class LearnerNewsSaveRow(Base):
+    """A learner chose to keep a shared news passage on their shelf."""
+
+    __tablename__ = "learner_news_saves"
+    __table_args__ = (UniqueConstraint("device_id", "passage_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(64), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    language: Mapped[str] = mapped_column(String(8))
+    passage_id: Mapped[str] = mapped_column(String(36), index=True)
+    saved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
     )
@@ -204,6 +252,27 @@ class TrialEventRow(Base):
     )
 
 
+class NewsIssueRow(Base):
+    """One checked news passage per language, band, and UTC day. Shared across learners."""
+
+    __tablename__ = "news_issues"
+    __table_args__ = (UniqueConstraint("issue_date", "language", "level"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    issue_date: Mapped[str] = mapped_column(String(10), index=True)
+    language: Mapped[str] = mapped_column(String(8), index=True)
+    level: Mapped[str] = mapped_column(String(8))
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    passage_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    source_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    source_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    headline: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+
 class GenerateQuotaRow(Base):
     __tablename__ = "generate_quota"
     __table_args__ = (UniqueConstraint("account_key", "year_month"),)
@@ -242,13 +311,19 @@ class GenerationJobRow(Base):
 
 
 _DB_URL = settings.sqlalchemy_url()
-connect_args = {}
+connect_args: dict = {}
 engine_kwargs: dict = {"pool_pre_ping": True}
 if _DB_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
+elif is_transaction_pooler(_DB_URL):
+    # Transaction-mode PgBouncer/Supavisor cannot keep session state.
+    engine_kwargs = {"poolclass": NullPool, "pool_pre_ping": True}
+    connect_args["connect_timeout"] = 10
 else:
     engine_kwargs["pool_size"] = settings.db_pool_size
     engine_kwargs["max_overflow"] = settings.db_max_overflow
+    engine_kwargs["pool_recycle"] = settings.db_pool_recycle
+    connect_args["connect_timeout"] = 10
 
 engine = create_engine(_DB_URL, connect_args=connect_args, **engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
@@ -264,11 +339,15 @@ _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("chapter_index", "INTEGER"),
         ("comprehension_json", "TEXT"),
         ("topic_hash", "VARCHAR(64)"),
+        ("source_name", "VARCHAR(120)"),
+        ("source_url", "VARCHAR(500)"),
+        ("source_date", "VARCHAR(32)"),
     ],
     "learners": [
         ("user_id", "INTEGER"),
         ("consecutive_up", "INTEGER DEFAULT 0"),
         ("consecutive_down", "INTEGER DEFAULT 0"),
+        ("placed", "INTEGER DEFAULT 1"),
     ],
     "learner_lemmas": [("user_id", "INTEGER")],
     "learner_stars": [
@@ -281,11 +360,12 @@ _SQLITE_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("device_id", "VARCHAR(64)"),
         ("user_id", "INTEGER"),
     ],
+    "users": [("auth_id", "CHAR(36)")],
 }
 
 
 def wait_for_db(attempts: int = 30, delay: float = 1.0) -> None:
-    """Block until the database accepts connections (RDS / Compose startup)."""
+    """Block until the database accepts connections (Supabase / Compose startup)."""
     last: Exception | None = None
     for i in range(attempts):
         try:
@@ -307,6 +387,13 @@ def _with_advisory_lock(fn) -> None:
     if not _is_postgres():
         fn()
         return
+    if is_transaction_pooler(_DB_URL):
+        logger.warning(
+            "Skipping session advisory lock: DATABASE_URL is a transaction pooler "
+            "(port 6543). Use the Supabase session pooler (port 5432) in production."
+        )
+        fn()
+        return
     with engine.connect() as conn:
         conn.execute(text("SELECT pg_advisory_lock(872314)"))
         conn.commit()
@@ -315,6 +402,64 @@ def _with_advisory_lock(fn) -> None:
         finally:
             conn.execute(text("SELECT pg_advisory_unlock(872314)"))
             conn.commit()
+
+
+APP_TABLES = (
+    "passages",
+    "feedback",
+    "users",
+    "magic_links",
+    "learners",
+    "learner_lemmas",
+    "learner_stars",
+    "learner_reads",
+    "learner_cards",
+    "learner_taps",
+    "learner_news_saves",
+    "trial_events",
+    "generate_quota",
+    "generation_jobs",
+    "news_issues",
+)
+
+
+def lock_down_public_schema(conn) -> None:
+    """Enable RLS and revoke PostgREST roles so the Data API cannot read app tables.
+
+    The FastAPI process connects as the table owner (or postgres), which bypasses
+    RLS. anon / authenticated have no policies, so REST/GraphQL access is denied.
+    """
+    names = set(inspect(conn).get_table_names())
+    for table in APP_TABLES:
+        if table not in names:
+            continue
+        conn.execute(text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
+    conn.execute(
+        text(
+            """
+            DO $$
+            DECLARE
+              r text;
+            BEGIN
+              FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+                  EXECUTE format('REVOKE ALL ON ALL TABLES IN SCHEMA public FROM %I', r);
+                  EXECUTE format('REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM %I', r);
+                  EXECUTE format('REVOKE ALL ON SCHEMA public FROM %I', r);
+                  EXECUTE format(
+                    'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM %I',
+                    r
+                  );
+                  EXECUTE format(
+                    'ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM %I',
+                    r
+                  );
+                END IF;
+              END LOOP;
+            END $$;
+            """
+        )
+    )
 
 
 def _stamp_alembic_if_needed() -> None:
@@ -333,21 +478,14 @@ def _stamp_alembic_if_needed() -> None:
 
 
 def _ensure_sqlite_columns() -> None:
-    if not _DB_URL.startswith("sqlite"):
-        return
+    """Add columns that create_all will not add onto tables that already exist."""
+    insp = inspect(engine)
+    tables = set(insp.get_table_names())
     with engine.begin() as conn:
-        tables = {
-            row[0]
-            for row in conn.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table'")
-            )
-        }
         for table, cols in _SQLITE_COLUMNS.items():
             if table not in tables:
                 continue
-            existing = {
-                row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))
-            }
+            existing = {col["name"] for col in insp.get_columns(table)}
             for name, ddl in cols:
                 if name not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
@@ -360,6 +498,9 @@ def init_db() -> None:
         Base.metadata.create_all(bind=engine)
         _ensure_sqlite_columns()
         _stamp_alembic_if_needed()
+        if _is_postgres() and is_supabase_url(_DB_URL):
+            with engine.begin() as conn:
+                lock_down_public_schema(conn)
         if settings.skip_seed:
             return
         from app.services.seed import seed_library

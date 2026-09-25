@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Literata, Noto_Naskh_Arabic, Outfit } from "next/font/google";
+import { Caveat, Literata, Noto_Naskh_Arabic, Outfit } from "next/font/google";
+import { AuthBridge } from "@/components/auth-bridge";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -24,17 +25,24 @@ const naskh = Noto_Naskh_Arabic({
   display: "swap",
 });
 
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: {
-    default: "Levla — graded readers",
-    template: "%s · Levla",
+    default: "Lociros — graded readers",
+    template: "%s · Lociros",
   },
   description:
     "CEFR-calibrated Japanese, Arabic, Italian, and Russian passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: "Levla",
+    title: "Lociros",
   },
 };
 
@@ -46,9 +54,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} ${literata.variable} ${naskh.variable} h-full antialiased`}
+      className={`${outfit.variable} ${literata.variable} ${naskh.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-paper text-ink">
+        <AuthBridge />
         {children}
         <script
           // Only register the offline cache in production. In dev the app

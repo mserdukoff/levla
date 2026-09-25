@@ -1,15 +1,27 @@
 # Design specifications
 
-Levla is meant to feel like a **small printed reader**, not a language-app dashboard. Paper, ink, one accent, long reading measure, almost no chrome.
+Lociros is meant to feel like a **small printed reader on a desk**, not a language-app dashboard. Paper, ink, one accent, two paper washes, long reading measure, almost no chrome.
 
-Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, the shared components (`band.tsx`, `segmented.tsx`, `passage-article.tsx`, `gloss-card.tsx`, `generation-progress.tsx`, `seal.tsx`), the screens (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`), and the landing page (`components/landing/*`). There is no component library, no dark mode, no illustrations. The exam seal is the one brand object; it is not an illustration of a character.
+Implementation lives in `frontend/src/app/globals.css`, `layout.tsx`, the shared components (`band.tsx`, `segmented.tsx`, `passage-article.tsx`, `gloss-card.tsx`, `generation-progress.tsx`, `seal.tsx`), the screens (`shelf.tsx`, `reader.tsx`, `generate-form.tsx`), and the landing page (`components/landing/*`). There is no component library and no dark mode. The exam seal is the one brand object; it is not an illustration of a character.
+
+## The engraving pass (September 2026)
+
+The landing page follows one reference composition: warm paper, indigo ink, lifted sheets, and copperplate-style engravings in the margins, with handwritten margin notes.
+
+- **Indigo ink.** `--ink` is the slate navy of the engravings (`#1c2538`), so type, buttons, and art read as one printing. Shadows are tinted with the same ink.
+- **Sheets, not hairline boxes.** Anything the reader holds (the demo reader, proof sheets, the Continue card, the reader's passage, shelf and word lists) is a `sheet`: 14 px radius, a 7% ink border, and a soft shadow. Floating things (the demo gloss, the hero word chips, the reader's gloss dialog, the Continue card) use `sheet-float`, which has a deeper shadow.
+- **Plain paper bands.** Landing sections are all paper, divided by a full-width hairline. Section eyebrows for the check, the shelf, and rating are terracotta; the others are ink at 50%.
+- **Pass is sage.** A passing seal is stamped in `--sage`; a failing one stays terracotta. This is the only place the product says "yes" in colour.
+- **Art.** Engravings are generated one piece at a time (not cropped from the reference) and live in `public/art/*.webp`. Scene art has its paper colour keyed out to transparency; the three passage thumbnails stay rectangular. All of it is decoration only (`aria-hidden`, `pointer-events: none`) and is hidden below `lg`, except the hero cliff, which stacks under the headline on small screens. The hero's strata labels and word chips are HTML over the image, not part of it. Handwritten notes use Caveat (`t-hand`), also decoration only, and never carry information that is not also in the body copy.
+- **Each language has its own set.** Japanese, Arabic, Italian, and Russian each get a hero cliff (`cliff-{lang}`), a verb pillar (`pillar-{lang}`), a study still life (`study-{lang}`), a word stone (`stone-{lang}`: 言葉, كلمة, parola, слово), a panorama (`vista-{lang}`), and two scene thumbnails (`thumb-{lang}-{1,2}`). The card catalog, hills strip, ruins landscape, and laurel sprig are shared. Per-language copy and the positions of the hero's labels and chip live in `landing/scenes.ts`; if a cliff is regenerated, its `face` and strata `top` percentages must be re-measured. Cliffs are not trimmed, so those percentages stay valid, and `cliff-fade` softens the canvas edges.
+- **Line icons** (`LineIcon` in `landing/art.tsx`) mark the rows of the "A tap" list. They are 1.4 px strokes in ink/60, and do not appear in the app chrome.
 
 ## Rationale for the 2026 redesign
 
 Three departures from the earlier spec, and why.
 
-1. **A landing page now exists at `/`; the shelf moved to `/library`.** The old spec forbade a marketing page. The product claim (CEFR as a *checked* constraint, not a prompt adjective) is invisible from the shelf, so a visitor never learned why this is different from asking a chatbot for "A2 Japanese". The landing page states the claim, shows the analyzer's flags on a prompted draft next to a checked one, and runs the real reader on a hand-authored passage. Nothing on it is a mockup: the hero uses the same `PassageArticle` and `GlossCard` as `/passage/[id]`.
-2. **Hairlines replace boxes.** The shelf list, words list, reader toolbar, and gloss kanji list are rules between rows rather than bordered cards. Cards remain for exactly two things: the inverted Continue block and the raised proof sheets. This is the main move away from a "SaaS card grid" and toward a printed page.
+1. **A landing page now exists at `/`; the shelf moved to `/library`.** The old spec forbade a marketing page. The product claim (CEFR as a *checked* constraint, not a prompt adjective) is invisible from the shelf, so a visitor never learned why this is different from asking a chatbot for "A2 Japanese". The landing page is the reader: a hand-authored passage in the same column as the app, then a failed draft and the checked one. Nothing on it is a mockup. The hero uses the same `PassageArticle` and `GlossCard` as `/passage/[id]`.
+2. **Hairlines replace boxes.** The shelf list, words list, reader toolbar, and gloss kanji list are rules between rows rather than bordered cards. The inverted Continue block is the one filled card. Proof sheets on the landing page are square hairline rectangles. This is the main move away from a "SaaS card grid" and toward a printed page.
 3. **CEFR bands are drawn as a joined strip.** Wherever a level *matters* (placement, reader header, the demo), the four bands are shown as one hairline box with the current band inked (`BandStrip`). Where a level is only metadata (a shelf row), it is plain serif text. Inside the gloss card the band is a single hairline chip. No coloured badges.
 
 Kept on purpose: the palette, the two typefaces, ink-on-paper inversion as the only emphasis, no icons beyond typographic arrows, no page transitions.
@@ -18,12 +30,11 @@ Kept on purpose: the palette, the two typefaces, ink-on-paper inversion as the o
 
 | | |
 | --- | --- |
-| Name | **Levla** |
-| Document title | `Levla — graded readers` (`%s · Levla` on inner pages) |
+| Name | **Lociros** |
+| Document title | `Lociros — graded readers` (`%s · Lociros` on inner pages) |
 | One-liner (metadata) | CEFR-calibrated Japanese, Italian, Russian, and Arabic passages. The level is checked by a morphological analyzer, not promised by a prompt. Tap any word for lemma, grammar, and a gloss. |
-| Landing headline | Graded readers where A2 is actually A2. |
-| Kicker | `Japanese · Italian · Russian · Arabic · A1–B2` |
-| Library kicker | `{Language} · Library` |
+| Landing | The passage title is the headline. One plain line under the nav states the product. |
+| Library label | `{Language} · Library`, set as `t-eyebrow` |
 
 Copy is short, second-person, and specific. No gamification ("streak", "XP"), no creature mascot, no exclamation marks in chrome. Numbers are set tabular (`tnum`). The only brand object is the **exam seal** (`seal.tsx`): one double-ring stamp for every language, terracotta ink, inscription from `SEAL_COPY`. It never appears in the gloss. Adding a language is a copy row (`script`, pass word, fail word), not a new drawing. Missing languages fall back to PASS / FAIL.
 
@@ -33,18 +44,23 @@ CSS custom properties on `:root`, registered as Tailwind theme colors (`bg-paper
 
 | Token | Hex | Role |
 | ----- | --- | ---- |
-| `--paper` | `#f3eee4` | Page background |
-| `--paper-raised` | `#faf6ee` | Proof sheets, gloss panel, segmented controls, row hover |
-| `--paper-deep` | `#eae3d4` | Hover wash inside segmented controls. A tonal step of paper, not a second accent |
-| `--ink` | `#1b1712` | Text, inverted blocks, primary button, active band |
-| `--rule` | `#d7cbb8` | Every hairline, skeleton bars |
-| `--terracotta` | `#b84a2a` | Kicker, selected genre chip, errors, selected word wash, drift flags on the landing page |
+| `--paper` | `#f4efe6` | Page background; also the colour keyed out of the engravings |
+| `--paper-raised` | `#fbf9f4` | Sheets, gloss panel, segmented controls |
+| `--paper-deep` | `#ebe5d8` | Hover wash inside segmented controls. A tonal step of paper, not a second accent |
+| `--blush` / `--blush-deep` | `#f2e5da` / `#e6c8b6` | Reserved tints; not used as bands |
+| `--sage-wash` | `#ebe9dc` | The review-due row on the shelf |
+| `--sage` | `#4f6e57` | Passing exam seals, the "Too hard" mark in the landing rating demo |
+| `--ink` | `#1c2538` | Text, primary button, active band. Indigo slate, matched to the engravings |
+| `--rule` | `#dcd5c7` | Every hairline, skeleton bars |
+| `--terracotta` | `#b5452a` | Section eyebrows on the landing, selected genre chip, errors, selected word wash, drift flags, failing seals |
+
+Shadows are two tokens, `--elev-card` and `--elev-float` (Tailwind `shadow-card`, `shadow-float`), both tinted with the ink at low alpha.
 
 Grammar-colour inks (`--g-*`) are unchanged and remain an opt-in overlay.
 
 Derived states use opacity modifiers, not extra tokens: `text-ink/70 /55 /50 /45 /40`, `hover:bg-paper-raised`, `bg-terracotta/16` (selected word), `border-terracotta/30 bg-terracotta/10` (error panel).
 
-Terracotta appears on the landing page on the kicker, the underlines and flags on the drifted draft, its "would fail" summary line, and the exam seals on both proof sheets. The checked draft’s type is ink only; the pass seal is the terracotta on that sheet.
+Terracotta on the landing page is the underlines and flags on the drifted draft, its summary line, and the exam seals on both proof sheets. The checked draft’s type is ink only; the pass seal is the terracotta on that sheet. Section labels are ink at 50%, not terracotta.
 
 ## Typography
 
@@ -61,28 +77,26 @@ Type roles are `@utility` classes in `globals.css`, so the scale lives in one pl
 
 | Class | Use | Setting |
 | ----- | --- | ------- |
-| `t-display` | Landing h1, closing line | Literata 450, tracking −0.024em, leading 1.02, balanced |
+| `t-display` | Occasional display line | Literata 450, tracking −0.024em, leading 1.02, balanced |
 | `t-heading` | Section h2, library placement line | Literata 450, tracking −0.016em, leading 1.14 |
-| `t-kicker` | Brand kicker | Literata 13 px, caps, tracking 0.28em, terracotta |
-| `t-eyebrow` | Section labels, field legends, topic line | 11 px, caps, tracking 0.18em, ink/50 |
-| `t-folio` | "01", "02" on the landing page | Literata 13 px, tabular |
+| `t-eyebrow` | Section labels, field legends, topic line, library label | 11 px, caps, tracking 0.18em, ink/50 |
 | `t-quiet` | Text actions (← Library, Restock, toggles) | 13 px, ink/50 → ink on hover |
 
-Sizes in use: landing h1 `2.9 / 3.6 / 4rem`; section h2 `1.9 / 2.4rem`; library placement `2 / 2.5rem`; reader title `2.1 / 2.6rem`; reader body `1.35 / 1.45rem` at leading 1.85 (2.35 with furigana); gloss surface `1.75rem`; landing lede `1.125 / 1.2rem`.
+Sizes in use: landing passage title `2.1 / 2.6rem` (same as the reader); landing section h2 `1.5 / 1.75rem`; library placement `2 / 2.5rem`; reader title `2.1 / 2.6rem`; reader body `1.35 / 1.45rem` at leading 1.85 (2.35 with furigana); gloss surface `1.75rem`; landing lede `1.0625rem`.
 
 ## Layout
 
-Single column everywhere except the landing page.
+Single column everywhere.
 
 | Surface | Max width | Padding |
 | ------- | --------- | ------- |
-| Landing | `max-w-[74rem]`, 12-col grid at `lg` | `px-5 sm:px-8 lg:px-12` |
+| Landing, privacy, terms | `max-w-[42rem]` | `px-5 sm:px-8` |
 | Library | `max-w-[36rem]` | `px-5 pt-8 pb-24` / `sm:px-8 sm:pt-10` |
 | Reader | `max-w-[42rem]` | `px-5 pt-7 pb-32` / `sm:px-8 sm:pt-9` |
 | Review | `max-w-[36rem]` | as library |
 | 404 | `max-w-md` | `px-5 py-24` |
 
-Landing sections are separated by a full-width hairline and a folio (`01 The claim`, `02 The loop`, `03 Who it's for`) in a 4 + 8 column split. Section spacing is `mt-28 sm:mt-36`.
+The landing correction sits under a full-width hairline. There are no folio numbers and no multi-column section heads.
 
 ## Spacing and radii
 
@@ -115,30 +129,37 @@ Three animated elements, all paced rather than decorative:
 2. **Kanji stroke order** (`stroke-order.tsx`): when a Japanese word opens in the gloss, each kanji shows a KanjiVG diagram immediately. Faint traces of the character sit under ink strokes that draw in sequence, with numbers appearing as each stroke starts. Click the diagram to replay. `prefers-reduced-motion` shows the completed numbered diagram with no drawing.
 3. The **exam seal** (`seal.tsx`): one press, scale 1.16 → 1 with a few degrees of rotation, 280 ms. `prefers-reduced-motion` shows the seal already down. On inverted surfaces (Continue) the seal uses paper instead of terracotta.
 
-The gloss panel keeps its soft upward shadow on `sm+` because it floats.
+The gloss panel is a `sheet-float` on `sm+` and a top rule on small screens.
 
 ## Screens
 
 ### Landing (`/`)
 
-1. Nav: wordmark, anchor links (The check, The loop), **Library →**.
-2. Hero: kicker, headline, lede, **Open the library**, and the **reader demo** (`reader-demo.tsx`): a raised proof sheet with a band strip, language segmented control, title, Grammar / Furigana toggles, the passage as clickable words, and the gloss area beneath. One word is preselected on load (`食べ` / `продавцу`) so the gloss is visible immediately. Sample passages live in `demo-data.ts` in the real `Token` shape.
-3. **01 The claim**: two proof sheets (`drift.tsx`). Left, a prompted draft with the analyzer's flags marked in terracotta (`ている · B1`, `keigo · B2`, …) and "4 constructions above A2 · would fail", with a fail exam seal pressed into the sheet. Right, the checked draft in an ink-bordered sheet with its report (over-level lemmas, banned constructions, flags caught), a pass seal, and "passes A2". Below, the four-step procedure (Constrain, Analyze, Score, Rewrite).
-4. **02 The loop**: five numbered steps; step three shows the feedback pills, step four two band strips (A2 → B1).
-5. **03 Who it's for**: For / Not.
-6. Close: "Pick a passage." and the button again. Footer: Levla · Morphology by Sudachi and pymorphy3 · A single-user demo.
+1. Nav: wordmark, **The check**, **A tap**, **The shelf**, **Sign in** (full app only), and an ink **Get started** button (to the account form when signed out, otherwise to the library).
+2. Hero: eyebrow **Real language progress, one story at a time.**, headline **Every word has depth.**, the language's lede, a language segmented control, **Start reading** and **See how it works ↓**. On the right, that language's cliff: carved words that get harder going down (for Japanese おはよう, then 食べる and 春夏秋冬, then 友達 and 見る, then classical columns). From `lg`, HTML labels name the layers A1 Everyday words, A2 Daily life, B1 Stories, B2 Culture and history down its left edge; from `sm`, one word chip (おはよう, مرحبا, ciao, привет) floats over it.
+3. **Read**: **Graded readers where A2 is actually A2.** with the **reader demo** (`reader-demo.tsx`) in the centre column. Band strip, language control, title, toggles, tappable passage. One word is preselected; from `lg` its gloss floats off the sheet's lower-right edge. A hills strip sits under the copy and the language's verb pillar in the right margin, with a handwritten note.
+4. **The check**: heading and procedure on the left, two proof sheets on the right (`drift.tsx`), fail seal then pass seal pressed into their corners, captions underneath. A laurel sprig at the far right.
+5. **A tap**: a hairline list with line icons of what the gloss shows for the selected language, the language's word stone in the margin with a note and a Fig. 3 caption.
+6. **Keep your shelf**: the language's study still life, the email form on a sheet (signed out, full app) or a card that opens the library (demo or signed in), and the "My words" card-catalog drawer.
+7. **Rate**: three fanned passage cards (the language's thumbnails and panorama), the three rating marks (interactive, with a one-line result), a handwritten note and the ruins landscape.
+8. **Explore**: **Language opens a wider world.**, a line on where that language's passages are set, and its panorama bleeding off the right edge (`vista-fade`), with a handwritten caption naming the place.
+9. Closing row: **A calmer, more certain way to read.**, **Start reading**, **Explore the library →**. Then the footer.
 
-The whole page follows one language choice (the demo's segmented control).
+The whole page follows one language choice (the hero control and the demo's control are the same state). The choice is saved, so the library, placement read, and reader open in it. Copy does not use em dashes.
+
+### Privacy (`/privacy`) and terms (`/terms`)
+
+Same column as the landing page. Privacy states what stays in the browser (device id, language, reader preferences, and in the demo the ratings and saved words) and that a signed-in library is stored on the server. Terms states that the passages are for study, that the demo has no accounts, and that the level check can be wrong.
 
 ### Library (`/library`)
 
 1. Header: wordmark (links to `/`), language segmented control (hidden when only Japanese is enabled).
-2. Kicker `{Language} · Library`, heading **Your {Language} is at {band}.**, band strip, status line (`{n} lemmas seen.` / `Rate a passage to move it.` + `Three ratings in a row move the band.`).
+2. The language's panorama as a faded banner, then eyebrow `{Language} · Library`, heading **Your {Language} is at {band}.**, band strip, status line (`{n} lemmas seen.` / `Rate a passage to move it.` + `Three ratings in a row move the band.`).
 3. Auth panel (only when the backend requires it): hairline-bounded row or email form.
 4. Error panel.
-5. **Continue**: the inverted card. Topic and chapter top-left, inverted band strip and a mark-size exam seal top-right, title, meta line, **Read →**.
-6. Review row (only when cards are due).
-7. **The shelf**: hairline rows. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised. A mark-size fail seal sits on rows that failed calibration; passed rows stay unmarked.
+5. **Continue**: a `sheet-float`. Band strip and a mark-size exam seal top-left, an engraved thumbnail top-right (one of the passage language's two, chosen from the passage id), topic, title, then a ruled meta line with an ink **Read →** button.
+6. Review row on a sage sheet (only when cards are due).
+7. **The shelf**: rows on one sheet. Title, band + chapter right-aligned in serif, then `{topic} · {n} words · {n}% new · audio · read`. Hover washes the row to paper-raised. A mark-size fail seal sits on rows that failed calibration; passed rows stay unmarked.
 8. **Words**: hairline rows with Remove; lemma, gloss, source title; export links. Stroke-order diagrams stay off this list — they belong on review.
 9. **Restock**: a section label and **Restock the shelf →**; open state shows one sentence and the form, with **Hide restock** below. **Review saved words** sits beside it when nothing is due.
 
@@ -148,21 +169,27 @@ Language and level are segmented controls (level cells: serif band + hint). Topi
 
 ### Reader (`/passage/[id]`)
 
+From `lg`, a fixed left rail (`reader-rail.tsx`): wordmark, **Library**, **Review**, **Vocabulary** (the library's words list), then the passage language's ink-wash branch (pine, date palm, olive, birch) and a small terracotta stamp (学ぶ set vertically, تعلّم, imparare, учиться). The rail has no Stats or Settings links because those pages do not exist.
+
+Behind the title block, the language's ink-wash landscape (`wash-{lang}`: Fuji, desert city, Tuscan hill town, river church) fades out on every side (`wash-fade`); for Arabic it is mirrored to the left with the seal. The header and the sheet are positioned so they paint over it.
+
 Header: **← Library** left; tracked meta (`{n} words · {n} new · {n} known`, `sm+`) and a band strip right.
 
-Topic line as eyebrow (`{topic} · chapter n · {n}% new`), then the title, with a corner exam seal on the title block. The seal’s verdict is `calibration.passed` (pass inscription or fail), even if the passage is still readable. Audio bar if present.
+Topic line as eyebrow (`{topic} · chapter n · {n}% new`), then the title at up to 3.1rem with a short ink rule under it, with a corner exam seal on the title block. The seal’s verdict is `calibration.passed` (pass inscription or fail), even if the passage is still readable. Audio bar if present.
 
-Toolbar: a hairline-bounded row. Left, toggles **English · Sentence · Grammar · Furigana (ja) · Known**. Right, **Why this is {band}** which opens the calibration report as a definition list inside the same row, with a smaller seal on that report. Legend appears under the toggles when Grammar is on.
+The passage sits on one sheet. Its top row is tabs in serif: **English · Sentence · Grammar · Furigana (ja) / Vowels (ar) · Known**, then a short divider and **Why this is {band}**. Each tab is an independent toggle; every one that is on gets a 2 px ink underline on the row's hairline. On small screens the row scrolls sideways instead of wrapping. When Grammar is on, a second hairline row holds the colour legend (は TOPIC, が SUBJECT, を OBJECT, PARTICLE, VERB, ENDING, ADJECTIVE for Japanese); the calibration report opens in the same row, with a smaller seal. The passage type is 1.45rem, 1.7rem from `sm`.
 
 Article rules are unchanged (word buttons, hover, selection, chain highlight, fade known, furigana). Calibration warnings print with a terracotta left rule.
 
+Rating is in the page flow, not a sticky bar: comprehension questions (with **Check answers**), then **Was this {band} passage…** with the three pills, then the saved line and, when it differs from the pager's next, **Read the suggested next →**. The page ends with the pager: an outlined **← Previous**, `{i} / {n}` over up to ten dots, and an ink **Next →**, in shelf order for the passage's language. Past the last shelf item, Next falls back to the recommended passage.
+
 The **English** block sits under the passage with an eyebrow. Full translation and **Sentence** share that block: Sentence turns off the gloss and fills the same English section with the tapped sentence. In Sentence mode the article selects whole sentences (hover and click), not individual words.
 
-Sticky bottom bar and gloss panel behave as before. The gloss floats at `min(38rem, 100% − 2rem)` on `sm+`, up to `75vh`. Unselected feedback pills dim after a rating; **Read next →** sits at the right of the status line.
+The gloss floats at `min(38rem, 100% − 2rem)` on `sm+`, up to `75vh`, centred on the reading column (offset by half the rail from `lg`). Unselected feedback pills dim after a rating.
 
 ### Review, 404, loading
 
-Review follows the library header pattern (`← Library`, due count as tracked meta). Japanese cards show stroke-order diagrams only after **Show**, together with the gloss and ratings. 404 links **Back to the library**. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
+Review follows the library header pattern (`← Library`, due count as tracked meta), with the card catalog beside the heading from `sm`. Japanese cards show stroke-order diagrams only after **Show**, together with the gloss and ratings. 404 shows the ruins landscape and links **Back to the library**. The placement read (`/placement`) shows the chosen language's cliff above its heading from `sm`; privacy and terms carry the hills strip. The reader loading state is a static composition: header with `← Library` and an empty band-strip outline, a title bar, a toolbar of three stubs, and five text lines.
 
 ## Gloss card content order
 
@@ -170,7 +197,7 @@ Unchanged: surface (with reading beside it) → lemma + band chip → morph line
 
 ## Interaction rules
 
-Unchanged from the previous spec (`levla.language`, `levla.grammar`, `levla.furigana`, `levla.fade`, `levla.device_id`; abort on language change; one-shot feedback; lazy English). The demo on the landing page keeps its own local state and never calls the API. Post-sign-in redirects land on `/library`. The service worker precaches `/`, `/library`, `/review`; the PWA `start_url` is `/library`.
+Unchanged from the previous spec (`lociros.language`, `lociros.grammar`, `lociros.furigana`, `lociros.fade`, `lociros.device_id`; abort on language change; one-shot feedback; lazy English). The demo on the landing page keeps its own local state and never calls the API. Post-sign-in redirects land on `/library`. The service worker precaches `/`, `/library`, `/review`; the PWA `start_url` is `/library`.
 
 ## Accessibility
 
@@ -182,7 +209,7 @@ Unchanged from the previous spec (`levla.language`, `levla.grammar`, `levla.furi
 
 ## What not to add
 
-- Dark mode, gradients, drop shadows on cards, coloured CEFR badges, progress rings, creature mascots, testimonials, pricing.
-- A third typeface, or a second accent.
+- Dark mode, gradient stripes, hard or cool-grey shadows, coloured CEFR badges, progress rings, creature mascots, testimonials, pricing.
+- A second accent. Caveat is for margin notes only, never for UI text.
 - A second seal geometry per language, a face or speech bubble on the seal, or the seal inside the gloss card.
-- Anything on the landing page that is not the real product: no illustration of the reader, only the reader.
+- A picture of the reader instead of the reader. The demo sheet and proof sheets are real components; the engravings stay in the margins.

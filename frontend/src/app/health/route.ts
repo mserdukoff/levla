@@ -1,5 +1,5 @@
 export const dynamic = "force-dynamic";
 
 export function GET() {
-  return Response.json({ ok: true, name: "levla" });
+  return Response.json({ ok: true, name: "lociros" });
 }

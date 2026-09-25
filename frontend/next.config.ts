@@ -4,13 +4,20 @@ import type { NextConfig } from "next";
 
 const frontendDir = path.dirname(fileURLToPath(import.meta.url));
 const isVercel = process.env.VERCEL === "1";
+const isDemo = process.env.NEXT_PUBLIC_DEMO === "1";
+
+if (isVercel && !isDemo && !process.env.NLP_BACKEND_URL) {
+  console.warn(
+    "NLP_BACKEND_URL is unset. Passage SSR and /api proxy will 502 until you set it to the public FastAPI origin.",
+  );
+}
 
 const nextConfig: NextConfig = {
-  // Docker / ECS use standalone. Vercel’s Next.js builder does not.
+  // Docker uses standalone. Vercel’s Next.js builder does not.
   ...(isVercel ? {} : { output: "standalone" as const }),
   outputFileTracingRoot: frontendDir,
   env: {
-    NEXT_PUBLIC_DEMO: process.env.NEXT_PUBLIC_DEMO ?? (isVercel ? "1" : ""),
+    NEXT_PUBLIC_DEMO: process.env.NEXT_PUBLIC_DEMO ?? "",
   },
   turbopack: { root: frontendDir },
   // The dev server blocks JS-chunk requests whose Origin doesn't match an

@@ -66,7 +66,7 @@ export function Seal({
 
   return (
     <span
-      className={`seal inline-block shrink-0 ${inverted ? "seal-inverted" : ""} ${press ? "seal-animate" : ""} ${SIZE_CLASS[size]} ${className}`}
+      className={`seal inline-block shrink-0 ${verdict === "pass" ? "seal-pass" : ""} ${inverted ? "seal-inverted" : ""} ${press ? "seal-animate" : ""} ${SIZE_CLASS[size]} ${className}`}
       role="img"
       aria-label={`${word} · ${level}`}
       dir={copy.rtl ? "rtl" : "ltr"}

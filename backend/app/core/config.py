@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import urlparse
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -7,13 +8,49 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = BACKEND_DIR.parent
 
 
+def _parseable_db_url(url: str) -> str:
+    """urlparse does not like SQLAlchemy's postgresql+psycopg2 scheme."""
+    if url.startswith("postgresql+psycopg2://"):
+        return "postgresql://" + url[len("postgresql+psycopg2://") :]
+    return url
+
+
 def normalize_database_url(url: str) -> str:
-    """RDS and Heroku-style URLs often start with postgres://."""
+    """Hosted Postgres URLs often start with postgres://."""
     if url.startswith("postgres://"):
         return "postgresql+psycopg2://" + url[len("postgres://") :]
     if url.startswith("postgresql://") and "+psycopg" not in url:
         return "postgresql+psycopg2://" + url[len("postgresql://") :]
     return url
+
+
+def is_supabase_url(url: str) -> bool:
+    host = (urlparse(_parseable_db_url(url)).hostname or "").lower()
+    return (
+        host.endswith(".supabase.co")
+        or host.endswith(".supabase.com")
+        or host.endswith(".pooler.supabase.com")
+    )
+
+
+def is_transaction_pooler(url: str) -> bool:
+    """Supabase transaction-mode pooler (shared or dedicated) listens on 6543."""
+    return urlparse(_parseable_db_url(url)).port == 6543
+
+
+def resolve_sslmode(url: str, sslmode: str) -> str:
+    if sslmode:
+        return sslmode
+    if is_supabase_url(url):
+        return "require"
+    return ""
+
+
+def apply_db_sslmode(url: str, sslmode: str) -> str:
+    if not sslmode or "sslmode=" in url or not url.startswith("postgresql"):
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}sslmode={sslmode}"
 
 
 class Settings(BaseSettings):
@@ -30,7 +67,9 @@ class Settings(BaseSettings):
     llm_model: str = "openai/gpt-4o-mini"
     database_url: str = f"sqlite:///{BACKEND_DIR / 'levla.db'}"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    cors_origin_regex: str = ""
     jwt_secret: str = "dev-change-me"
+    supabase_url: str = ""
     google_client_id: str = ""
     google_client_secret: str = ""
     public_base_url: str = "http://localhost:3000"
@@ -43,21 +82,20 @@ class Settings(BaseSettings):
     show_arabic: bool = False
     require_auth: bool = False
     generate_monthly_cap: int = 10
-    auth_cookie_name: str = "levla_token"
+    auth_cookie_name: str = "lociros_token"
     smtp_url: str = ""
     data_root: str = Field(default="", validation_alias="DATA_DIR")
-    s3_audio_bucket: str = ""
-    s3_audio_prefix: str = "audio/"
-    aws_region: str = ""
     cookie_secure: bool | None = None
     cookie_samesite: str = "lax"
     cookie_domain: str = ""
     db_pool_size: int = 5
     db_max_overflow: int = 10
+    db_pool_recycle: int = 600
     db_sslmode: str = ""
     skip_seed: bool = False
     generate_workers: int = 2
     generate_max_pending: int = 3
+    admin_emails: str = ""
 
     @field_validator("database_url", mode="before")
     @classmethod
@@ -69,6 +107,34 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() in {"production", "prod"}
+
+    @property
+    def is_supabase(self) -> bool:
+        return is_supabase_url(self.database_url)
+
+    @property
+    def effective_supabase_url(self) -> str:
+        if self.supabase_url:
+            return self.supabase_url.rstrip("/")
+        host = (urlparse(_parseable_db_url(self.database_url)).hostname or "").lower()
+        parts = host.split(".")
+        if len(parts) >= 3 and parts[0] == "db" and host.endswith(".supabase.co"):
+            return f"https://{parts[1]}.supabase.co"
+        return ""
+
+    @property
+    def supabase_jwks_url(self) -> str:
+        base = self.effective_supabase_url
+        return f"{base}/auth/v1/.well-known/jwks.json" if base else ""
+
+    @property
+    def supabase_jwt_issuer(self) -> str:
+        base = self.effective_supabase_url
+        return f"{base}/auth/v1" if base else ""
+
+    @property
+    def uses_transaction_pooler(self) -> bool:
+        return is_transaction_pooler(self.database_url)
 
     @property
     def effective_cookie_secure(self) -> bool:
@@ -89,6 +155,15 @@ class Settings(BaseSettings):
         return PROJECT_ROOT / "data"
 
     @property
+    def admin_email_set(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
+    def is_admin_email(self, email: str | None) -> bool:
+        if not email:
+            return False
+        return email.strip().lower() in self.admin_email_set
+
+    @property
     def cors_origin_list(self) -> list[str]:
         origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
         base = self.public_base_url.rstrip("/")
@@ -98,10 +173,8 @@ class Settings(BaseSettings):
 
     def sqlalchemy_url(self) -> str:
         url = self.database_url
-        if self.db_sslmode and "sslmode=" not in url and url.startswith("postgresql"):
-            sep = "&" if "?" in url else "?"
-            url = f"{url}{sep}sslmode={self.db_sslmode}"
-        return url
+        sslmode = resolve_sslmode(url, self.db_sslmode)
+        return apply_db_sslmode(url, sslmode)
 
 
 settings = Settings()

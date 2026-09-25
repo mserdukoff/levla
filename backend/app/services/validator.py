@@ -1,8 +1,29 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from app.models.schemas import Calibration, Token
+
+_KATAKANA = re.compile(r"[ァ-ヶー・]+")
+_DIGITS = re.compile(r"[\d０-９]+(?:[.,:／/][\d０-９]+)*")
+
+
+def vocab_exempt(tok: Token) -> bool:
+    """Names, katakana loans, and numbers are not graded vocabulary."""
+    text = (tok.text or "").strip()
+    if text and _DIGITS.fullmatch(text):
+        return True
+    morph = tok.morph
+    if morph is None:
+        return False
+    detail = morph.pos_detail or ""
+    pos = (morph.pos or "").upper()
+    if pos in {"PROPN", "NNP"} or "固有" in detail or detail == "proper-noun":
+        return True
+    if _KATAKANA.fullmatch(text):
+        return True
+    return False
 from app.services.data import grammar_rules, level_rank, vocab_bands
 
 CONTENT_POS = {"NOUN", "ADJF", "ADJS", "VERB", "INFN", "ADVB", "PRED", "NUMR"}
@@ -139,6 +160,8 @@ def validate_tokens(tokens: list[Token], level: str, language: str = "ru") -> Va
             content_n += 1
             band = bands.get(lemma)
             if band is None or level_rank(band) > cap:
+                if vocab_exempt(tok):
+                    continue
                 # Skip likely proper names
                 if tok.text[:1].isupper() and not _is_sentence_initial(tokens, i):
                     continue

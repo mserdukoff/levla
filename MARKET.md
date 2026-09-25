@@ -1,4 +1,4 @@
-# Levla — market feasibility
+# Lociros — market feasibility
 
 Can this be sold as a real app to language learners? Assessment of the current product (furigana, grammar coloring, starred words, sentence English, just-right placement) against how people actually study reading. Scores are analyst judgments of the codebase as of September 2026, not measured usage.
 
@@ -15,7 +15,7 @@ Can this be sold as a real app to language learners? Assessment of the current p
 | Technical wedge | High |
 | Path to a paid beta | 4–6 months |
 
-Levla is a strong prototype with a real wedge — morphologically checked CEFR, not ChatGPT roleplay. It is not a product people will pay for or return to daily. The brand promise is “this text is actually A2.” Soft fail, a ~26-text shelf, no audio, and progress tied to localStorage will break that promise in the first week.
+Lociros is a strong prototype with a real wedge — morphologically checked CEFR, not ChatGPT roleplay. It is not a product people will pay for or return to daily. The brand promise is “this text is actually A2.” Soft fail, a ~26-text shelf, no audio, and progress tied to localStorage will break that promise in the first week.
 
 A paid beta is realistic in 4–6 months if you pick one language, pre-build a library, add accounts and audio, and stop showing failed calibration as a CEFR-banded reader.
 
@@ -27,9 +27,9 @@ A paid beta is realistic in 4–6 months if you pick one language, pre-build a l
 
 Serious learners do not hire “an LLM that writes a story.” They hire a daily 15-minute extensive-reading session: a text they can mostly understand, a way to look up the rest without breaking flow, sound attached to the writing, and a feeling that yesterday’s words came back today.
 
-LingQ, Satori Reader, Readlang, NHK Web Easy, and Duolingo Stories all sell some slice of that job. ChatGPT sells infinite custom text with zero calibration. Levla only wins if the learner can feel that the next page is easier or harder for a **structural** reason, not because the model felt like it.
+LingQ, Satori Reader, Readlang, NHK Web Easy, and Duolingo Stories all sell some slice of that job. ChatGPT sells infinite custom text with zero calibration. Lociros only wins if the learner can feel that the next page is easier or harder for a **structural** reason, not because the model felt like it.
 
-| Job | What good looks like | Levla today |
+| Job | What good looks like | Lociros today |
 | --- | --- | --- |
 | Read at my level | Trust the band; hide junk; i+1 new words | Ruleset is real; soft-fail still shows the badge |
 | Understand in flow | Tap, gloss, furigana, sentence English | Strong — this is the best part of the app |
@@ -42,9 +42,9 @@ LingQ, Satori Reader, Readlang, NHK Web Easy, and Duolingo Stories all sell some
 
 ## Table-stakes coverage vs. products learners already use
 
-Analyst scores 0–10. Categories are the features that keep a reading app in someone’s daily rotation. Source: current Levla codebase vs. public LingQ, Satori Reader, and ChatGPT behavior. Not survey data.
+Analyst scores 0–10. Categories are the features that keep a reading app in someone’s daily rotation. Source: current Lociros codebase vs. public LingQ, Satori Reader, and ChatGPT behavior. Not survey data.
 
-| Feature | Levla | LingQ | Satori Reader | ChatGPT |
+| Feature | Lociros | LingQ | Satori Reader | ChatGPT |
 | --- | ---: | ---: | ---: | ---: |
 | Level control | 8 | 5 | 8 | 2 |
 | Tap-to-gloss | 8 | 9 | 7 | 1 |
@@ -54,14 +54,14 @@ Analyst scores 0–10. Categories are the features that keep a reading app in so
 | Habit / sync | 2 | 8 | 6 | 1 |
 | Mobile | 4 | 8 | 7 | 9 |
 
-Levla leads on level control; it is empty on audio and catalog. ChatGPT wins on volume and loses on trust.
+Lociros leads on level control; it is empty on audio and catalog. ChatGPT wins on volume and loses on trust.
 
 ### Competitive notes (detail)
 
 - **LingQ** wins on corpus and unknown-word workflow; it is ugly and level labels are fuzzy. Copy the known/unknown overlay (fade-known is a start) and ignore the rest of the chrome.
 - **Satori Reader** wins on audio and editorial quality for Japanese. You will not beat them on stories. Beat them on “make me a text about my commute that is still A2.”
 - **Readlang** wins as a browser layer on real web pages. Different job (authentic content). Stay in graded, generated, controlled text.
-- **ChatGPT** is the real competitor for restock. The only defense is a visible, checkable grammar passport and a next-text that actually moves. If you cannot show the check, Levla is slower ChatGPT.
+- **ChatGPT** is the real competitor for restock. The only defense is a visible, checkable grammar passport and a next-text that actually moves. If you cannot show the check, Lociros is slower ChatGPT.
 
 ---
 
@@ -69,7 +69,7 @@ Levla leads on level control; it is empty on audio and catalog. ChatGPT wins on 
 
 ### Japanese hobbyists, A2–B1 — larger checkbook, harder wedge
 
-Largest willingness to pay in consumer language tech. They already buy WaniKani, Bunpro, Satori Reader. They are allergic to unnatural です/ます and missing audio. Levla’s furigana, construction flags, and kanji breakdown are aimed at them — but a ~500-lemma Japanese list is too small, so generated A1/A2 will either be tiny-vocab or constantly over-level. Harder to differentiate vs. Satori and Tadoku. Sharper distribution (r/LearnJapanese, Refold, Discord).
+Largest willingness to pay in consumer language tech. They already buy WaniKani, Bunpro, Satori Reader. They are allergic to unnatural です/ます and missing audio. Lociros’s furigana, construction flags, and kanji breakdown are aimed at them — but a ~500-lemma Japanese list is too small, so generated A1/A2 will either be tiny-vocab or constantly over-level. Harder to differentiate vs. Satori and Tadoku. Sharper distribution (r/LearnJapanese, Refold, Discord).
 
 ### Russian A1–B2 — smaller market, cleaner proof
 

@@ -93,7 +93,7 @@ def _azure_ssml(sentences: list[str], language: str) -> tuple[bytes, list[dict]]
         "Ocp-Apim-Subscription-Key": settings.azure_speech_key,
         "Content-Type": "application/ssml+xml",
         "X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3",
-        "User-Agent": "levla",
+        "User-Agent": "lociros",
     }
     with httpx.Client(timeout=60) as client:
         res = client.post(url, content=ssml.encode("utf-8"), headers=headers)

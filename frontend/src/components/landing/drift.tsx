@@ -35,75 +35,63 @@ function useOnceInView<T extends HTMLElement>() {
 export function Drift({ lang }: { lang: LangCode }) {
   const sample = DRIFT[lang];
   const font = readingFont(lang);
+  const dir = lang === "ar" ? "rtl" : "ltr";
   const { ref, on } = useOnceInView<HTMLDivElement>();
   return (
-    <div ref={ref} className="grid gap-10 lg:grid-cols-2 lg:gap-8">
-      <section className="flex flex-col">
-        <p className="t-eyebrow">What most reading practice looks like</p>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink/60">{sample.prompt}</p>
-        <div className="relative mt-6 flex-1">
-          <p
-            lang={lang}
-            dir={lang === "ar" ? "rtl" : "ltr"}
-            className={`h-full rounded-card border border-rule bg-paper-raised px-5 py-6 pr-16 text-[1.15rem] leading-[1.95] text-ink sm:px-6 sm:pr-20 ${font}`}
-          >
-            {sample.drifted.map((seg, i) =>
-              seg.flag ? (
-                <span key={i} className="relative inline whitespace-nowrap">
-                  <span className="border-b-[1.5px] border-terracotta">{seg.text}</span>
-                  <sup className="ml-0.5 font-sans text-[10px] font-medium uppercase tracking-[0.08em] text-terracotta">
-                    {seg.flag}
-                  </sup>
-                </span>
-              ) : (
-                <span key={i}>{seg.text}</span>
-              ),
-            )}
-          </p>
-          <div className="pointer-events-none absolute -right-1 -top-3 sm:-right-3 sm:-top-4">
-            <Seal
-              verdict="fail"
-              language={lang}
-              level="A2"
-              size="hero"
-              animate={on}
-            />
+    <div ref={ref} className="grid gap-10 md:grid-cols-2 md:gap-6">
+      <figure className="flex flex-col">
+        <div className="relative flex-1">
+          <div className="sheet h-full bg-[#fbf3ee] px-5 py-6 sm:px-6">
+            <span aria-hidden="true" className="float-right h-16 w-20" />
+            <p className="mb-3 text-[12.5px] italic text-ink/45">Asked for {sample.prompt}</p>
+            <p lang={lang} dir={dir} className={`text-[1.08rem] leading-[1.95] text-ink ${font}`}>
+              {sample.drifted.map((seg, i) =>
+                seg.flag ? (
+                  <span key={i} className="relative inline whitespace-nowrap">
+                    <span className="border-b-[1.5px] border-terracotta">{seg.text}</span>
+                    <sup className="ml-1 font-sans text-[9px] font-medium uppercase tracking-[0.1em] text-terracotta">
+                      {seg.flag}
+                    </sup>
+                  </span>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                ),
+              )}
+            </p>
+          </div>
+          <div className="pointer-events-none absolute -right-2 -top-4">
+            <Seal verdict="fail" language={lang} level="A2" size="corner" animate={on} />
           </div>
         </div>
-        <p className="tnum mt-4 text-[13px] text-terracotta">{sample.driftedSummary}</p>
-      </section>
+        <figcaption className="tnum mt-3 px-1 text-[12px] text-terracotta">
+          {sample.driftedSummary}
+        </figcaption>
+      </figure>
 
-      <section className="flex flex-col">
-        <p className="t-eyebrow">What you get on Levla</p>
-        <p className="mt-2 text-[15px] leading-relaxed text-ink/60">
-          Same request, same length — but held to what a beginner has actually learned.
-        </p>
-        <div className="relative mt-6 flex flex-1 flex-col">
-          <div className="flex flex-1 flex-col rounded-card border border-ink bg-paper-raised px-5 py-6 pr-16 sm:px-6 sm:pr-20">
-            <p lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} className={`text-[1.15rem] leading-[1.95] text-ink ${font}`}>
+      <figure className="flex flex-col">
+        <div className="relative flex flex-1 flex-col">
+          <div className="sheet flex-1 px-5 py-6 sm:px-6">
+            <span aria-hidden="true" className="float-right h-16 w-20" />
+            <p lang={lang} dir={dir} className={`text-[1.08rem] leading-[1.95] text-ink ${font}`}>
               {sample.checked}
             </p>
-            <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-t border-rule pt-4 text-[13px]">
+            <dl className="clear-both mt-5 grid grid-cols-[auto_1fr] gap-x-5 gap-y-1.5 border-t border-rule/70 pt-4 text-[12.5px]">
               {sample.checkedReport.map((row) => (
                 <div key={row.k} className="contents">
-                  <dt className="t-eyebrow pt-[3px]">{row.k}</dt>
+                  <dt className="t-eyebrow pt-[3px] text-[10px]!">{row.k}</dt>
                   <dd className="tnum leading-relaxed text-ink/70">{row.v}</dd>
                 </div>
               ))}
             </dl>
           </div>
-          <div className="pointer-events-none absolute -right-1 -top-3 sm:-right-3 sm:-top-4">
-            <Seal
-              verdict="pass"
-              language={lang}
-              level="A2"
-              size="hero"
-              animate={on}
-            />
+          <div className="pointer-events-none absolute -right-2 -top-4">
+            <Seal verdict="pass" language={lang} level="A2" size="corner" animate={on} />
           </div>
         </div>
-        <p className="tnum mt-4 text-[13px] text-ink">{sample.checkedSummary}</p>
-      </section>
+        <figcaption className="tnum mt-3 px-1 text-[12px] text-ink/60">
+          {sample.checkedSummary}
+        </figcaption>
+      </figure>
     </div>
   );
 }

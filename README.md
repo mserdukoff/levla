@@ -1,8 +1,8 @@
-# Levla
+# Lociros
 
 CEFR-calibrated graded readers for **Japanese**, **Italian**, **Russian**, and **Arabic**.
 
-Levla generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji or (in Arabic) the root and وزن. After each text you mark it **too easy**, **just right**, or **too hard**. That updates your placement (or leaves it), records the lemmas you just saw, and picks the next unread passage.
+Lociros generates and serves short reading passages at a real A1–B2 level, then lets you tap any word for lemma, grammar, gloss, and (in Japanese) kanji or (in Arabic) the root and وزن. After each text you mark it **too easy**, **just right**, or **too hard**. That updates your placement (or leaves it), records the lemmas you just saw, and picks the next unread passage.
 
 The product claim is not “an LLM wrote some Japanese.” It is: **grammar and vocabulary are constrained in the prompt, then checked by a morphological analyzer, then used to drive a learner model.**
 
@@ -23,7 +23,7 @@ Full product, architecture, design, API, NLP, and learner-model specs live in [`
 - [API](#api)
 - [Frontend](#frontend)
 - [Run locally](#run-locally)
-- [Static demo on Vercel](#static-demo-on-vercel)
+- [Deploy](#deploy)
 - [Run with Docker](#run-with-docker)
 - [Tests](#tests)
 - [Rebuilding lexicons](#rebuilding-lexicons)
@@ -35,7 +35,7 @@ Full product, architecture, design, API, NLP, and learner-model specs live in [`
 
 ## Why it exists
 
-Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Italian drifts into congiuntivo, gerundio, and passato remoto. Arabic drifts into past tense, إنّ, derived verb Forms II–X, and the passive. Levla treats CEFR as a **checkable constraint**:
+Asking a model to “write B1 Russian” or “write A1 Japanese” is not enough. Russian drifts into extra cases and participles. Japanese drifts into て-form, ている, relative clauses, and keigo. Italian drifts into congiuntivo, gerundio, and passato remoto. Arabic drifts into past tense, إنّ, derived verb Forms II–X, and the passive. Lociros treats CEFR as a **checkable constraint**:
 
 1. The prompt includes per-level grammar rules and an in-band lemma sample.
 2. The draft is tokenized with a real analyzer (Sudachi for Japanese, spaCy for Italian, pymorphy3 for Russian, CAMeL Tools for Arabic).
@@ -78,7 +78,7 @@ The reading UI is built around that analysis: every word already has lemma, POS,
 
 **Seeded library**
 
-On first backend start, Levla writes a hand-authored starter library (and English translations) if they are missing or failed calibration:
+On first backend start, Lociros writes a hand-authored starter library (and English translations) if they are missing or failed calibration:
 
 | Language | A1 | A2 | B1 | B2 |
 | -------- | -- | -- | -- | -- |
@@ -142,9 +142,9 @@ Lexicon lookup (`data/gloss/{ru,ja,it,ar}_en.json`). Unknown lemmas in generated
 
 **Kanji** (`backend/app/services/kanji.py`)
 
-For each kanji in a word, Levla tries to consume a prefix of the word reading using on/kun candidates (including voiced, handakuten, and sokuon variants). Each part carries the matched reading, on (katakana) / kun (okurigana dots), English meanings, stroke count, JLPT N-level, school grade, newspaper frequency, Kangxi radical, and KRADFILE parts from `data/kanji/ja.json` (~13k characters, built from KANJIDIC2). Stored passages are re-aligned on read so the extra fields show up without regenerating text.
+For each kanji in a word, Lociros tries to consume a prefix of the word reading using on/kun candidates (including voiced, handakuten, and sokuon variants). Each part carries the matched reading, on (katakana) / kun (okurigana dots), English meanings, stroke count, JLPT N-level, school grade, newspaper frequency, Kangxi radical, and KRADFILE parts from `data/kanji/ja.json` (~13k characters, built from KANJIDIC2). Stored passages are re-aligned on read so the extra fields show up without regenerating text.
 
-Jisho.org has no kanji API (its public endpoint is word search only). The lexicon is the same EDRDG data Jisho is built on, bundled locally. Stroke-order diagrams in the gloss use [KanjiVG](https://kanjivg.tagaini.net/) (the same source Jisho animates): opening a word fetches its SVG, then Levla draws the strokes in Japanese order.
+Jisho.org has no kanji API (its public endpoint is word search only). The lexicon is the same EDRDG data Jisho is built on, bundled locally. Stroke-order diagrams in the gloss use [KanjiVG](https://kanjivg.tagaini.net/) (the same source Jisho animates): opening a word fetches its SVG, then Lociros draws the strokes in Japanese order.
 
 ---
 
@@ -241,9 +241,9 @@ A draft **passes** only if over-level lemma rate, construction hits, and (for Ru
 
 ## Learner model
 
-No accounts. The browser stores a UUID in `localStorage` (`levla.device_id`) and sends it as `X-Device-Id`. Language preference is stored separately (`levla.language`).
+A browser UUID in `localStorage` (`lociros.device_id`) is sent as `X-Device-Id`. After Supabase sign-in, FastAPI merges that guest progress onto `public.users`. Language preference is stored separately (`lociros.language`).
 
-Per `(device_id, language)` Levla keeps:
+Per `(device_id, language)` Lociros keeps:
 
 | Table | Role |
 | ----- | ---- |
@@ -280,10 +280,10 @@ Counts are **token occurrences**, not unique lemmas. The shelf uses this so a re
 └─────────────────────────────┘                         └──────────────┬──────────────┘
                                                                        │
                                                                        ▼
-                                                            Postgres (Compose / AWS)
+                                                            Postgres (Compose / Supabase)
                                                             or SQLite (local)
                                                             data/*.json lexicons
-                                                            S3 audio (optional)
+                                                            local audio MP3s
                                                             OpenRouter (optional)
 ```
 
@@ -383,7 +383,7 @@ Base path: `/api`. OpenAPI is at `http://localhost:8000/docs` when the backend i
 
 | Method | Path | Body / query | Notes |
 | ------ | ---- | ------------ | ----- |
-| `GET` | `/health` | | `{ "ok": true, "name": "levla" }` |
+| `GET` | `/health` | | `{ "ok": true, "name": "lociros" }` |
 | `POST` | `/generate` | `{ level, topic, genre?, language }` | **200** cached passage, or **202** job id to poll |
 | `GET` | `/generate/{job_id}` | header `X-Device-Id` | Job status; includes `passage` when complete |
 | `GET` | `/library?language=ja\|ru` | header `X-Device-Id` | Placement, seen lemma count, `next_id`, items with new/known/read/recommended. |
@@ -487,22 +487,22 @@ If the rewrite target is wrong you will see shelf errors; the Next server must b
 
 ---
 
-## Static demo on Vercel
+## Deploy
 
-The full app needs FastAPI, analyzers, and SQLite. For a public demo, the Next.js frontend can run **without** that backend: a hand-authored catalog (A1 / A2 / B1 in all four languages), tap-to-gloss, ratings, and saved words in `localStorage`. Custom generation is off.
+Production is **Vercel** (Next.js) + **Supabase** (Postgres) + FastAPI on any Docker host. Walkthrough: [docs/deploy.md](docs/deploy.md).
 
-1. Import the GitHub repo in [Vercel](https://vercel.com/new).
-2. Set **Root Directory** to `frontend`.
-3. Deploy. Vercel builds set `NEXT_PUBLIC_DEMO=1` automatically (see `frontend/next.config.ts`).
+1. Put the Supabase URI in backend `DATABASE_URL` (session pooler on IPv4 hosts; direct is fine from this Mac).
+2. Run the FastAPI Docker image on Fly, Railway, Render, or a VPS. Note the public HTTPS origin.
+3. Import the repo in [Vercel](https://vercel.com/new). Set **Root Directory** to `frontend`. Set `NLP_BACKEND_URL` to that API origin. Leave `NEXT_PUBLIC_DEMO` unset.
 
-Locally:
+The frontend can still ship as a **static demo** (hand-authored catalog, `localStorage`, no generation) if you set `NEXT_PUBLIC_DEMO=1` at build time:
 
 ```bash
 cd frontend
 NEXT_PUBLIC_DEMO=1 npm run dev
 ```
 
-The Docker / AWS frontend image is unchanged: it still talks to FastAPI unless you set `NEXT_PUBLIC_DEMO=1` at build time.
+That is not the production app.
 
 ---
 
@@ -519,7 +519,7 @@ docker compose up --build
 - The frontend container uses `NLP_BACKEND_URL=http://backend:8000` at **runtime** so `/api` and SSR stay on the Compose network
 - Backend waits for Postgres, then creates tables and seeds the library on first boot
 
-Images are production-shaped (non-root users, health checks, `APP_ENV=production` baked into the backend image). Compose overrides `APP_ENV=development` so a local `JWT_SECRET=dev-change-me` still boots. See [docs/aws.md](docs/aws.md) for ECS / RDS / S3.
+Images are production-shaped (non-root users, health checks, `APP_ENV=production` baked into the backend image). Compose overrides `APP_ENV=development` so a local `JWT_SECRET=dev-change-me` still boots. See [docs/deploy.md](docs/deploy.md) for Vercel + Supabase.
 
 ---
 
@@ -582,14 +582,15 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 | -------- | ------- | ------- |
 | `OPENROUTER_API_KEY` | empty | Required for `/generate`, LLM gloss fill, and translation |
 | `LLM_MODEL` | `openai/gpt-4o-mini` | OpenRouter model id |
-| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. Compose sets Postgres. `postgres://` is rewritten to `postgresql+psycopg2://` |
-| `DB_SSLMODE` | empty | Set `require` for RDS |
+| `DATABASE_URL` | `sqlite:///./levla.db` | SQLAlchemy URL. Compose sets Postgres. `postgres://` is rewritten to `postgresql+psycopg2://`. Supabase hosts get `sslmode=require` |
+| `DB_SSLMODE` | empty | Set `require` for hosted Postgres; inferred for Supabase |
 | `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated. `PUBLIC_BASE_URL` is always added |
+| `CORS_ORIGIN_REGEX` | empty | Optional regex for Vercel preview origins |
 | `APP_ENV` | `development` | `production` requires a real `JWT_SECRET` and sets `Secure` cookies |
-| `JWT_SECRET` | `dev-change-me` | Signs auth cookies |
+| `JWT_SECRET` | `dev-change-me` | Signs the legacy FastAPI cookie used without Supabase Auth |
 | `PUBLIC_BASE_URL` | `http://localhost:3000` | Public origin (OAuth, CORS, OpenRouter referer) |
-| `S3_AUDIO_BUCKET` | empty | If set, passage MP3s go to S3 instead of local disk |
-| `SKIP_SEED` | `false` | Skip library/catalog seed (extra ECS tasks after first boot) |
+| `SUPABASE_URL` | empty | `https://PROJECT.supabase.co`. Inferred from a direct `db.*.supabase.co` host |
+| `SKIP_SEED` | `false` | Skip library/catalog seed on extra API/worker processes after first boot |
 | `GENERATE_WORKERS` | `2` | Background threads per process that run generation jobs. Set `0` on API tasks if a dedicated worker service handles generation |
 | `GENERATE_MAX_PENDING` | `3` | Max queued/running jobs per device or signed-in user |
 | `SHOW_RUSSIAN` | `false` | Put Russian on the public shelf |
@@ -601,20 +602,22 @@ Grammar JSON is edited by hand. After changing grammar or vocab, restart the bac
 | Variable | Default | Meaning |
 | -------- | ------- | ------- |
 | `NLP_BACKEND_URL` | `http://127.0.0.1:8000` | Backend origin for SSR passage fetch and the `/api` proxy. Read at runtime |
-| `NEXT_PUBLIC_DEMO` | empty (`1` on Vercel) | Static catalog + `localStorage` learner. No Python backend. Set at **build** time |
+| `NEXT_PUBLIC_SUPABASE_URL` | empty | Supabase Auth project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | empty | Publishable key. Never the secret |
+| `NEXT_PUBLIC_DEMO` | empty | Static catalog + `localStorage` learner. No Python backend. Set to `1` at **build** time only for that mode |
 
 ---
 
 ## Limitations
 
 - **Soft fail.** A passage that still violates the ruleset is stored and readable, with a warning. Calibration is a gate with a retry, not a hard reject.
-- **No accounts.** Clearing site data resets placement and seen lemmas. There is no sync across devices.
 - **Lexicon coverage.** Japanese vocab is a few hundred lemmas; unknown content words count as over-level (names and some loanwords are skipped). Russian frequency lemmas without a pedagogical gloss may have no English until an LLM fill runs.
 - **Analyzer errors.** pymorphy3, spaCy, Sudachi, and CAMeL Tools can pick the wrong lemma or POS; the validator will then flag or miss constructions.
 - **Japanese construction detection** is heuristic (て+いる, 連体形+noun, a keigo lemma list). It will both over- and under-flag.
 - **Arabic Form I–X mapping** is heuristic on CAMeL وزن patterns. A mis-tagged Form II verb can fail an A1 seed.
 - **Generation cost and latency.** Two completion calls plus gloss plus translation is normal on a fail-then-rewrite path. No streaming.
-- **SQLite.** Fine for a single-user or small demo. Compose and AWS use Postgres.
+- **SQLite.** Fine for a single-user or small demo. Compose uses local Postgres. Production uses Supabase.
+- **Guest vs account.** Catalog reading works without an account. Sign-in (Supabase Auth) keeps placement and lemmas across devices.
 - **Languages.** `ja` is public. `it`, `ru`, and `ar` are behind `SHOW_ITALIAN`, `SHOW_RUSSIAN`, and `SHOW_ARABIC`. Adding a language means grammar JSON, vocab/gloss, a morph module, a validator, seed texts, and UI labels.
 
 Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JLPT lists.
@@ -631,4 +634,4 @@ Not in this repo: audio, SRS / Anki export, billed accounts, or official CEFR/JL
 | [docs/api.md](docs/api.md) | Endpoints, headers, payloads, status codes |
 | [docs/nlp-and-cefr.md](docs/nlp-and-cefr.md) | Generation, analyzers, validators, lexicons, kanji |
 | [docs/learner-model.md](docs/learner-model.md) | Device id, placement, new/known counts, next-text ranking |
-| [docs/aws.md](docs/aws.md) | Step-by-step AWS hosting (ECS, ALB, RDS, S3) |
+| [docs/deploy.md](docs/deploy.md) | Vercel frontend, Supabase Postgres, FastAPI on a Docker host |

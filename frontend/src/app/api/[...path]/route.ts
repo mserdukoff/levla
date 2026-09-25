@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { backendUrl } from "@/lib/backend";
+import { accessToken } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -25,6 +26,10 @@ async function proxy(req: NextRequest, path: string[]) {
       headers.set(key, value);
     }
   });
+  if (!headers.has("authorization")) {
+    const token = await accessToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }
   const method = req.method.toUpperCase();
   const body =
     method === "GET" || method === "HEAD" ? undefined : await req.arrayBuffer();

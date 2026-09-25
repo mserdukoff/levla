@@ -114,6 +114,9 @@ export type Passage = {
   chapter_index?: number | null;
   comprehension?: ComprehensionQuestion[];
   shelf_status?: string;
+  source_name?: string | null;
+  source_url?: string | null;
+  source_date?: string | null;
 };
 
 export type LibraryItem = {
@@ -134,15 +137,53 @@ export type LibraryItem = {
   chapter_index?: number | null;
   has_audio?: boolean;
   new_lemma_pct?: number;
+  source_name?: string | null;
+  source_url?: string | null;
+  source_date?: string | null;
+};
+
+export type NewsNotice = {
+  passage_id: string;
+  title: string;
+  language: LangCode;
+  level: CefrLevel;
+  source_name?: string | null;
+  source_date?: string | null;
+  saved?: boolean;
+  read?: boolean;
+};
+
+export type PlacementQuestion = {
+  id: string;
+  prompt: string;
+  choices: string[];
+};
+
+export type PlacementRead = {
+  language: LangCode;
+  title: string;
+  text: string;
+  tokens: Token[];
+  questions: PlacementQuestion[];
+};
+
+export type PlacementResult = {
+  language: LangCode;
+  level: CefrLevel;
+  correct: number;
+  total: number;
+  placed: boolean;
 };
 
 export type LibraryResponse = {
   language: LangCode;
   placement: CefrLevel;
+  placed?: boolean;
   next_id: string | null;
   seen_lemmas: number;
   items: LibraryItem[];
   words?: StarredWord[];
+  news_notice?: NewsNotice | null;
 };
 
 export type StarredWord = {
@@ -198,6 +239,55 @@ export type MeResponse = {
   show_arabic: boolean;
   generate_remaining: number | null;
   require_auth: boolean;
+  admin: boolean;
+};
+
+export type AdminCount = { key: string; count: number };
+
+export type AdminUser = {
+  id: number;
+  email: string | null;
+  display_name: string | null;
+  has_auth: boolean;
+  created_at: string | null;
+  reads: number;
+  stars: number;
+  jobs: number;
+};
+
+export type AdminJob = {
+  id: string;
+  status: string;
+  language: string;
+  level: string;
+  topic: string;
+  user_id: number | null;
+  error: string | null;
+  created_at: string | null;
+  finished_at: string | null;
+};
+
+export type AdminOverview = {
+  api: {
+    ok: boolean;
+    name: string;
+    env: string;
+    db: string;
+    require_auth: boolean;
+    generate_workers: number;
+    show_russian: boolean;
+    show_italian: boolean;
+    show_arabic: boolean;
+  };
+  totals: Record<string, number>;
+  passages_by_language: AdminCount[];
+  passages_by_level: AdminCount[];
+  passages_by_shelf: AdminCount[];
+  jobs_by_status: AdminCount[];
+  activity_7d: Record<string, number>;
+  trial: Record<string, number | boolean>;
+  recent_users: AdminUser[];
+  recent_jobs: AdminJob[];
 };
 
 export type ReviewCard = {

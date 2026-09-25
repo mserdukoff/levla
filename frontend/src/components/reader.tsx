@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BandStrip } from "@/components/band";
 import { GlossCard } from "@/components/gloss-card";
+import { Art } from "@/components/landing/art";
 import { GrammarLegend, PassageArticle } from "@/components/passage-article";
+import { ReaderRail } from "@/components/reader-rail";
 import { Seal } from "@/components/seal";
-import { fetchPassageStats, fetchTranslation, sendFeedback, starWord, unstarWord } from "@/lib/api";
+import { fetchLibrary, fetchPassageStats, fetchTranslation, recordTap, sendFeedback, starWord, submitComprehension, unstarWord } from "@/lib/api";
 import {
   loadFadeKnown,
   loadFurigana,
@@ -35,12 +37,71 @@ function Toggle({
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      className={`text-[13px] tracking-[0.02em] underline underline-offset-4 transition-colors hover:text-ink ${
-        on ? "text-ink decoration-ink/50" : "text-ink/50 decoration-ink/15"
+      className={`relative whitespace-nowrap py-4 font-display text-[15px] transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:transition-colors hover:text-ink ${
+        on ? "text-ink after:bg-ink" : "text-ink/55 after:bg-transparent"
       }`}
     >
       {children}
     </button>
+  );
+}
+
+const MAX_DOTS = 10;
+
+function Pager({
+  index,
+  total,
+  prevId,
+  nextId,
+}: {
+  index: number | null;
+  total: number;
+  prevId: string | null;
+  nextId: string | null;
+}) {
+  const dots = Math.min(total, MAX_DOTS);
+  const activeDot = index != null && total > 0 ? Math.floor((index * dots) / total) : -1;
+  const edge =
+    "inline-flex h-11 items-center gap-2.5 rounded-card px-5 text-[14px] transition-colors";
+  return (
+    <nav aria-label="Shelf" className="mt-12 flex items-center justify-between gap-4">
+      {prevId ? (
+        <Link
+          href={`/passage/${prevId}`}
+          className={`${edge} border border-ink/70 text-ink hover:bg-ink/[0.04]`}
+        >
+          <span aria-hidden="true">←</span> Previous
+        </Link>
+      ) : (
+        <span className={`${edge} border border-rule text-ink/30`} aria-disabled="true">
+          <span aria-hidden="true">←</span> Previous
+        </span>
+      )}
+      {index != null && total > 0 ? (
+        <div className="flex flex-col items-center gap-2">
+          <span className="tnum text-[12px] tracking-[0.08em] text-ink/55">
+            {index + 1} / {total}
+          </span>
+          <span aria-hidden="true" className="flex gap-2">
+            {Array.from({ length: dots }, (_, i) => (
+              <span
+                key={i}
+                className={`h-[5px] w-[5px] rounded-full ${i === activeDot ? "bg-ink" : "bg-ink/20"}`}
+              />
+            ))}
+          </span>
+        </div>
+      ) : null}
+      {nextId ? (
+        <Link href={`/passage/${nextId}`} className={`${edge} bg-ink text-paper hover:bg-ink/90`}>
+          Next <span aria-hidden="true">→</span>
+        </Link>
+      ) : (
+        <span className={`${edge} bg-ink/15 text-paper`} aria-disabled="true">
+          Next <span aria-hidden="true">→</span>
+        </span>
+      )}
+    </nav>
   );
 }
 
@@ -67,8 +128,9 @@ function GrammarPassport({ passage, open }: { passage: Passage; open: boolean })
     v: used.length > 0 ? used.join(", ") : "none",
   });
   return (
-    <div className="relative mt-5 border-t border-rule pt-5">
-      <div className="pointer-events-none absolute right-0 top-5">
+    <div className="not-first:mt-4 not-first:border-t not-first:border-rule not-first:pt-4">
+     <div className="relative">
+      <div className="pointer-events-none absolute right-0 top-0">
         <Seal
           verdict={cal.passed ? "pass" : "fail"}
           language={passage.language}
@@ -84,6 +146,7 @@ function GrammarPassport({ passage, open }: { passage: Passage; open: boolean })
           </div>
         ))}
       </dl>
+     </div>
     </div>
   );
 }
@@ -154,6 +217,14 @@ export function Reader({ passage }: { passage: Passage }) {
   const [savingWord, setSavingWord] = useState(false);
   const [audioSentence, setAudioSentence] = useState<number | null>(null);
   const [passportOpen, setPassportOpen] = useState(false);
+  const [shelfIds, setShelfIds] = useState<string[]>([]);
+  const questions = passage.comprehension ?? [];
+  const [picks, setPicks] = useState<number[]>(() => questions.map(() => -1));
+  const [compDone, setCompDone] = useState(questions.length === 0);
+  const [compScore, setCompScore] = useState<{ correct: number; total: number } | null>(null);
+  const [compError, setCompError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const tapped = useRef(new Set<string>());
   const sentenceIds = useMemo(
     () => tokenSentenceIndex(passage.tokens, passage.language),
     [passage.tokens, passage.language],
@@ -187,6 +258,16 @@ export function Reader({ passage }: { passage: Passage }) {
       cancelled = true;
     };
   }, [passage.id]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    fetchLibrary(passage.language, ac.signal)
+      .then((lib) => setShelfIds(lib.items.map((item) => item.id)))
+      .catch(() => {
+        /* the pager falls back to the recommended next passage */
+      });
+    return () => ac.abort();
+  }, [passage.language]);
 
   useEffect(() => {
     setShowEnglish(false);
@@ -225,6 +306,24 @@ export function Reader({ passage }: { passage: Passage }) {
       setFeedbackError(err instanceof Error ? err.message : "Could not save feedback.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function onCheck() {
+    if (picks.some((pick) => pick < 0)) {
+      setCompError("Answer each question.");
+      return;
+    }
+    setChecking(true);
+    setCompError(null);
+    try {
+      const result = await submitComprehension(passage.id, picks);
+      setCompScore({ correct: result.correct, total: result.total });
+      setCompDone(true);
+    } catch (err) {
+      setCompError(err instanceof Error ? err.message : "Could not check those answers.");
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -331,13 +430,27 @@ export function Reader({ passage }: { passage: Passage }) {
             "No English for this sentence yet.")
       : null;
 
+  const shelfIndex = shelfIds.indexOf(passage.id);
+  const prevId = shelfIndex > 0 ? shelfIds[shelfIndex - 1] : null;
+  const pagerNext =
+    shelfIndex >= 0 && shelfIndex < shelfIds.length - 1 ? shelfIds[shelfIndex + 1] : nextId;
+
   return (
+    <div className="relative min-h-full overflow-x-clip lg:pl-[13.5rem]">
+      <ReaderRail language={passage.language} current="/library" />
     <div
-      className={`mx-auto flex min-h-full w-full max-w-[42rem] flex-col px-5 pt-7 sm:px-8 sm:pt-9 ${
-        glossOpen ? "pb-[min(40rem,80vh)]" : "pb-32"
+      className={`relative mx-auto flex w-full max-w-[47rem] flex-col px-5 pt-7 sm:px-8 sm:pt-9 ${
+        glossOpen ? "pb-[min(40rem,80vh)]" : "pb-16"
       }`}
     >
-      <header className="flex items-center justify-between gap-4">
+      <Art
+        key={passage.language}
+        src={`wash-${passage.language}`}
+        className={`wash-fade absolute top-2 w-[34rem] sm:w-[46rem] ${
+          ar ? "-left-[12rem] -scale-x-100 sm:-left-[16rem]" : "-right-[12rem] sm:-right-[16rem]"
+        }`}
+      />
+      <header className="relative flex items-center justify-between gap-4">
         <Link href="/library" className="t-quiet">
           ← Library
         </Link>
@@ -351,17 +464,23 @@ export function Reader({ passage }: { passage: Passage }) {
       </header>
 
       <div className={`relative mt-12 sm:mt-14 ${ar ? "pl-[6.5rem] sm:pl-[7.5rem]" : "pr-[6.5rem] sm:pr-[7.5rem]"}`}>
-        <p className="t-eyebrow">
+        <p className={`t-eyebrow ${ar ? "text-right" : ""}`}>
+          {passage.source_name
+            ? `${passage.source_name}${passage.source_date ? ` · ${passage.source_date}` : ""} · `
+            : ""}
           {passage.topic}
           {newPct != null ? ` · ${newPct}% new` : ""}
         </p>
         <h1
           dir={ar ? "rtl" : undefined}
-          className={`mt-3 text-[2.1rem] leading-[1.15] tracking-[-0.01em] text-ink sm:text-[2.6rem] ${font}`}
+          className={`mt-4 text-[2.3rem] leading-[1.15] tracking-[-0.01em] text-ink sm:text-[3.1rem] ${font}`}
         >
           {passage.title}
         </h1>
-        <div className="pointer-events-none absolute -right-1 top-0 sm:right-0">
+        <span aria-hidden="true" className={`mt-5 block h-px w-14 bg-ink/25 ${ar ? "ml-auto" : ""}`} />
+        <div
+          className={`pointer-events-none absolute top-0 ${ar ? "-left-1 sm:left-0" : "-right-1 sm:right-0"}`}
+        >
           <Seal
             verdict={passage.calibration.passed ? "pass" : "fail"}
             language={passage.language}
@@ -374,55 +493,71 @@ export function Reader({ passage }: { passage: Passage }) {
 
       <AudioBar passage={passage} activeSentence={audioSentence} onSentence={setAudioSentence} />
 
-      <div className="mt-8 border-y border-rule py-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2">
-          <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
-            <Toggle on={showEnglish} onClick={onToggleEnglish}>
-              English
-            </Toggle>
-            <Toggle on={showSentence} onClick={onToggleSentence}>
-              Sentence
-            </Toggle>
-            <Toggle on={grammarColors} onClick={onToggleGrammar}>
-              Grammar
-            </Toggle>
-            {ja ? (
-              <Toggle on={furigana} onClick={onToggleFurigana}>
-                Furigana
+      <div className="sheet relative mt-9 px-5 pb-10 sm:px-9">
+        <div className="-mx-5 border-b border-rule/70 px-5 sm:-mx-9 sm:px-9">
+          <div className="flex items-center justify-between gap-x-5 overflow-x-auto [scrollbar-width:none] sm:gap-x-7">
+            <div className="flex shrink-0 items-center gap-x-5 sm:gap-x-7">
+              <Toggle on={showEnglish} onClick={onToggleEnglish}>
+                English
               </Toggle>
-            ) : null}
-            {ar ? (
-              <Toggle on={furigana} onClick={onToggleFurigana}>
-                Vowels
+              <Toggle on={showSentence} onClick={onToggleSentence}>
+                Sentence
               </Toggle>
-            ) : null}
-            <Toggle on={fadeKnown} onClick={onToggleFade}>
-              Known
-            </Toggle>
+              <Toggle on={grammarColors} onClick={onToggleGrammar}>
+                Grammar
+              </Toggle>
+              {ja ? (
+                <Toggle on={furigana} onClick={onToggleFurigana}>
+                  Furigana
+                </Toggle>
+              ) : null}
+              {ar ? (
+                <Toggle on={furigana} onClick={onToggleFurigana}>
+                  Vowels
+                </Toggle>
+              ) : null}
+              <Toggle on={fadeKnown} onClick={onToggleFade}>
+                Known
+              </Toggle>
+            </div>
+            <div className="flex shrink-0 items-center gap-5">
+              <span aria-hidden="true" className="h-5 w-px bg-rule" />
+              <Toggle on={passportOpen} onClick={() => setPassportOpen((v) => !v)}>
+                Why this is {passage.level}
+              </Toggle>
+            </div>
           </div>
-          <Toggle on={passportOpen} onClick={() => setPassportOpen((v) => !v)}>
-            Why this is {passage.level}
-          </Toggle>
         </div>
-        {grammarColors ? <GrammarLegend language={passage.language} className="mt-3" /> : null}
-        <GrammarPassport passage={passage} open={passportOpen} />
-      </div>
+        {grammarColors || passportOpen ? (
+          <div className="-mx-5 border-b border-rule/70 px-5 py-4 sm:-mx-9 sm:px-9">
+            {grammarColors ? <GrammarLegend language={passage.language} /> : null}
+            <GrammarPassport passage={passage} open={passportOpen} />
+          </div>
+        ) : null}
 
-      <PassageArticle
-        tokens={passage.tokens}
-        language={passage.language}
-        selected={selected}
-        onSelect={setSelected}
-        grammarColors={grammarColors}
-        furigana={furigana}
-        fadeKnown={fadeKnown}
-        knownLemmas={stats?.known_lemmas ?? []}
-        sentenceIds={sentenceIds}
-        audioSentence={audioSentence}
-        focusSentence={focusSentence}
-        sentenceMode={showSentence}
-        className="mt-10 text-[1.35rem] sm:text-[1.45rem]"
-      />
+        <PassageArticle
+          tokens={passage.tokens}
+          language={passage.language}
+          selected={selected}
+          onSelect={(index) => {
+            setSelected(index);
+            if (index == null) return;
+            const tok = passage.tokens[index];
+            if (!tok?.is_word || !tok.lemma || tapped.current.has(tok.lemma)) return;
+            tapped.current.add(tok.lemma);
+            recordTap(tok.lemma, passage.language, passage.id);
+          }}
+          grammarColors={grammarColors}
+          furigana={furigana}
+          fadeKnown={fadeKnown}
+          knownLemmas={stats?.known_lemmas ?? []}
+          sentenceIds={sentenceIds}
+          audioSentence={audioSentence}
+          focusSentence={focusSentence}
+          sentenceMode={showSentence}
+          className="mt-8 text-[1.45rem] sm:text-[1.7rem]"
+        />
+      </div>
 
       {showEnglish || (showSentence && sentenceCaption) ? (
         <div className="mt-12 border-t border-rule pt-8">
@@ -432,15 +567,116 @@ export function Reader({ passage }: { passage: Passage }) {
           ) : englishError ? (
             <p className="text-sm text-terracotta">{englishError}</p>
           ) : showEnglish && english ? (
-            <p className="whitespace-pre-wrap font-reading text-[1.05rem] leading-[1.7] text-ink/75">
+            <p className="whitespace-pre-wrap font-reading text-[1.15rem] leading-[1.7] text-ink/80">
               {english}
             </p>
           ) : (
-            <p className="whitespace-pre-wrap font-reading text-[1.05rem] leading-[1.7] text-ink/75">
+            <p className="whitespace-pre-wrap font-reading text-[1.15rem] leading-[1.7] text-ink/80">
               {sentenceCaption}
             </p>
           )}
         </div>
+      ) : null}
+
+      {questions.length > 0 ? (
+        <section className="mt-12 border-t border-rule pt-8">
+          <p className="t-eyebrow">Did you follow it?</p>
+          <ol className="mt-5 flex flex-col gap-6">
+            {questions.map((question, qIndex) => (
+              <li key={question.id}>
+                <p className="text-[15px] leading-relaxed text-ink">{question.prompt}</p>
+                <div className="mt-3 flex flex-col gap-2">
+                  {question.choices.map((choice, cIndex) => {
+                    const selectedChoice = picks[qIndex] === cIndex;
+                    const revealed = compDone && compScore != null;
+                    const right = revealed && cIndex === question.answer_index;
+                    const wrong = revealed && selectedChoice && cIndex !== question.answer_index;
+                    return (
+                      <button
+                        key={choice}
+                        type="button"
+                        disabled={compDone || checking}
+                        onClick={() =>
+                          setPicks((prev) => prev.map((value, index) => (index === qIndex ? cIndex : value)))
+                        }
+                        className={`rounded-card border px-3 py-2 text-left text-sm leading-relaxed ${
+                          right
+                            ? "border-ink bg-ink text-paper"
+                            : wrong
+                              ? "border-terracotta text-terracotta"
+                              : selectedChoice
+                                ? "border-ink bg-paper-raised text-ink"
+                                : "border-rule bg-paper text-ink hover:border-ink/30"
+                        }`}
+                      >
+                        {choice}
+                      </button>
+                    );
+                  })}
+                </div>
+              </li>
+            ))}
+          </ol>
+          {compScore ? (
+            <p className="mt-4 text-sm text-ink/60">
+              {compScore.correct} of {compScore.total}. Then say how the passage felt.
+            </p>
+          ) : null}
+          {compError ? <p className="mt-3 text-sm text-terracotta">{compError}</p> : null}
+          {!compDone ? (
+            <button
+              type="button"
+              disabled={checking || picks.some((pick) => pick < 0)}
+              onClick={() => void onCheck()}
+              className="btn-primary mt-6 disabled:opacity-40"
+            >
+              {checking ? "Checking…" : "Check answers"}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
+
+      {compDone ? (
+        <section className="mt-12 border-t border-rule pt-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[14px] text-ink/60">Was this {passage.level} passage…</p>
+            <div className="flex flex-wrap gap-2">
+              {FEEDBACK.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={sending || Boolean(feedback)}
+                  onClick={() => onFeedback(item.id)}
+                  className={`rounded-full border px-4 py-1.5 text-sm transition-colors disabled:cursor-default ${
+                    feedback === item.id
+                      ? "border-ink bg-ink text-paper"
+                      : "border-rule bg-paper-raised text-ink hover:border-ink/30"
+                  } ${feedback && feedback !== item.id ? "opacity-50" : ""}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {feedbackError ? <p className="mt-3 text-xs text-terracotta">{feedbackError}</p> : null}
+          {feedback && !feedbackError ? (
+            <p className="mt-3 flex items-baseline justify-between gap-3 text-[13px] text-ink/55">
+              <span>
+                {placement
+                  ? `Saved. Your ${LANG_NAME[passage.language]} is at ${placement}.`
+                  : "Saved."}
+              </span>
+              {nextId && nextId !== pagerNext ? (
+                <Link
+                  href={`/passage/${nextId}`}
+                  className="text-ink underline decoration-ink/30 underline-offset-4"
+                >
+                  Read the suggested next →
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
+        </section>
       ) : null}
 
       {passage.calibration.warnings.length > 0 ? (
@@ -449,9 +685,17 @@ export function Reader({ passage }: { passage: Passage }) {
         </p>
       ) : null}
 
+      <Pager
+        index={shelfIndex >= 0 ? shelfIndex : null}
+        total={shelfIds.length}
+        prevId={prevId}
+        nextId={pagerNext}
+      />
+    </div>
+
       {glossOpen && selectedToken?.is_word ? (
         <div
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-rule bg-paper-raised px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 shadow-[0_-8px_30px_rgba(27,23,18,0.08)] sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[min(38rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-card sm:border sm:px-8 sm:pb-7 sm:pt-6"
+          className="fixed inset-x-0 bottom-0 z-20 border-t border-rule bg-paper-raised px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:w-[min(38rem,calc(100%-2rem))] sm:-translate-x-1/2 sm:rounded-[12px] sm:border sm:border-ink/8 sm:px-8 sm:pb-7 sm:pt-6 sm:shadow-float lg:left-[calc(50%+6.75rem)]"
           role="dialog"
           aria-label="Word gloss"
         >
@@ -473,53 +717,7 @@ export function Reader({ passage }: { passage: Passage }) {
             </button>
           </div>
         </div>
-      ) : (
-        <footer className="fixed inset-x-0 bottom-0 z-10 border-t border-rule bg-paper/95 px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-[42rem] items-center justify-between gap-3">
-            <p className="hidden text-[13px] text-ink/45 sm:block">
-              Was this {passage.level} passage…
-            </p>
-            <p className="text-[13px] text-ink/45 sm:hidden">This passage was</p>
-            <div className="flex flex-wrap justify-end gap-2">
-              {FEEDBACK.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={sending || Boolean(feedback)}
-                  onClick={() => onFeedback(item.id)}
-                  className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors disabled:cursor-default ${
-                    feedback === item.id
-                      ? "border-ink bg-ink text-paper"
-                      : "border-rule bg-paper-raised text-ink hover:border-ink/30"
-                  } ${feedback && feedback !== item.id ? "opacity-50" : ""}`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {feedbackError ? (
-            <p className="mx-auto mt-2 max-w-[42rem] text-xs text-terracotta">{feedbackError}</p>
-          ) : null}
-          {feedback && !feedbackError ? (
-            <p className="mx-auto mt-2 flex max-w-[42rem] items-baseline justify-between gap-3 text-xs text-ink/50">
-              <span>
-                {placement
-                  ? `Saved. Your ${LANG_NAME[passage.language]} is at ${placement}.`
-                  : "Saved."}
-              </span>
-              {nextId ? (
-                <Link
-                  href={`/passage/${nextId}`}
-                  className="text-[13px] text-ink underline decoration-ink/30 underline-offset-4"
-                >
-                  Read next →
-                </Link>
-              ) : null}
-            </p>
-          ) : null}
-        </footer>
-      )}
+      ) : null}
     </div>
   );
 }

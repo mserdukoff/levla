@@ -2,6 +2,7 @@ import { isDemo } from "./demo";
 import * as demoApi from "./demo-api";
 import { deviceHeaders } from "./device";
 import type {
+  AdminOverview,
   CefrLevel,
   FeedbackRating,
   FeedbackResult,
@@ -13,6 +14,8 @@ import type {
   ReviewCard,
   StarredWord,
   GenerateJobResponse,
+  PlacementRead,
+  PlacementResult,
 } from "./types";
 
 async function readError(res: Response): Promise<string> {
@@ -187,6 +190,22 @@ export async function starWord(body: {
   return res.json();
 }
 
+export async function saveNews(body: {
+  passage_id: string;
+  language: LangCode;
+  saved: boolean;
+}): Promise<{ saved: boolean }> {
+  if (isDemo()) return demoApi.saveNews(body);
+  const res = await fetch("/api/news/save", opts({
+    method: "POST",
+    body: JSON.stringify(body),
+  }, true));
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+  return res.json();
+}
+
 export async function unstarWord(lemma: string, language: LangCode): Promise<void> {
   if (isDemo()) return demoApi.unstarWord(lemma, language);
   const res = await fetch("/api/words", opts({
@@ -219,6 +238,38 @@ export async function submitReview(cardId: number, rating: "again" | "hard" | "g
   return res.json();
 }
 
+export async function fetchPlacement(language: LangCode): Promise<PlacementRead> {
+  if (isDemo()) return demoApi.fetchPlacement(language);
+  const res = await fetch(`/api/placement?language=${language}`, opts({ cache: "no-store" }));
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+  return res.json();
+}
+
+export async function submitPlacement(language: LangCode, answers: number[]): Promise<PlacementResult> {
+  if (isDemo()) return demoApi.submitPlacement(language, answers);
+  const res = await fetch("/api/placement", opts({
+    method: "POST",
+    body: JSON.stringify({ language, answers }),
+  }, true));
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+  return res.json();
+}
+
+export function recordTap(lemma: string, language: LangCode, passageId?: string) {
+  if (isDemo()) {
+    demoApi.recordTap(lemma, language);
+    return;
+  }
+  void fetch("/api/taps", opts({
+    method: "POST",
+    body: JSON.stringify({ lemma, language, passage_id: passageId ?? null }),
+  }, true)).catch(() => undefined);
+}
+
 export async function submitComprehension(passageId: string, answers: number[]) {
   if (isDemo()) return demoApi.submitComprehension(passageId, answers);
   const res = await fetch("/api/comprehension", opts({
@@ -237,4 +288,15 @@ export async function recordEvent(kind: string, passageId?: string) {
     method: "POST",
     body: JSON.stringify({ kind, passage_id: passageId ?? null }),
   }, true));
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview> {
+  if (isDemo()) {
+    throw new Error("Admin is not available in the demo.");
+  }
+  const res = await fetch("/api/admin/overview", opts({ cache: "no-store" }));
+  if (!res.ok) {
+    throw new Error(await readError(res));
+  }
+  return res.json();
 }

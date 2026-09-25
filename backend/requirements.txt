@@ -16,8 +16,7 @@ https://github.com/explosion/spacy-models/releases/download/it_core_news_md-3.8.
 camel-tools>=1.5.2
 alembic>=1.14.0
 psycopg2-binary>=2.9.10
-PyJWT>=2.10.0
+PyJWT[crypto]>=2.10.0
 email-validator>=2.2.0
-boto3>=1.35.0
 
 

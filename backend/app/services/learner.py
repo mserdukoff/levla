@@ -12,6 +12,7 @@ from app.models.db import (
     LearnerReadRow,
     LearnerRow,
     LearnerStarRow,
+    LearnerTapRow,
     PassageRow,
 )
 from app.models.schemas import StarredWord, Token
@@ -142,6 +143,17 @@ def apply_placement(learner: LearnerRow, rating: str) -> str:
     return learner.level
 
 
+def set_placed_level(learner: LearnerRow, level: str) -> str:
+    if level not in LEVELS:
+        level = DEFAULT_LEVEL
+    learner.level = level
+    learner.placed = 1
+    learner.consecutive_up = 0
+    learner.consecutive_down = 0
+    learner.updated_at = datetime.now(timezone.utc)
+    return learner.level
+
+
 def _guest_identity(device_id: str) -> Identity:
     return Identity(user_id=None, device_id=device_id)
 
@@ -205,6 +217,64 @@ def seen_lemmas(
     query = apply_owner_filter(db.query(LearnerLemmaRow.lemma), LearnerLemmaRow, ident)
     rows = query.filter(LearnerLemmaRow.language == language).all()
     return {r[0] for r in rows}
+
+
+def record_tap(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    lemma: str,
+    device_id: str | None = None,
+) -> None:
+    ident = _as_identity(identity, device_id)
+    if not ident.can_persist:
+        return
+    lemma = lemma.strip()
+    if not lemma:
+        return
+    owner_device = ident.device_id or f"user-{ident.user_id}"
+    query = apply_owner_filter(db.query(LearnerTapRow), LearnerTapRow, ident)
+    row = query.filter(
+        LearnerTapRow.language == language,
+        LearnerTapRow.lemma == lemma,
+    ).one_or_none()
+    now = datetime.now(timezone.utc)
+    if row is None:
+        db.add(
+            LearnerTapRow(
+                device_id=owner_device,
+                user_id=ident.user_id,
+                language=language,
+                lemma=lemma,
+                seen_at=now,
+            )
+        )
+    else:
+        row.seen_at = now
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+
+
+def recent_taps(
+    db: Session,
+    identity: Identity | str,
+    language: str,
+    device_id: str | None = None,
+    limit: int = 12,
+) -> list[str]:
+    ident = _as_identity(identity, device_id)
+    if not ident.can_persist:
+        return []
+    query = apply_owner_filter(db.query(LearnerTapRow), LearnerTapRow, ident)
+    rows = (
+        query.filter(LearnerTapRow.language == language)
+        .order_by(LearnerTapRow.seen_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [row.lemma for row in rows]
 
 
 def read_ids(
@@ -424,12 +494,25 @@ def unstar_lemma(
     return True
 
 
+def _row_lemmas(row: PassageRow) -> set[str]:
+    try:
+        data = json.loads(row.tokens_json)
+    except Exception:
+        return set()
+    return {
+        item.get("lemma")
+        for item in data
+        if isinstance(item, dict) and item.get("lemma")
+    }
+
+
 def pick_next_id(
     db: Session,
     language: str,
     placement: str,
     already_read: set[str],
     exclude_id: str | None = None,
+    tapped: set[str] | None = None,
 ) -> str | None:
     rows = (
         db.query(PassageRow)
@@ -440,7 +523,7 @@ def pick_next_id(
         .order_by(PassageRow.created_at.desc())
         .all()
     )
-    rows = [r for r in rows if calibration_passed(r)]
+    rows = [r for r in rows if calibration_passed(r) and (r.genre or "") != "news"]
     if not rows:
         return None
 
@@ -468,22 +551,25 @@ def pick_next_id(
     if series_id:
         return series_id
 
-    def score(row: PassageRow) -> tuple[int, float]:
-        created = row.created_at.timestamp() if row.created_at else 0.0
-        return (0, -created)
+    looked = tapped or set()
 
-    for level in _level_priority(placement):
+    def score(row: PassageRow, prefer_taps: bool) -> tuple[int, float]:
+        created = row.created_at.timestamp() if row.created_at else 0.0
+        overlap = len(_row_lemmas(row) & looked) if prefer_taps and looked else 0
+        return (-overlap, -created)
+
+    for index, level in enumerate(_level_priority(placement)):
         unread = [
             r
             for r in rows
             if r.level == level and r.id not in already_read and r.id != exclude_id
         ]
         if unread:
-            unread.sort(key=score)
+            unread.sort(key=lambda row: score(row, index == 0))
             return unread[0].id
 
     rest = [r for r in rows if r.id != exclude_id]
     if not rest:
         return rows[0].id
-    rest.sort(key=score)
+    rest.sort(key=lambda row: score(row, False))
     return rest[0].id

@@ -130,6 +130,10 @@ function makePassage(opts: {
   tokens: Token[];
   translation: string;
   created_at: string;
+  comprehension?: Passage["comprehension"];
+  source_name?: string;
+  source_url?: string | null;
+  source_date?: string;
 }): Passage {
   return {
     id: opts.id,
@@ -144,6 +148,10 @@ function makePassage(opts: {
     word_count: opts.tokens.filter((t) => t.is_word).length,
     created_at: opts.created_at,
     translation: opts.translation,
+    comprehension: opts.comprehension,
+    source_name: opts.source_name,
+    source_url: opts.source_url,
+    source_date: opts.source_date,
   };
 }
 
@@ -929,6 +937,165 @@ export const DEMO_PASSAGES: Passage[] = [
       "Right now I am on the train and reading a book. When I was little I always read on the train. Work is not waiting today, because it is a holiday. Then I buy water at the station. The city is already close.",
   }),
 ];
+
+function glossWord(language: LangCode, text: string, gloss: string, pos: string): Token {
+  return {
+    text,
+    ws: language === "ja" ? "" : " ",
+    is_word: true,
+    lemma: text,
+    morph: {
+      lemma: text,
+      pos,
+      case: null,
+      gender: null,
+      number: null,
+      tense: null,
+      aspect: null,
+      mood: null,
+      reading: null,
+      form: null,
+    },
+    gloss,
+    level: "A2",
+  };
+}
+
+function glossStop(text: string): Token {
+  return { text, ws: /[。！？]/.test(text) ? "" : " ", is_word: false, lemma: null, morph: null, gloss: null, level: null };
+}
+
+const NEWS_QUESTIONS = [
+  {
+    id: "q1",
+    prompt: "The morning train was ___.",
+    choices: ["late", "cancelled for a year", "flying"],
+    answer_index: 0,
+  },
+  {
+    id: "q2",
+    prompt: "Which of these happens in the passage?",
+    choices: ["People waited at the station.", "Someone flew to the moon.", "The text is a recipe."],
+    answer_index: 0,
+  },
+];
+
+DEMO_PASSAGES.push(
+  makePassage({
+    id: "demo-ja-news",
+    language: "ja",
+    level: "A2",
+    topic: "a late morning train",
+    genre: "news",
+    title: "朝の電車",
+    tokens: [
+      glossWord("ja", "けさ", "this morning", "noun"),
+      glossStop("、"),
+      glossWord("ja", "市内", "in the city", "noun"),
+      glossWord("ja", "の", "of", "particle"),
+      glossWord("ja", "電車", "train", "noun"),
+      glossWord("ja", "が", "subject", "particle"),
+      glossWord("ja", "遅れました", "was late", "verb"),
+      glossStop("。"),
+      glossWord("ja", "駅", "station", "noun"),
+      glossWord("ja", "で", "at", "particle"),
+      glossWord("ja", "多くの", "many", "adj"),
+      glossWord("ja", "人", "people", "noun"),
+      glossWord("ja", "が", "subject", "particle"),
+      glossWord("ja", "待ちました", "waited", "verb"),
+      glossStop("。"),
+    ],
+    translation: "This morning the city train was late. Many people waited at the station.",
+    created_at: "2026-09-22T08:00:00Z",
+    comprehension: NEWS_QUESTIONS,
+    source_name: "Demo wire",
+    source_date: "2026-09-22",
+  }),
+  makePassage({
+    id: "demo-ru-news",
+    language: "ru",
+    level: "A2",
+    topic: "a late morning train",
+    genre: "news",
+    title: "Утренний поезд",
+    tokens: [
+      glossWord("ru", "Утром", "in the morning", "ADVB"),
+      glossWord("ru", "городской", "city", "ADJF"),
+      glossWord("ru", "поезд", "train", "NOUN"),
+      glossWord("ru", "опоздал", "was late", "VERB"),
+      glossStop("."),
+      glossWord("ru", "На", "at", "PREP"),
+      glossWord("ru", "вокзале", "station", "NOUN"),
+      glossWord("ru", "люди", "people", "NOUN"),
+      glossWord("ru", "ждали", "waited", "VERB"),
+      glossStop("."),
+    ],
+    translation: "In the morning the city train was late. People waited at the station.",
+    created_at: "2026-09-22T08:00:00Z",
+    comprehension: NEWS_QUESTIONS,
+    source_name: "Demo wire",
+    source_date: "2026-09-22",
+  }),
+  makePassage({
+    id: "demo-it-news",
+    language: "it",
+    level: "A2",
+    topic: "a late morning train",
+    genre: "news",
+    title: "Il treno del mattino",
+    tokens: [
+      glossWord("it", "Stamattina", "this morning", "ADV"),
+      glossWord("it", "il", "the", "DET"),
+      glossWord("it", "treno", "train", "NOUN"),
+      glossWord("it", "della", "of the", "PREP"),
+      glossWord("it", "città", "city", "NOUN"),
+      glossWord("it", "era", "was", "VERB"),
+      glossWord("it", "in", "in", "PREP"),
+      glossWord("it", "ritardo", "delay", "NOUN"),
+      glossStop("."),
+      glossWord("it", "Alla", "at the", "PREP"),
+      glossWord("it", "stazione", "station", "NOUN"),
+      glossWord("it", "molte", "many", "ADJ"),
+      glossWord("it", "persone", "people", "NOUN"),
+      glossWord("it", "hanno", "have", "VERB"),
+      glossWord("it", "aspettato", "waited", "VERB"),
+      glossStop("."),
+    ],
+    translation: "This morning the city train was late. Many people waited at the station.",
+    created_at: "2026-09-22T08:00:00Z",
+    comprehension: NEWS_QUESTIONS,
+    source_name: "Demo wire",
+    source_date: "2026-09-22",
+  }),
+  makePassage({
+    id: "demo-ar-news",
+    language: "ar",
+    level: "A2",
+    topic: "a late morning train",
+    genre: "news",
+    title: "قطار الصباح",
+    tokens: [
+      glossWord("ar", "في", "in", "ADP"),
+      glossWord("ar", "الصباح", "the morning", "NOUN"),
+      glossWord("ar", "تأخر", "was late", "VERB"),
+      glossWord("ar", "قطار", "train", "NOUN"),
+      glossWord("ar", "المدينة", "the city", "NOUN"),
+      glossStop("."),
+      glossWord("ar", "في", "at", "ADP"),
+      glossWord("ar", "المحطة", "the station", "NOUN"),
+      glossWord("ar", "انتظر", "waited", "VERB"),
+      glossWord("ar", "كثير", "many", "ADJ"),
+      glossWord("ar", "من", "of", "ADP"),
+      glossWord("ar", "الناس", "people", "NOUN"),
+      glossStop("."),
+    ],
+    translation: "In the morning the city train was late. Many people waited at the station.",
+    created_at: "2026-09-22T08:00:00Z",
+    comprehension: NEWS_QUESTIONS,
+    source_name: "Demo wire",
+    source_date: "2026-09-22",
+  }),
+);
 
 const BY_ID = new Map(DEMO_PASSAGES.map((p) => [p.id, p]));
 

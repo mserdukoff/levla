@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse, Response as PlainResponse, JSONResponse
 from sqlalchemy import text
@@ -15,16 +17,23 @@ from app.models.schemas import (
     GlossResponse,
     LibraryResponse,
     MagicLinkRequest,
+    PlacementRead,
+    PlacementResult,
+    PlacementSubmit,
+    AdminOverview,
     MeResponse,
+    NewsSaveRequest,
     PassageResponse,
     PassageStats,
     ReviewSubmit,
     StarredWord,
     StarRequest,
     TranslationResponse,
+    TapRequest,
     TrialEventRequest,
     UnstarRequest,
 )
+from app.services.admin import admin_overview, is_admin_user, require_admin
 from app.services.anki_export import apkg_bytes, csv_bytes
 from app.services.auth import (
     consume_magic_link,
@@ -35,6 +44,7 @@ from app.services.auth import (
     google_authorize_url,
     clear_auth_cookie,
 )
+from app.services.identity import Identity, merge_guest_into_user, valid_device_id
 from app.services.generate import (
     complete_read,
     ensure_translation,
@@ -47,25 +57,31 @@ from app.services.generation_jobs import (
     job_to_response,
 )
 from app.services.gloss import resolve_gloss
-from app.services.identity import Identity, valid_device_id
 from app.services.learner import (
     DEFAULT_LEVEL,
     get_learner,
+    get_or_create_learner,
     lemma_token_stats,
     list_stars,
     pick_next_id,
     read_ids,
+    recent_taps,
+    record_tap,
     seen_lemmas,
+    set_placed_level,
     star_lemma,
     starred_lemmas,
     tokens_from_row,
     unstar_lemma,
 )
 from app.services.library import list_library
+from app.services.news import save_news
 from app.services.morph import analyze_word
 from app.services.quota import consume_generate, remaining_generates
 from app.services.srs import due_cards, due_count, review_card
 from app.services.trial import record_event, trial_metrics
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
@@ -104,13 +120,13 @@ def get_identity(
 
 @router.get("/health")
 def health():
-    return {"ok": True, "name": "levla"}
+    return {"ok": True, "name": "lociros"}
 
 
 @router.get("/health/ready")
 def ready(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))
-    return {"ok": True, "name": "levla", "db": True}
+    return {"ok": True, "name": "lociros", "db": True}
 
 
 @router.get("/me", response_model=MeResponse)
@@ -128,6 +144,7 @@ def me(request: Request, db: Session = Depends(get_db), identity: Identity = Dep
         show_arabic=settings.show_arabic,
         generate_remaining=remaining if settings.require_auth else None,
         require_auth=settings.require_auth,
+        admin=is_admin_user(user),
     )
 
 
@@ -150,6 +167,8 @@ def delete_me(
         LearnerReadRow,
         LearnerRow,
         LearnerStarRow,
+        LearnerTapRow,
+        LearnerNewsSaveRow,
         MagicLinkRow,
         TrialEventRow,
     )
@@ -160,6 +179,8 @@ def delete_me(
         LearnerStarRow,
         LearnerReadRow,
         LearnerRow,
+        LearnerTapRow,
+        LearnerNewsSaveRow,
         TrialEventRow,
     ):
         db.query(model).filter(model.user_id == user.id).delete()
@@ -172,6 +193,19 @@ def delete_me(
     db.commit()
     clear_auth_cookie(response)
     return {"ok": True}
+
+
+@router.post("/auth/session")
+def auth_session(
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    """Attach guest device progress after a Supabase sign-in."""
+    if not identity.user_id:
+        raise HTTPException(status_code=401, detail="Sign in first.")
+    if identity.device_id:
+        merge_guest_into_user(db, identity.device_id, identity.user_id)
+    return {"ok": True, "user_id": identity.user_id}
 
 
 @router.get("/auth/google")
@@ -251,6 +285,7 @@ def post_generate(
         if identity.can_persist
         else []
     )
+    reuse = recent_taps(db, identity, body.language) if identity.can_persist else []
     try:
         job = enqueue_generation(
             db,
@@ -260,6 +295,7 @@ def post_generate(
             language=body.language,
             identity=identity,
             known_lemmas=known or None,
+            reuse_lemmas=reuse or None,
         )
     except HTTPException:
         raise
@@ -290,6 +326,15 @@ def get_library(
     identity: Identity = Depends(get_identity),
 ):
     require_language(language)
+    if identity.can_persist:
+        learner = get_learner(db, identity, language)
+        level = learner.level if learner is not None else DEFAULT_LEVEL
+        try:
+            from app.services.news import schedule_daily_news
+
+            schedule_daily_news(language, level)
+        except Exception:
+            logger.exception("Could not schedule daily news")
     return list_library(db, language, identity)
 
 
@@ -335,7 +380,10 @@ def get_passage_stats(
         seen = seen_lemmas(db, identity, language)
         already = read_ids(db, identity)
     new, recycled = lemma_token_stats(tokens_from_row(row), language, seen)
-    next_id = pick_next_id(db, language, placement, already, exclude_id=passage_id)
+    tapped = set(recent_taps(db, identity, language)) if identity.can_persist else set()
+    next_id = pick_next_id(
+        db, language, placement, already, exclude_id=passage_id, tapped=tapped
+    )
     starred = sorted(starred_lemmas(db, identity, language)) if identity.can_persist else []
     return PassageStats(
         passage_id=passage_id,
@@ -506,7 +554,7 @@ def export_words_csv(
     return PlainResponse(
         data,
         media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": 'attachment; filename="levla-words.csv"'},
+        headers={"Content-Disposition": 'attachment; filename="lociros-words.csv"'},
     )
 
 
@@ -522,7 +570,7 @@ def export_words_apkg(
     return PlainResponse(
         data,
         media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="levla-words.apkg"'},
+        headers={"Content-Disposition": 'attachment; filename="lociros-words.apkg"'},
     )
 
 
@@ -551,6 +599,69 @@ def post_review(
     except KeyError:
         raise HTTPException(status_code=404, detail="Card not found") from None
     return card
+
+
+@router.get("/placement", response_model=PlacementRead)
+def get_placement(language: str = "ja"):
+    require_language(language)
+    from app.services.placement import placement_read
+
+    return placement_read(language)
+
+
+@router.post("/placement", response_model=PlacementResult)
+def post_placement(
+    body: PlacementSubmit,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    require_language(body.language)
+    if not identity.can_persist:
+        raise HTTPException(status_code=400, detail="A device id is required to save a level.")
+    from app.services.placement import score_placement
+
+    try:
+        correct, total, level = score_placement(body.language, body.answers)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    learner = get_or_create_learner(db, identity, body.language)
+    set_placed_level(learner, level)
+    db.commit()
+    return PlacementResult(
+        language=body.language,
+        level=level,  # type: ignore[arg-type]
+        correct=correct,
+        total=total,
+        placed=True,
+    )
+
+
+@router.post("/news/save")
+def post_news_save(
+    body: NewsSaveRequest,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    require_language(body.language)
+    if not identity.can_persist:
+        raise HTTPException(status_code=400, detail="A device id is required to save a passage.")
+    try:
+        saved = save_news(db, identity, body.passage_id, body.language, body.saved)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "saved": saved}
+
+
+@router.post("/taps")
+def post_tap(
+    body: TapRequest,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    require_language(body.language)
+    if identity.can_persist:
+        record_tap(db, identity, body.language, body.lemma)
+    return {"ok": True}
 
 
 @router.post("/comprehension")
@@ -594,8 +705,22 @@ def post_event(
     return {"ok": True}
 
 
+@router.get("/admin/overview", response_model=AdminOverview)
+def get_admin_overview(
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    require_admin(db, identity)
+    return admin_overview(db)
+
+
 @router.get("/trial/metrics")
-def get_trial_metrics(days: int = 30, db: Session = Depends(get_db)):
+def get_trial_metrics(
+    days: int = 30,
+    db: Session = Depends(get_db),
+    identity: Identity = Depends(get_identity),
+):
+    require_admin(db, identity)
     return trial_metrics(db, days=days)
 
 

@@ -1,10 +1,10 @@
 {
-  "name": "Levla",
-  "short_name": "Levla",
+  "name": "Lociros",
+  "short_name": "Lociros",
   "start_url": "/library",
   "display": "standalone",
   "background_color": "#f3eee4",
-  "theme_color": "#1b1712",
+  "theme_color": "#1c2538",
   "description": "CEFR-calibrated Japanese, Arabic, Italian, and Russian graded readers",
   "icons": [
     {

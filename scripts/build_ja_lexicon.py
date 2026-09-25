@@ -579,7 +579,7 @@ JLPT_CSV = {
 def _http_json(url: str):
     import urllib.request
 
-    req = urllib.request.Request(url, headers={"User-Agent": "levla-lexicon"})
+    req = urllib.request.Request(url, headers={"User-Agent": "lociros-lexicon"})
     with urllib.request.urlopen(req, timeout=60) as res:
         return json.loads(res.read().decode("utf-8"))
 
@@ -587,7 +587,7 @@ def _http_json(url: str):
 def _http_text(url: str) -> str:
     import urllib.request
 
-    req = urllib.request.Request(url, headers={"User-Agent": "levla-lexicon"})
+    req = urllib.request.Request(url, headers={"User-Agent": "lociros-lexicon"})
     with urllib.request.urlopen(req, timeout=60) as res:
         return res.read().decode("utf-8")
 

@@ -1,16 +1,16 @@
-# Prompt for Claude Fable — Levla visual redesign + landing page
+# Prompt for Claude Fable — Lociros visual redesign + landing page
 
 > Copy everything below into Fable as one message. It's written to be self-contained: it includes the product, the current design system, and what to change.
 
 ---
 
-I want you to redesign the visual design of my app, **Levla**, and design a **landing page** for it (one doesn't exist yet — right now the app opens straight into the logged-out shelf). I want the whole thing to feel genuinely premium and considered — not a generic SaaS template, not "AI app" chrome. Treat this as a real design pass, not a reskin: push on typography, spacing, and detail the way a small, well-funded studio would for a paid product.
+I want you to redesign the visual design of my app, **Lociros**, and design a **landing page** for it (one doesn't exist yet — right now the app opens straight into the logged-out shelf). I want the whole thing to feel genuinely premium and considered — not a generic SaaS template, not "AI app" chrome. Treat this as a real design pass, not a reskin: push on typography, spacing, and detail the way a small, well-funded studio would for a paid product.
 
-## What Levla is
+## What Lociros is
 
-Levla is a CEFR-calibrated graded reader for Russian and Japanese (A1–B2). It generates short reading passages constrained to a checkable CEFR level, validated by a morphological analyzer, then serves them through a reader where the learner taps any word for lemma, grammar, and gloss. After each passage the learner rates it too easy / just right / too hard, which updates their placement and picks the next passage. It's a single-user demo — no accounts, no billing, no sync.
+Lociros is a CEFR-calibrated graded reader for Russian and Japanese (A1–B2). It generates short reading passages constrained to a checkable CEFR level, validated by a morphological analyzer, then serves them through a reader where the learner taps any word for lemma, grammar, and gloss. After each passage the learner rates it too easy / just right / too hard, which updates their placement and picks the next passage. It's a single-user demo — no accounts, no billing, no sync.
 
-The core differentiator, and the thing the landing page needs to sell: CEFR level here is a **checked constraint**, not a prompt adjective. Most "AI-generated A2 Japanese" drifts into grammar way above the stated level. Levla generates against the level, then runs a real morphological analyzer against the output before it's shown to anyone.
+The core differentiator, and the thing the landing page needs to sell: CEFR level here is a **checked constraint**, not a prompt adjective. Most "AI-generated A2 Japanese" drifts into grammar way above the stated level. Lociros generates against the level, then runs a real morphological analyzer against the output before it's shown to anyone.
 
 Two screens today: the **shelf** (library + placement + restock) and the **reader** (passage + word-level gloss + grammar coloring + furigana + feedback). Full behavioral spec is below if you need it, but the redesign is about look, not new functionality.
 

@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from app.models.db import (
     LearnerCardRow,
     LearnerLemmaRow,
+    LearnerNewsSaveRow,
     LearnerReadRow,
     LearnerRow,
     LearnerStarRow,
+    LearnerTapRow,
 )
 
 _DEVICE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
@@ -69,6 +71,8 @@ def merge_guest_into_user(db: Session, device_id: str, user_id: int) -> None:
         LearnerStarRow,
         LearnerReadRow,
         LearnerCardRow,
+        LearnerNewsSaveRow,
+        LearnerTapRow,
     ):
         rows = db.query(model).filter(model.device_id == device_id).all()
         for row in rows:

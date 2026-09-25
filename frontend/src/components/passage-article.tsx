@@ -35,7 +35,7 @@ export function GrammarLegend({ language, className = "" }: { language: LangCode
   const items = language === "ja" ? JA_LEGEND : LATIN_LEGEND;
   return (
     <p
-      className={`flex flex-wrap items-baseline gap-x-3.5 gap-y-1 text-[11px] uppercase tracking-[0.12em] text-ink/40 ${className}`}
+      className={`flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[11.5px] uppercase tracking-[0.1em] text-ink/40 ${className}`}
     >
       {items.map((item) => (
         <span key={item.role + item.label} className={ROLE_TEXT[item.role]}>

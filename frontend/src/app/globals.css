@@ -1,19 +1,26 @@
 @import "tailwindcss";
 
 /*
-  Levla — paper, ink, one accent.
+  Lociros — warm paper, indigo ink, one accent.
 
-  Tokens are deliberately few. `--paper-deep` is the only addition to the
-  original palette: a tonal step of the same paper, used for hover washes and
-  the landing page's quieter bands. It is not a second accent.
+  The ink is the same slate navy as the engravings, so type and art read as
+  one printing. Blush and sage are tinted paper, not accents: they only ever
+  fill a whole card. Sage ink is reserved for a passing seal, the one place
+  the product says "yes".
 */
 :root {
-  --paper: #f3eee4;
-  --paper-raised: #faf6ee;
-  --paper-deep: #eae3d4;
-  --ink: #1b1712;
-  --rule: #d7cbb8;
-  --terracotta: #b84a2a;
+  --paper: #f4efe6;
+  --paper-raised: #fbf9f4;
+  --paper-deep: #ebe5d8;
+  --blush: #f2e5da;
+  --blush-deep: #e6c8b6;
+  --sage-wash: #ebe9dc;
+  --sage: #4f6e57;
+  --ink: #1c2538;
+  --rule: #dcd5c7;
+  --terracotta: #b5452a;
+  --elev-card: 0 1px 2px rgb(28 37 56 / 0.05), 0 12px 32px -14px rgb(28 37 56 / 0.2);
+  --elev-float: 0 2px 4px rgb(28 37 56 / 0.06), 0 24px 48px -18px rgb(28 37 56 / 0.32);
 
   /* grammar overlay inks — pedagogical, never brand */
   --g-topic: #b84a2a;
@@ -32,6 +39,7 @@
     "Yu Gothic", "Noto Sans JP", ui-sans-serif, system-ui, sans-serif;
   --naskh: var(--font-naskh), "Noto Naskh Arabic", "Arabic Typesetting",
     "Traditional Arabic", serif;
+  --hand: var(--font-caveat), "Bradley Hand", "Segoe Print", cursive;
 }
 
 @theme inline {
@@ -41,6 +49,10 @@
   --color-ink: var(--ink);
   --color-rule: var(--rule);
   --color-terracotta: var(--terracotta);
+  --color-blush: var(--blush);
+  --color-blush-deep: var(--blush-deep);
+  --color-sage-wash: var(--sage-wash);
+  --color-sage: var(--sage);
   --color-g-topic: var(--g-topic);
   --color-g-subject: var(--g-subject);
   --color-g-object: var(--g-object);
@@ -54,8 +66,12 @@
   --font-reading: var(--serif);
   --font-ja: var(--gothic);
   --font-ar: var(--naskh);
-  /* one card radius, one pill. Nothing in between. */
-  --radius-card: 6px;
+  --font-hand: var(--hand);
+  /* controls sit at 8px, sheets of paper at 14px. */
+  --radius-card: 8px;
+  --radius-sheet: 14px;
+  --shadow-card: var(--elev-card);
+  --shadow-float: var(--elev-float);
 }
 
 html {
@@ -101,16 +117,6 @@ body {
   color: color-mix(in srgb, var(--ink) 50%, transparent);
 }
 
-/* brand kicker: serif, terracotta, wide */
-@utility t-kicker {
-  font-family: var(--serif);
-  font-size: 13px;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.28em;
-  color: var(--terracotta);
-}
-
 /* large serif display, optical size kicks in above 40px */
 @utility t-display {
   font-family: var(--serif);
@@ -129,15 +135,6 @@ body {
   text-wrap: balance;
 }
 
-/* folio numerals on the landing page: “01”, “02” */
-@utility t-folio {
-  font-family: var(--serif);
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--ink) 45%, transparent);
-}
-
 /* quiet text action: “← Library”, “Restock the shelf”, toggles */
 @utility t-quiet {
   font-size: 13px;
@@ -152,6 +149,68 @@ body {
 
 @utility tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/* margin note in the reader's own hand */
+@utility t-hand {
+  font-family: var(--hand);
+  font-size: 1.3rem;
+  line-height: 1.15;
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+}
+
+/* ---------- surfaces ---------- */
+
+/* a sheet of paper lifted off the page */
+@utility sheet {
+  border-radius: var(--radius-sheet);
+  border: 1px solid color-mix(in srgb, var(--ink) 7%, transparent);
+  background: var(--paper-raised);
+  box-shadow: var(--elev-card);
+}
+
+@utility sheet-float {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  background: var(--paper-raised);
+  box-shadow: var(--elev-float);
+}
+
+.art {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* for art cropped at a hard edge: dissolve every side into the paper */
+.fade-edges {
+  mask-image:
+    linear-gradient(to right, transparent, black 5%, black 85%, transparent),
+    linear-gradient(to bottom, black 88%, transparent);
+  mask-composite: intersect;
+}
+
+/* hero cliffs: some landscapes run to the canvas edge on the left and bottom */
+.cliff-fade {
+  mask-image:
+    linear-gradient(to right, transparent, black 7%),
+    linear-gradient(to bottom, black 86%, transparent);
+  mask-composite: intersect;
+}
+
+/* a panorama that dissolves into the paper on its left, where copy sits */
+.vista-fade {
+  mask-image:
+    linear-gradient(to right, transparent, black 28%, black 90%, transparent),
+    linear-gradient(to bottom, transparent, black 12%, black 86%, transparent);
+  mask-composite: intersect;
+}
+
+/* the reader's ink-wash landscape: fades out to the left and below the title */
+.wash-fade {
+  mask-image:
+    linear-gradient(to right, transparent, black 35%, black 80%, transparent),
+    linear-gradient(to bottom, transparent, black 8%, black 55%, transparent);
+  mask-composite: intersect;
 }
 
 /* ---------- controls ---------- */
@@ -266,6 +325,10 @@ article rt {
   color: var(--terracotta);
   transform: rotate(-6deg);
   transform-origin: 50% 55%;
+}
+
+.seal-pass {
+  color: var(--sage);
 }
 
 .seal-inverted {

@@ -44,6 +44,9 @@ class LibraryItem(BaseModel):
     chapter_index: int | None = None
     has_audio: bool = False
     new_lemma_pct: float = 0.0
+    source_name: str | None = None
+    source_url: str | None = None
+    source_date: str | None = None
 
 
 class StarredWord(BaseModel):
@@ -66,13 +69,57 @@ class UnstarRequest(BaseModel):
     language: LangCode
 
 
+class NewsNotice(BaseModel):
+    passage_id: str
+    title: str
+    language: LangCode
+    level: CefrLevel
+    source_name: str | None = None
+    source_date: str | None = None
+    saved: bool = False
+    read: bool = False
+
+
+class NewsSaveRequest(BaseModel):
+    passage_id: str
+    language: LangCode
+    saved: bool = True
+
+
 class LibraryResponse(BaseModel):
     language: LangCode
     placement: CefrLevel
+    placed: bool = True
     next_id: str | None = None
     seen_lemmas: int = 0
     items: list[LibraryItem]
     words: list[StarredWord] = []
+    news_notice: NewsNotice | None = None
+
+
+class PlacementQuestion(BaseModel):
+    id: str
+    prompt: str
+    choices: list[str]
+
+
+class PlacementSubmit(BaseModel):
+    language: LangCode
+    answers: list[int]
+
+
+class PlacementResult(BaseModel):
+    language: LangCode
+    level: CefrLevel
+    correct: int
+    total: int
+    placed: bool = True
+
+
+class TapRequest(BaseModel):
+    lemma: str = Field(..., min_length=1, max_length=120)
+    language: LangCode
+    passage_id: str | None = None
 
 
 class PassageStats(BaseModel):
@@ -152,6 +199,14 @@ class Token(BaseModel):
     conj_id: int | None = None
 
 
+class PlacementRead(BaseModel):
+    language: LangCode
+    title: str
+    text: str
+    tokens: list[Token]
+    questions: list[PlacementQuestion]
+
+
 class Calibration(BaseModel):
     passed: bool
     attempts: int
@@ -209,6 +264,9 @@ class PassageResponse(BaseModel):
     series_id: str | None = None
     chapter_index: int | None = None
     comprehension: list[ComprehensionQuestion] = []
+    source_name: str | None = None
+    source_url: str | None = None
+    source_date: str | None = None
 
 
 class GenerateJobResponse(BaseModel):
@@ -259,6 +317,7 @@ class MeResponse(BaseModel):
     show_arabic: bool = False
     generate_remaining: int | None = None
     require_auth: bool = False
+    admin: bool = False
 
 
 class MagicLinkRequest(BaseModel):
@@ -289,3 +348,44 @@ class TrialEventRequest(BaseModel):
     kind: str = Field(..., min_length=1, max_length=40)
     passage_id: str | None = None
     payload: dict | None = None
+
+
+class AdminCount(BaseModel):
+    key: str
+    count: int
+
+
+class AdminUserRow(BaseModel):
+    id: int
+    email: str | None = None
+    display_name: str | None = None
+    has_auth: bool = False
+    created_at: datetime | None = None
+    reads: int = 0
+    stars: int = 0
+    jobs: int = 0
+
+
+class AdminJobRow(BaseModel):
+    id: str
+    status: str
+    language: str
+    level: str
+    topic: str
+    user_id: int | None = None
+    error: str | None = None
+    created_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+class AdminOverview(BaseModel):
+    api: dict
+    totals: dict[str, int]
+    passages_by_language: list[AdminCount]
+    passages_by_level: list[AdminCount]
+    passages_by_shelf: list[AdminCount]
+    jobs_by_status: list[AdminCount]
+    activity_7d: dict[str, int]
+    trial: dict
+    recent_users: list[AdminUserRow]
+    recent_jobs: list[AdminJobRow]

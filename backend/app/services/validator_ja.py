@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.models.schemas import Token
 from app.services.data import grammar_rules, level_rank, vocab_bands
-from app.services.validator import ValidationResult
+from app.services.validator import ValidationResult, vocab_exempt
 
 CONTENT_POS = {"noun", "verb", "i-adj", "na-adj", "adverb"}
 KEIGO = {
@@ -119,8 +119,7 @@ def validate_tokens_ja(tokens: list[Token], level: str) -> ValidationResult:
             content_n += 1
             band = bands.get(lemma)
             if band is None or level_rank(band) > cap:
-                # Skip names / katakana loanwords that look proper
-                if tok.text[:1].isupper():
+                if vocab_exempt(tok) or tok.text[:1].isupper():
                     continue
                 overlevel += 1
                 if band:

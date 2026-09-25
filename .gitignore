@@ -13,4 +13,5 @@ frontend/node_modules/
 dist/
 backend/audio/
 *.mp3
-
+.vercel
+.env.local

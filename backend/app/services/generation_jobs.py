@@ -55,6 +55,7 @@ def enqueue_generation(
     language: str,
     identity: Identity,
     known_lemmas: list[str] | None,
+    reuse_lemmas: list[str] | None = None,
 ) -> GenerationJobRow:
     if pending_count(db, identity) >= settings.generate_max_pending:
         raise HTTPException(
@@ -68,9 +69,7 @@ def enqueue_generation(
         topic=topic,
         genre=genre,
         language=language,
-        known_lemmas_json=(
-            json.dumps(known_lemmas, ensure_ascii=False) if known_lemmas else None
-        ),
+        known_lemmas_json=_lemma_payload(known_lemmas, reuse_lemmas),
         device_id=identity.device_id,
         user_id=identity.user_id,
         created_at=datetime.now(timezone.utc),
@@ -79,6 +78,33 @@ def enqueue_generation(
     db.commit()
     db.refresh(row)
     return row
+
+
+def _lemma_payload(
+    known_lemmas: list[str] | None,
+    reuse_lemmas: list[str] | None,
+) -> str | None:
+    if reuse_lemmas:
+        return json.dumps(
+            {"known": known_lemmas or [], "reuse": reuse_lemmas},
+            ensure_ascii=False,
+        )
+    if known_lemmas:
+        return json.dumps(known_lemmas, ensure_ascii=False)
+    return None
+
+
+def _lemma_lists(raw: str | None) -> tuple[list[str] | None, list[str] | None]:
+    if not raw:
+        return None, None
+    parsed = json.loads(raw)
+    if isinstance(parsed, dict):
+        known = parsed.get("known") or None
+        reuse = parsed.get("reuse") or None
+        return known, reuse
+    if isinstance(parsed, list):
+        return parsed, None
+    return None, None
 
 
 def claim_next_job(db: Session) -> GenerationJobRow | None:
@@ -131,9 +157,7 @@ def _process_job(job_id: str) -> None:
         job = db.get(GenerationJobRow, job_id)
         if job is None or job.status != STATUS_RUNNING:
             return
-        known: list[str] | None = None
-        if job.known_lemmas_json:
-            known = json.loads(job.known_lemmas_json)
+        known, reuse = _lemma_lists(job.known_lemmas_json)
         cached = find_cached_passage(
             db, job.level, job.topic, job.genre, job.language
         )
@@ -150,6 +174,7 @@ def _process_job(job_id: str) -> None:
             job.genre,
             job.language,
             known_lemmas=known,
+            reuse_lemmas=reuse,
         )
         job.status = STATUS_COMPLETED
         job.passage_id = passage.id

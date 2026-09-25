@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -30,6 +31,34 @@ from app.services.sentences import english_aligned
 from app.services.validator import ValidationResult, validate_tokens
 
 logger = logging.getLogger(__name__)
+
+_FOREIGN_WORD = re.compile(r"[A-Za-z]{2,}")
+_NEWS_SCRIPT = {"ja", "ru", "ar"}
+_NEWS_MAX_OVERLEVEL = {"A1": 0.12, "A2": 0.15, "B1": 0.18, "B2": 0.22}
+
+
+def hold_news_to_level(
+    title: str,
+    text: str,
+    language: str,
+    level: str,
+    result: ValidationResult,
+) -> ValidationResult:
+    """A news draft is public only when it stays inside the learner's band."""
+    reasons: list[str] = []
+    if language in _NEWS_SCRIPT and _FOREIGN_WORD.search(f"{title}\n{text}"):
+        reasons.append("script: a source-language word is still in the title or the text")
+    cap = _NEWS_MAX_OVERLEVEL.get(level, 0.10)
+    if result.overlevel_lemma_rate > cap:
+        reasons.append(
+            f"news: vocabulary is above {level} "
+            f"({result.overlevel_lemma_rate:.0%} over level, keep it under {cap:.0%})"
+        )
+    if not reasons:
+        return result
+    result.passed = False
+    result.flags = reasons + [flag for flag in result.flags if flag not in reasons]
+    return result
 
 
 def public_passage_filter():
@@ -119,6 +148,9 @@ def _to_response(row: PassageRow) -> PassageResponse:
         series_id=getattr(row, "series_id", None),
         chapter_index=getattr(row, "chapter_index", None),
         comprehension=_parse_comprehension(getattr(row, "comprehension_json", None)),
+        source_name=getattr(row, "source_name", None),
+        source_url=getattr(row, "source_url", None),
+        source_date=getattr(row, "source_date", None),
     )
 
 
@@ -259,15 +291,26 @@ def generate_passage(
     genre: str | None = None,
     language: str = "ru",
     known_lemmas: list[str] | None = None,
+    reuse_lemmas: list[str] | None = None,
+    news_brief: str | None = None,
 ) -> PassageResponse:
-    cached = find_cached_passage(db, level, topic, genre, language)
-    if cached is not None:
-        return cached
+    if not news_brief:
+        cached = find_cached_passage(db, level, topic, genre, language)
+        if cached is not None:
+            return cached
 
     title, text, translation = generate_passage_text(
-        level, topic, genre, language=language, known_lemmas=known_lemmas
+        level,
+        topic,
+        genre,
+        language=language,
+        known_lemmas=known_lemmas,
+        reuse_lemmas=reuse_lemmas,
+        news_brief=news_brief,
     )
     tokens, result = _analyze_and_validate(text, level, language, use_llm_gloss=True)
+    if news_brief:
+        result = hold_news_to_level(title, text, language, level, result)
 
     attempts = 1
     warnings: list[str] = []
@@ -282,12 +325,19 @@ def generate_passage(
                 correction_flags=result.flags,
                 language=language,
                 known_lemmas=known_lemmas,
+                reuse_lemmas=reuse_lemmas,
+                news_brief=news_brief,
             )
             tokens2, result2 = _analyze_and_validate(
                 text2, level, language, use_llm_gloss=True
             )
+            if news_brief:
+                result2 = hold_news_to_level(title2, text2, language, level, result2)
             attempts = 2
-            if result2.severity <= result.severity:
+            closer = result2.severity <= result.severity
+            if news_brief and result2.passed and not result.passed:
+                closer = True
+            if closer:
                 title, text, tokens, result = title2, text2, tokens2, result2
                 translation = translation2
             else:
@@ -304,6 +354,13 @@ def generate_passage(
         aligned = translate_passage(text, language)
         if aligned:
             translation = aligned
+    from app.services.comprehension import questions_from_english
+
+    comprehension_json = None
+    if translation:
+        built = questions_from_english(translation, topic)
+        if built:
+            comprehension_json = json.dumps(built, ensure_ascii=False)
     row = _persist(
         db,
         language=language,
@@ -316,6 +373,7 @@ def generate_passage(
         calibration=calibration,
         translation=translation,
         topic_hash=topic_hash(language, level, topic, genre),
+        comprehension_json=comprehension_json,
     )
     if not result.passed:
         logger.info("Quarantined failed draft %s (%s %s)", row.id, language, level)
@@ -399,6 +457,7 @@ def complete_read(
             lemma_token_stats,
             pick_next_id,
             read_ids,
+            recent_taps,
             seen_lemmas,
             tokens_from_row,
         )
@@ -414,7 +473,12 @@ def complete_read(
         already = read_ids(db, identity)
         already.add(passage_id)
         next_id = pick_next_id(
-            db, language, learner.level, already, exclude_id=passage_id
+            db,
+            language,
+            learner.level,
+            already,
+            exclude_id=passage_id,
+            tapped=set(recent_taps(db, identity, language)),
         )
         result.update(
             placement=learner.level,
