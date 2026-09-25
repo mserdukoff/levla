@@ -41,7 +41,7 @@ export function HandNote({
   );
 }
 
-const ARROWS = {
+export const ARROWS = {
   // a short swoop down and to the right
   swoopRight: "M4 6 C 10 22, 22 30, 42 30 M34 23 L43 30 L35 37",
   // curls down from a note, ends pointing left

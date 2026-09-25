@@ -1,7 +1,9 @@
 "use client";
 
+import { MotionConfig } from "motion/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { AuthPanel, signOutAccount } from "@/components/auth-panel";
 import { DemoBanner } from "@/components/demo-banner";
 import { Segmented } from "@/components/segmented";
@@ -12,8 +14,19 @@ import { LANGUAGES, readingFont, type LangCode, type MeResponse } from "@/lib/ty
 import { Art, HandArrow, HandNote, LineIcon } from "./art";
 import { DEMO } from "./demo-data";
 import { Drift } from "./drift";
+import { DrawnArrow, Float, InkArt, Parallax, Reveal, Stagger, StaggerItem } from "./motion-bits";
+import { PromptHero } from "./prompt-hero";
 import { ReaderDemo } from "./reader-demo";
 import { SCENES } from "./scenes";
+import { Story, type StoryStep } from "./story";
+
+const ShaderWash = dynamic(() => import("./shader-wash"), { ssr: false });
+
+export type LandingVariant = "classic" | "motion" | "prompt" | "story" | "shader";
+
+function Plain({ children }: { children: React.ReactNode; className?: string }) {
+  return <>{children}</>;
+}
 
 const KEPT_OUT: Record<LangCode, string> = {
   ja: "At A2, て-form and plain past are allowed. The check keeps out ている, conditionals, potential, causative, passive, relative clauses, and keigo.",
@@ -216,7 +229,12 @@ function RateDemo({ lang }: { lang: LangCode }) {
   );
 }
 
-export function Landing() {
+export function Landing({ variant = "classic" }: { variant?: LandingVariant }) {
+  const anim = variant !== "classic";
+  const Col = anim ? Stagger : "div";
+  const Item = anim ? StaggerItem : Plain;
+  const Arrow = anim ? DrawnArrow : HandArrow;
+  const Section = anim ? Reveal : Fragment;
   const [lang, setLang] = useState<LangCode>("ja");
   const [me, setMe] = useState<MeResponse | null>(null);
   const language = LANGUAGES.find((item) => item.id === lang)?.label ?? "Japanese";
@@ -226,6 +244,80 @@ export function Landing() {
   const demo = isDemo();
   const signedIn = Boolean(me?.authenticated);
   const startHref = demo || signedIn ? "/library" : "#account";
+
+  const storySteps: StoryStep[] = [
+    {
+      id: "read",
+      eyebrow: "Read",
+      title: "Graded readers where A2 is actually A2.",
+      body: (
+        <p>
+          Short passages from beginner through upper-intermediate. Every one is checked against the
+          level before it is shown. Tap any word for the meaning, the grammar, and the reading.
+        </p>
+      ),
+      visual: (
+        <div className="relative isolate mx-auto max-w-[34rem]">
+          <ReaderDemo key={lang} lang={lang} onLang={chooseLang} />
+        </div>
+      ),
+    },
+    {
+      id: "check",
+      eyebrow: "The check",
+      title: `${article} ${language} passage that failed the check.`,
+      body: (
+        <>
+          <p>
+            A morphological analyzer reads every word and checks it against the level. If something
+            is above the level, the passage is rewritten.
+          </p>
+          <p className="mt-4 text-[13px] leading-relaxed text-ink/50">{KEPT_OUT[lang]}</p>
+        </>
+      ),
+      visual: <Drift key={lang} lang={lang} />,
+    },
+    {
+      id: "tap",
+      eyebrow: "A tap",
+      title: "A tap stays in the sentence.",
+      body: (
+        <p>
+          Tap a word in the passage. The gloss tells you what it is, then you keep reading.
+          Everything you need, right there.
+        </p>
+      ),
+      visual: (
+        <div className="grid grid-cols-[1fr_16rem] items-center gap-8">
+          <dl className="border-t border-rule">
+            {TAP[lang].map((item) => (
+              <div
+                key={item.k}
+                className="grid grid-cols-[1.75rem_7rem_1fr] items-baseline gap-x-3 border-b border-rule py-3"
+              >
+                <LineIcon name={item.icon} className="translate-y-[3px] text-ink/60" />
+                <dt className="text-[14px] font-medium text-ink">{item.k}</dt>
+                <dd className="text-[14px] leading-relaxed text-ink/65">{item.v}</dd>
+              </div>
+            ))}
+          </dl>
+          <InkArt key={lang} src={`stone-${lang}`} className="w-full" />
+        </div>
+      ),
+    },
+    {
+      id: "rate",
+      eyebrow: "Rate and move forward",
+      title: "Rate, and move forward.",
+      body: (
+        <p>
+          Levels run from A1 through B2. You begin at A2. The shelf remembers the lemmas you have
+          seen, and the next passage is chosen from that.
+        </p>
+      ),
+      visual: <RateDemo key={lang} lang={lang} />,
+    },
+  ];
 
   function chooseLang(next: LangCode) {
     setLang(next);
@@ -244,7 +336,13 @@ export function Landing() {
   }, [refreshMe]);
 
   return (
-    <main className="overflow-x-clip">
+    <MotionConfig reducedMotion="user">
+    <main className="relative overflow-x-clip">
+      {variant === "shader" ? (
+        <div aria-hidden="true" className="shader-fade pointer-events-none absolute inset-x-0 top-0 h-[52rem]">
+          <ShaderWash lang={lang} className="h-full w-full" />
+        </div>
+      ) : null}
       {/* ---------- hero ---------- */}
       <Wrap>
         <header className="flex items-center justify-between py-5 sm:py-6">
@@ -283,79 +381,125 @@ export function Landing() {
 
         <DemoBanner />
 
-        <section className="relative grid items-center gap-10 pb-14 pt-8 lg:grid-cols-12 lg:gap-6 lg:pb-16 lg:pt-6">
-          <div className="relative z-10 lg:col-span-5 lg:pb-10">
-            <p className="t-eyebrow max-w-[16rem] leading-[1.6]!">
-              Real language progress, one story at a time.
-            </p>
-            <h1 className="t-display mt-5 text-[3rem] text-ink sm:text-[3.75rem] lg:text-[4.25rem]">
-              Every word has depth.
-            </h1>
-            <p className="mt-6 min-h-[5.3rem] max-w-[27rem] text-[1.0625rem] leading-[1.65] text-ink/70">
-              {scene.lede}
-            </p>
-            <div className="mt-7">
-              <Segmented
-                ariaLabel="Language"
-                size="sm"
-                options={LANGUAGES.map((l) => ({ id: l.id, label: l.label }))}
-                value={lang}
-                onChange={chooseLang}
-              />
-            </div>
-            <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
-              <Link href="/library" className="btn-primary px-7">
-                Start reading
-              </Link>
-              <a href="#read" className="t-quiet text-[14px]">
-                See how it works ↓
-              </a>
-            </div>
-            {!demo && me?.admin ? (
-              <Link href="/admin" className="t-quiet mt-4 inline-block">
-                Admin
-              </Link>
-            ) : null}
-          </div>
-
-          <figure className="relative lg:col-span-7 lg:-mr-10 xl:-mr-20 2xl:-ml-6 2xl:-mr-36">
-            <Art key={lang} src={`cliff-${lang}`} className="cliff-fade aspect-[4/3] w-full" />
-            <div aria-hidden="true" className="absolute inset-0 hidden lg:block">
-              {scene.strata.map((s) => (
-                <div
-                  key={s.level}
-                  style={{ top: s.top, right: `calc(100% - ${scene.face} + 0.75rem)` }}
-                  className="absolute flex -translate-y-1/2 items-center gap-2.5 text-right"
-                >
-                  <span className="rounded-[4px] bg-paper/85 px-1.5 py-0.5 leading-tight">
-                    <span className="block font-display text-[13px] text-ink">{s.level}</span>
-                    <span className="block whitespace-nowrap text-[10.5px] tracking-[0.02em] text-ink/50">
-                      {s.label}
-                    </span>
-                  </span>
-                  <span className="h-px w-5 bg-ink/35" />
+        {variant === "prompt" ? (
+          <PromptHero lang={lang} onLang={chooseLang} />
+        ) : (
+          <section className="relative grid items-center gap-10 pb-14 pt-8 lg:grid-cols-12 lg:gap-6 lg:pb-16 lg:pt-6">
+            <Col className="relative z-10 lg:col-span-5 lg:pb-10">
+              <Item>
+                <p className="t-eyebrow max-w-[16rem] leading-[1.6]!">
+                  Real language progress, one story at a time.
+                </p>
+              </Item>
+              <Item>
+                <h1 className="t-display mt-5 text-[3rem] text-ink sm:text-[3.75rem] lg:text-[4.25rem]">
+                  Every word has depth.
+                </h1>
+              </Item>
+              <Item>
+                <p className="mt-6 min-h-[5.3rem] max-w-[27rem] text-[1.0625rem] leading-[1.65] text-ink/70">
+                  {scene.lede}
+                </p>
+              </Item>
+              <Item>
+                <div className="mt-7">
+                  <Segmented
+                    animated={anim}
+                    ariaLabel="Language"
+                    size="sm"
+                    options={LANGUAGES.map((l) => ({ id: l.id, label: l.label }))}
+                    value={lang}
+                    onChange={chooseLang}
+                  />
                 </div>
-              ))}
-            </div>
-            <div className="hidden sm:block">
-              <WordChip
-                word={scene.chip.word}
-                lang={lang}
-                reading={scene.chip.reading}
-                meaning={scene.chip.meaning}
-                className={scene.chip.position}
-              />
-            </div>
-            <figcaption className="sr-only">
-              A cliff of carved {language} words, from everyday greetings at the top to older
-              writing at the base.
-            </figcaption>
-          </figure>
-        </section>
+              </Item>
+              <Item>
+                <div className="mt-7 flex flex-wrap items-center gap-x-7 gap-y-4">
+                  <Link href="/library" className="btn-primary px-7">
+                    Start reading
+                  </Link>
+                  <a href="#read" className="t-quiet text-[14px]">
+                    See how it works ↓
+                  </a>
+                </div>
+              </Item>
+              {!demo && me?.admin ? (
+                <Link href="/admin" className="t-quiet mt-4 inline-block">
+                  Admin
+                </Link>
+              ) : null}
+            </Col>
+
+            <figure className="relative lg:col-span-7 lg:-mr-10 xl:-mr-20 2xl:-ml-6 2xl:-mr-36">
+              {anim ? (
+                <Parallax distance={50}>
+                  <InkArt key={lang} src={`cliff-${lang}`} className="cliff-fade aspect-[4/3] w-full" delay={0.2} />
+                </Parallax>
+              ) : (
+                <Art key={lang} src={`cliff-${lang}`} className="cliff-fade aspect-[4/3] w-full" />
+              )}
+              <div aria-hidden="true" className="absolute inset-0 hidden lg:block">
+                {scene.strata.map((s, i) => {
+                  const label = (
+                    <>
+                      <span className="rounded-[4px] bg-paper/85 px-1.5 py-0.5 leading-tight">
+                        <span className="block font-display text-[13px] text-ink">{s.level}</span>
+                        <span className="block whitespace-nowrap text-[10.5px] tracking-[0.02em] text-ink/50">
+                          {s.label}
+                        </span>
+                      </span>
+                      <span className="h-px w-5 bg-ink/35" />
+                    </>
+                  );
+                  const style = { top: s.top, right: `calc(100% - ${scene.face} + 0.75rem)` };
+                  const cls = "absolute flex -translate-y-1/2 items-center gap-2.5 text-right";
+                  return anim ? (
+                    <Float key={`${lang}-${s.level}`} className={cls} style={style} delay={0.7 + i * 0.15}>
+                      {label}
+                    </Float>
+                  ) : (
+                    <div key={s.level} style={style} className={cls}>
+                      {label}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden sm:block">
+                {anim ? (
+                  <Float key={`chip-${lang}`} className="pointer-events-none absolute inset-0 [&_a]:pointer-events-auto" delay={1.2}>
+                    <WordChip
+                      word={scene.chip.word}
+                      lang={lang}
+                      reading={scene.chip.reading}
+                      meaning={scene.chip.meaning}
+                      className={scene.chip.position}
+                    />
+                  </Float>
+                ) : (
+                  <WordChip
+                    word={scene.chip.word}
+                    lang={lang}
+                    reading={scene.chip.reading}
+                    meaning={scene.chip.meaning}
+                    className={scene.chip.position}
+                  />
+                )}
+              </div>
+              <figcaption className="sr-only">
+                A cliff of carved {language} words, from everyday greetings at the top to older
+                writing at the base.
+              </figcaption>
+            </figure>
+          </section>
+        )}
       </Wrap>
 
+      {variant === "story" ? <Story steps={storySteps} /> : null}
+      {variant !== "story" ? (
+      <>
       {/* ---------- read ---------- */}
       <section id="read" className="relative scroll-mt-4 border-t border-rule/70 pb-16 pt-16 sm:pt-20 lg:pb-44">
+        <Section>
         <Wrap className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="relative lg:col-span-4">
             <Eyebrow>Read</Eyebrow>
@@ -391,7 +535,7 @@ export function Landing() {
           <div className="relative hidden lg:col-span-3 lg:block">
             <div className="ml-10 w-[10rem]">
               <HandNote rotate={-8}>A2 vocabulary, real context, deeper understanding.</HandNote>
-              <HandArrow kind="curlDown" className="ml-2 mt-1 w-10" />
+              <Arrow kind="curlDown" className="ml-2 mt-1 w-10" />
             </div>
             <Art
               key={lang}
@@ -400,6 +544,7 @@ export function Landing() {
             />
           </div>
         </Wrap>
+        </Section>
       </section>
 
       {/* ---------- the check ---------- */}
@@ -408,6 +553,7 @@ export function Landing() {
           src="sprig-tall"
           className="absolute -right-6 bottom-0 hidden w-[9rem] opacity-80 xl:block 2xl:right-[3vw]"
         />
+        <Section>
         <Wrap className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <Eyebrow accent>The check</Eyebrow>
@@ -425,10 +571,12 @@ export function Landing() {
             <Drift key={lang} lang={lang} />
           </div>
         </Wrap>
+        </Section>
       </section>
 
       {/* ---------- a tap ---------- */}
       <section id="tap" className="relative scroll-mt-4 border-t border-rule/70 py-16 sm:py-20">
+        <Section>
         <Wrap className="grid gap-10 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <Eyebrow>A tap</Eyebrow>
@@ -457,7 +605,7 @@ export function Landing() {
           <figure className="relative hidden lg:col-span-3 lg:block">
             <div className="ml-auto w-[8.5rem]">
               <HandNote rotate={-8}>Look up, learn, keep reading.</HandNote>
-              <HandArrow kind="curlDown" className="mt-1 w-9" />
+              <Arrow kind="curlDown" className="mt-1 w-9" />
             </div>
             <Art key={lang} src={`stone-${lang}`} className="-mt-2 w-[18rem] max-w-none" />
             <figcaption className="t-hand ml-auto mt-1 w-[9rem] text-[1.05rem]! -rotate-3">
@@ -465,10 +613,14 @@ export function Landing() {
             </figcaption>
           </figure>
         </Wrap>
+        </Section>
       </section>
 
+      </>
+      ) : null}
       {/* ---------- the shelf ---------- */}
       <section id="shelf" className="relative scroll-mt-4 border-t border-rule/70 py-16 sm:py-20">
+        <Section>
         <Wrap className="grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <Eyebrow accent>The shelf</Eyebrow>
@@ -512,10 +664,14 @@ export function Landing() {
             <Art src="card-catalog" className="w-[25rem] max-w-none" />
           </div>
         </Wrap>
+        </Section>
       </section>
 
+      {variant !== "story" ? (
+      <>
       {/* ---------- rate ---------- */}
       <section id="rate" className="relative scroll-mt-4 border-t border-rule/70 py-16 sm:py-20">
+        <Section>
         <Wrap className="grid items-center gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-4">
             <Eyebrow accent>Rate and move forward</Eyebrow>
@@ -537,15 +693,19 @@ export function Landing() {
           <figure className="relative hidden lg:col-span-3 lg:block">
             <div className="relative z-10 ml-8 w-[9.5rem]">
               <HandNote rotate={-7}>Three ratings move your level one step.</HandNote>
-              <HandArrow kind="longLeft" className="mt-1 w-12" />
+              <Arrow kind="longLeft" className="mt-1 w-12" />
             </div>
             <Art src="ruins-landscape" className="-mt-6 w-[26rem] max-w-none -translate-x-6" />
           </figure>
         </Wrap>
+        </Section>
       </section>
 
+      </>
+      ) : null}
       {/* ---------- explore ---------- */}
       <section id="explore" className="relative scroll-mt-4 overflow-hidden border-t border-rule/70">
+        <Section>
         <Wrap className="grid items-end gap-8 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-10">
           <div className="relative z-10 pb-4 lg:col-span-4 lg:pb-20">
             <Eyebrow accent>Explore</Eyebrow>
@@ -565,10 +725,12 @@ export function Landing() {
             />
           </figure>
         </Wrap>
+        </Section>
       </section>
 
       {/* ---------- close ---------- */}
       <section className="border-t border-rule/70">
+        <Section>
         <Wrap className="flex flex-col gap-6 py-10 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="t-heading text-[1.6rem] text-ink sm:text-[1.75rem]">
@@ -587,9 +749,11 @@ export function Landing() {
             </Link>
           </div>
         </Wrap>
+        </Section>
       </section>
 
       <footer className="border-t border-rule/70">
+        <Section>
         <Wrap className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 py-7 text-[12.5px] text-ink/45">
           <span className="font-display text-[15px] text-ink/70">Lociros</span>
           <span>
@@ -605,7 +769,9 @@ export function Landing() {
             </Link>
           </span>
         </Wrap>
+        </Section>
       </footer>
     </main>
+    </MotionConfig>
   );
 }

@@ -216,6 +216,11 @@ body {
   mask-composite: intersect;
 }
 
+/* the animated shader wash behind the hero bleeds into the paper below it */
+.shader-fade {
+  mask-image: linear-gradient(to bottom, black 45%, transparent);
+}
+
 /* ---------- controls ---------- */
 
 @utility btn-primary {

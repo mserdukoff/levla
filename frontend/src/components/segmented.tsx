@@ -1,8 +1,12 @@
 "use client";
 
+import { motion } from "motion/react";
+import { useId } from "react";
+
 /**
  * A joined segmented control: one hairline box divided into cells.
  * The active cell inverts to ink. Used for language and CEFR level pickers.
+ * `animated` slides the ink fill between cells instead of swapping it.
  */
 export function Segmented<T extends string>({
   options,
@@ -11,6 +15,7 @@ export function Segmented<T extends string>({
   columns,
   size = "md",
   ariaLabel,
+  animated = false,
 }: {
   options: { id: T; label: string; hint?: string }[];
   value: T;
@@ -18,8 +23,10 @@ export function Segmented<T extends string>({
   columns?: number;
   size?: "sm" | "md";
   ariaLabel: string;
+  animated?: boolean;
 }) {
   const cols = columns ?? options.length;
+  const pill = useId();
   return (
     <div
       role="radiogroup"
@@ -29,6 +36,8 @@ export function Segmented<T extends string>({
     >
       {options.map((item) => {
         const active = item.id === value;
+        const fill = active && !animated ? "bg-ink" : "";
+        const hover = active ? "" : "hover:bg-paper-deep";
         return (
           <button
             key={item.id}
@@ -36,22 +45,30 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(item.id)}
-            className={`flex flex-col items-start text-left transition-colors ${
+            className={`relative flex flex-col items-start text-left transition-colors duration-300 ${
               size === "sm" ? "px-3 py-1.5" : "px-3.5 py-2.5"
-            } ${active ? "bg-ink text-paper" : "text-ink hover:bg-paper-deep"}`}
+            } ${active ? "text-paper" : "text-ink"} ${fill} ${hover}`}
           >
+            {animated && active ? (
+              <motion.span
+                layoutId={pill}
+                aria-hidden="true"
+                className="absolute inset-0 bg-ink"
+                transition={{ type: "spring", stiffness: 420, damping: 36 }}
+              />
+            ) : null}
             <span
-              className={
+              className={`relative ${
                 size === "sm"
                   ? "text-[13px] font-medium leading-tight"
                   : "font-display text-[1.125rem] leading-none"
-              }
+              }`}
             >
               {item.label}
             </span>
             {item.hint ? (
               <span
-                className={`mt-1 text-[11px] leading-tight ${
+                className={`relative mt-1 text-[11px] leading-tight ${
                   active ? "text-paper/65" : "text-ink/45"
                 }`}
               >
