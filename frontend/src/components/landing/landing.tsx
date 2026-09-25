@@ -339,10 +339,11 @@ export function Landing({ variant = "classic" }: { variant?: LandingVariant }) {
     <MotionConfig reducedMotion="user">
     <main className="relative overflow-x-clip">
       {variant === "shader" ? (
-        <div aria-hidden="true" className="shader-fade pointer-events-none absolute inset-x-0 top-0 h-[52rem]">
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0">
           <ShaderWash lang={lang} className="h-full w-full" />
         </div>
       ) : null}
+      <div className="relative">
       {/* ---------- hero ---------- */}
       <Wrap>
         <header className="flex items-center justify-between py-5 sm:py-6">
@@ -771,6 +772,7 @@ export function Landing({ variant = "classic" }: { variant?: LandingVariant }) {
         </Wrap>
         </Section>
       </footer>
+      </div>
     </main>
     </MotionConfig>
   );

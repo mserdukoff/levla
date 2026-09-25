@@ -4,10 +4,10 @@ import { ShaderGradient, ShaderGradientCanvas } from "@shadergradient/react";
 import type { LangCode } from "@/lib/types";
 
 const PALETTE: Record<LangCode, [string, string, string]> = {
-  ja: ["#f4efe6", "#e9c2b0", "#c7d3c1"],
-  ar: ["#f4efe6", "#e6c59f", "#dba98f"],
-  it: ["#f4efe6", "#e8d19c", "#c5cfa9"],
-  ru: ["#f4efe6", "#c3ccd8", "#dfd1bb"],
+  ja: ["#f4efe6", "#e6e0d1", "#dde2d6"],
+  ar: ["#f4efe6", "#e9dfcb", "#e3d6c1"],
+  it: ["#f4efe6", "#eae2cc", "#e0e2d0"],
+  ru: ["#f4efe6", "#e4e2dc", "#dce0e5"],
 };
 
 export default function ShaderWash({ lang, className = "" }: { lang: LangCode; className?: string }) {
