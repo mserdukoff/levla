@@ -25,7 +25,7 @@ function when(value: string | null | undefined): string {
 function Counts({ title, rows }: { title: string; rows: AdminCount[] }) {
   return (
     <section>
-      <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">{title}</h2>
+      <h2 className="text-[14px] font-medium text-ink/55">{title}</h2>
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-ink/45">None yet.</p>
       ) : (
@@ -106,7 +106,7 @@ export function AdminDashboard() {
       {data ? (
         <div className="mt-10 flex flex-col gap-12">
           <section>
-            <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">API</h2>
+            <h2 className="text-[14px] font-medium text-ink/55">API</h2>
             <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
               <div>
                 <dt className="text-ink/45">Status</dt>
@@ -128,7 +128,7 @@ export function AdminDashboard() {
           </section>
 
           <section>
-            <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">Totals</h2>
+            <h2 className="text-[14px] font-medium text-ink/55">Totals</h2>
             <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-5">
               {Object.entries(data.totals).map(([key, value]) => (
                 <li key={key}>
@@ -140,7 +140,7 @@ export function AdminDashboard() {
           </section>
 
           <section>
-            <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">
+            <h2 className="text-[14px] font-medium text-ink/55">
               Last 7 days
             </h2>
             <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -160,7 +160,7 @@ export function AdminDashboard() {
           </div>
 
           <section>
-            <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">Users</h2>
+            <h2 className="text-[14px] font-medium text-ink/55">Users</h2>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[36rem] text-left text-sm">
                 <thead className="text-ink/45">
@@ -190,7 +190,7 @@ export function AdminDashboard() {
           </section>
 
           <section>
-            <h2 className="text-[13px] font-medium tracking-wide text-ink/45 uppercase">
+            <h2 className="text-[14px] font-medium text-ink/55">
               Recent jobs
             </h2>
             <div className="mt-3 overflow-x-auto">

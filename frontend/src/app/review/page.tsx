@@ -132,9 +132,9 @@ export default function ReviewPage() {
   const status = loading
     ? ""
     : total === 0
-      ? "nothing due"
+      ? "Nothing due"
       : allDone
-        ? "all caught up"
+        ? "All caught up"
         : `${remaining} of ${total} due`;
 
   return (
@@ -143,7 +143,7 @@ export default function ReviewPage() {
         <Link href="/library" className="t-quiet">
           ← Library
         </Link>
-        <span className="tnum text-[11px] uppercase tracking-[0.16em] text-ink/45">{status}</span>
+        <span className="tnum text-[13px] text-ink/50">{status}</span>
       </header>
 
       <section className="mt-12 flex items-end justify-between gap-6">

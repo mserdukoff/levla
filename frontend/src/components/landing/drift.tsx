@@ -49,7 +49,7 @@ export function Drift({ lang }: { lang: LangCode }) {
                 seg.flag ? (
                   <span key={i} className="relative inline whitespace-nowrap">
                     <span className="border-b-[1.5px] border-terracotta">{seg.text}</span>
-                    <sup className="ml-1 font-sans text-[9px] font-medium uppercase tracking-[0.1em] text-terracotta">
+                    <sup className="ml-1 font-sans text-[11px] font-medium text-terracotta">
                       {seg.flag}
                     </sup>
                   </span>

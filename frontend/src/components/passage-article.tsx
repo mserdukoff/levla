@@ -15,32 +15,32 @@ export const ROLE_TEXT: Record<string, string> = {
 };
 
 const JA_LEGEND: { swatch?: string; label: string; role: string }[] = [
-  { swatch: "は", label: "topic", role: "topic" },
-  { swatch: "が", label: "subject", role: "subject" },
-  { swatch: "を", label: "object", role: "object" },
-  { label: "particle", role: "particle" },
-  { label: "verb", role: "verb" },
-  { label: "ending", role: "aux" },
-  { label: "adjective", role: "adj" },
+  { swatch: "は", label: "Topic", role: "topic" },
+  { swatch: "が", label: "Subject", role: "subject" },
+  { swatch: "を", label: "Object", role: "object" },
+  { label: "Particle", role: "particle" },
+  { label: "Verb", role: "verb" },
+  { label: "Ending", role: "aux" },
+  { label: "Adjective", role: "adj" },
 ];
 
 const LATIN_LEGEND: { label: string; role: string }[] = [
-  { label: "verb", role: "verb" },
-  { label: "adjective", role: "adj" },
-  { label: "preposition", role: "particle" },
-  { label: "adverb", role: "adverb" },
+  { label: "Verb", role: "verb" },
+  { label: "Adjective", role: "adj" },
+  { label: "Preposition", role: "particle" },
+  { label: "Adverb", role: "adverb" },
 ];
 
 export function GrammarLegend({ language, className = "" }: { language: LangCode; className?: string }) {
   const items = language === "ja" ? JA_LEGEND : LATIN_LEGEND;
   return (
     <p
-      className={`flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[11.5px] uppercase tracking-[0.1em] text-ink/40 ${className}`}
+      className={`flex flex-wrap items-baseline gap-x-5 gap-y-1 text-[13px] text-ink/40 ${className}`}
     >
       {items.map((item) => (
         <span key={item.role + item.label} className={ROLE_TEXT[item.role]}>
           {"swatch" in item && typeof item.swatch === "string" ? (
-            <span className="font-ja normal-case tracking-normal">{item.swatch} </span>
+            <span className="font-ja">{item.swatch} </span>
           ) : null}
           {item.label}
         </span>

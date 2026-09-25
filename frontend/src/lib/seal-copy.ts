@@ -1,6 +1,6 @@
 /**
  * Exam-seal inscriptions. One geometry in `seal.tsx`; adding a language is a
- * row here, not a new drawing. Missing keys fall back to Latin PASS / FAIL.
+ * row here, not a new drawing. Missing keys fall back to Latin Pass / Fail.
  *
  * Prefer the language’s short exam-stamp word (about 2–8 letters or 2–4 CJK).
  * If the native word is too long, keep the Latin fallback.
@@ -17,14 +17,14 @@ export type SealCopy = {
 
 export const SEAL_FALLBACK: SealCopy = {
   script: "latin",
-  pass: "PASS",
-  fail: "FAIL",
+  pass: "Pass",
+  fail: "Fail",
 };
 
 export const SEAL_COPY: Record<string, SealCopy> = {
     ja: { script: "cjk", pass: "合格", fail: "不合格" },
-    ru: { script: "cyrillic", pass: "ЗАЧЁТ", fail: "НЕЗАЧЁТ" },
-    it: { script: "latin", pass: "IDONEO", fail: "BOCCIATO" },
+    ru: { script: "cyrillic", pass: "Зачёт", fail: "Незачёт" },
+    it: { script: "latin", pass: "Idoneo", fail: "Bocciato" },
     ar: { script: "arabic", pass: "نجح", fail: "رسب", rtl: true },
 };
 

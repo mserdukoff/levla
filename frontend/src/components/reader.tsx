@@ -455,7 +455,7 @@ export function Reader({ passage }: { passage: Passage }) {
           ← Library
         </Link>
         <div className="flex items-center gap-3">
-          <span className="tnum hidden text-[11px] uppercase tracking-[0.16em] text-ink/45 sm:inline">
+          <span className="tnum hidden text-[13px] text-ink/50 sm:inline">
             {passage.word_count} words
             {lemmaTotal > 0 ? ` · ${stats?.new_lemmas} new · ${stats?.recycled_lemmas} known` : ""}
           </span>

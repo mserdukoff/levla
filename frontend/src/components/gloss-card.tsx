@@ -61,7 +61,7 @@ function KanjiRow({ part }: { part: KanjiPart }) {
           <p className="text-[12px] leading-snug text-ink/50">
             {on ? (
               <>
-                <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+                <span className="text-[11px] text-ink/40">
                   on{" "}
                 </span>
                 <span className="font-ja">{on}</span>
@@ -70,7 +70,7 @@ function KanjiRow({ part }: { part: KanjiPart }) {
             {on && kun ? <span className="text-ink/25"> · </span> : null}
             {kun ? (
               <>
-                <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+                <span className="text-[11px] text-ink/40">
                   kun{" "}
                 </span>
                 <span className="font-ja">{kun}</span>
@@ -79,7 +79,7 @@ function KanjiRow({ part }: { part: KanjiPart }) {
           </p>
         ) : null}
         {facts ? (
-          <p className="tnum text-[10px] uppercase tracking-[0.14em] text-ink/40">
+          <p className="tnum text-[11px] text-ink/40">
             {facts}
           </p>
         ) : null}
@@ -101,7 +101,7 @@ function KanjiRow({ part }: { part: KanjiPart }) {
         ) : null}
         {nanori ? (
           <p className="text-[12px] text-ink/40">
-            <span className="text-[10px] uppercase tracking-[0.14em]">names </span>
+            <span className="text-[11px]">names </span>
             <span className="font-ja">{nanori}</span>
           </p>
         ) : null}
@@ -138,7 +138,7 @@ function RootRow({ part }: { part: RootPart }) {
       <div className="flex min-w-0 flex-col gap-1">
         {part.form || part.form_name || part.pattern ? (
           <p className="text-[12px] leading-snug text-ink/50">
-            <span className="text-[10px] uppercase tracking-[0.14em] text-ink/40">
+            <span className="text-[11px] text-ink/40">
               wazn{" "}
             </span>
             {part.form ? <span>Form {part.form}</span> : null}
@@ -190,7 +190,7 @@ function ConjBreakdown({ pieces, language }: { pieces: ConjPiece[]; language: La
         return (
           <li key={`${piece.text}-${piece.label}-${i}`} className="flex flex-col">
             <span className={`${jp} text-[1.2rem] leading-tight ${color}`}>{piece.text}</span>
-            <span className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-ink/40">
+            <span className="mt-0.5 text-[11px] text-ink/40">
               {piece.label}
             </span>
           </li>

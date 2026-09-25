@@ -109,12 +109,15 @@ body {
 
 /* small tracked label: section headings on the shelf, field legends */
 @utility t-eyebrow {
-  font-size: 11px;
-  line-height: 1.2;
+  font-size: 12.5px;
+  line-height: 1.25;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: color-mix(in srgb, var(--ink) 50%, transparent);
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  /* sentence case: some eyebrows are built from lowercase data (topics) */
+  &::first-letter {
+    text-transform: uppercase;
+  }
 }
 
 /* large serif display, optical size kicks in above 40px */

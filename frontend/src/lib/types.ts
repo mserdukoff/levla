@@ -322,6 +322,41 @@ export const GENRES: { id: string; label: string }[] = [
   { id: "work", label: "Work" },
 ];
 
+const POS_NAME: Record<string, string> = {
+  NOUN: "noun",
+  PROPN: "proper noun",
+  VERB: "verb",
+  AUX: "auxiliary",
+  INFN: "infinitive",
+  ADJ: "adjective",
+  ADJF: "adjective",
+  ADJS: "short adjective",
+  ADV: "adverb",
+  ADVB: "adverb",
+  ADP: "preposition",
+  PREP: "preposition",
+  CCONJ: "conjunction",
+  SCONJ: "conjunction",
+  CONJ: "conjunction",
+  DET: "determiner",
+  PRON: "pronoun",
+  NPRO: "pronoun",
+  PART: "particle",
+  PRCL: "particle",
+  NUM: "numeral",
+  NUMR: "numeral",
+  INTJ: "interjection",
+  PRED: "predicative",
+  PRTF: "participle",
+  PRTS: "short participle",
+  GRND: "gerund",
+  COMP: "comparative",
+};
+
+function posName(pos: string): string {
+  return POS_NAME[pos] ?? pos.toLowerCase();
+}
+
 export function morphLine(morph: MorphInfo): string {
   const mood =
     morph.mood === "impr"
@@ -342,7 +377,7 @@ export function morphLine(morph: MorphInfo): string {
     morph.state,
     morph.gender,
     morph.number,
-    morph.pos && !morph.case ? morph.pos : null,
+    morph.pos && !morph.case ? posName(morph.pos) : null,
   ].filter(Boolean);
   return parts.join(" · ");
 }
